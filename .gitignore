@@ -1,0 +1,14 @@
+
+dist
+.env
+*.pyc
+*.egg-info
+MANIFEST
+
+.cache
+.eggs
+.idea
+.tox
+.ropeproject
+/build
+setup.cfg
