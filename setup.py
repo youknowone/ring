@@ -4,7 +4,7 @@ from setuptools import setup
 
 
 def get_version():
-    with open('cachain/version.txt') as f:
+    with open('ring/version.txt') as f:
         return f.read().strip()
 
 
@@ -17,18 +17,18 @@ def get_readme():
 
 
 setup(
-    name='cachain',
+    name='ring',
     version=get_version(),
     description='Cache chain manager for abstract models.',
     long_description=get_readme(),
     author='Jeong YunWon',
-    author_email='cachain@youknowone.org',
-    url='https://github.com/youknowone/cachain',
+    author_email='ring@youknowone.org',
+    url='https://github.com/youknowone/ring',
     packages=(
-        'cachain',
+        'ring',
     ),
     package_data={
-        'cachain': ['version.txt']
+        'ring': ['version.txt']
     },
     install_requires=[
         'prettyexc>=0.6.0',

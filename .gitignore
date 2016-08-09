@@ -10,5 +10,7 @@ MANIFEST
 .idea
 .tox
 .ropeproject
+.*.swp
+.*.swo
 /build
 setup.cfg

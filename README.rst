@@ -1,6 +1,6 @@
-Cachain
-~~~~~~~
+Ring
+~~~~
 
-.. image:: https://travis-ci.org/youknowone/cachain.svg?branch=master
-    :target: https://travis-ci.org/youknowone/cachain
+.. image:: https://travis-ci.org/youknowone/ring.svg?branch=master
+    :target: https://travis-ci.org/youknowone/ring
 

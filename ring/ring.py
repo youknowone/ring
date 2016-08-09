@@ -1,27 +1,10 @@
 
+from __future__ import absolute_import
 
-class Key(object):
-
-    def __init__(self, key):
-        self.key = key
-
-    def build(self, args):
-        raise NotImplementedError
+from .key import Key, FormatKey, CallableKey
 
 
-class FormatKey(Key):
-
-    def build(self, args):
-        return self.key.format(**args)
-
-
-class CallableKey(Key):
-
-    def build(self, args):
-        return self.key(**args)
-
-
-def _build_key(f, args, kwargs):
+def _build_func_key(f, args, kwargs):
     f_code = f.__code__
     for i, arg in enumerate(args):
         if i >= f_code.co_argcount:
@@ -49,8 +32,10 @@ class Ring(object):
             else:
                 raise TypeError
         self.key = key
+        self.links = {}
+        self.chains = {}
 
-    def __call__(self, key=_build_key, expire=None):
+    def __call__(self, key=_build_func_key, expire=None):
         def _wrapper(f):
             def get_or_set(*args, **kwargs):
                 built_args = key(f, args, kwargs)
@@ -64,6 +49,13 @@ class Ring(object):
     def get_by_key(self, key_args):
         built_key = self.key.build(key_args)
         return self.storage.get(built_key)
+
+    def delete(self, **kwargs):
+        return self.delete_by_key(kwargs)
+
+    def delete_by_key(self, key_args):
+        built_key = self.key.build(key_args)
+        return self.storage.delete(built_key)
 
     def set(self, _value, **kwargs):
         if callable(_value):
@@ -80,3 +72,9 @@ class Ring(object):
             value = _value(**kwargs)
             self.set_by_key(value, kwargs)
         return value
+
+    def link(self, target, keys):
+        self.links[target] = keys
+
+    def chain(self, target, keys):
+        self.chains[target] = keys
