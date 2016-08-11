@@ -131,3 +131,69 @@ def test_indirect_link(fx_ring, fx_ding):
 
     fx_ring.expire(user_id=2)
     assert fx_ding.get(user_id=2, asset_id=1) is None
+
+
+def test_link_workflow(fx_ring, fx_ding):
+    fx_ding.link(fx_ring)
+
+    asset_names = [
+        None, 'ring', 'ding', 'dong'
+    ]
+
+    history = []
+
+    @fx_ring()
+    def user_data(user_id):
+        history.append('user:{}'.format(user_id))
+        return {
+            'id': user_id,
+            'name': 'Name {}'.format(user_id),
+            'assets': [
+                asset_data(user_id, 1),
+                asset_data(user_id, 2),
+                asset_data(user_id, 3),
+            ]
+        }
+
+    @fx_ding()
+    def asset_data(user_id, asset_id):
+        history.append('asset:{}:{}'.format(user_id, asset_id))
+        return {
+            'id': asset_id,
+            'user_id': user_id,
+            'name': asset_names[asset_id],
+        }
+
+    assert history == []
+
+    # generate cache for user 1 and its assets
+    u1 = user_data(1)
+    assert [asset['name'] for asset in u1['assets']] == ['ring', 'ding', 'dong']
+    assert history == ['user:1', 'asset:1:1', 'asset:1:2', 'asset:1:3']
+
+    # generate cache for user 2 and its assets
+    asset_names[3] = 'doh!'
+    u2 = user_data(2)
+    assert [asset['name'] for asset in u2['assets']] == ['ring', 'ding', 'doh!']
+    assert history == ['user:1', 'asset:1:1', 'asset:1:2', 'asset:1:3', 'user:2', 'asset:2:1', 'asset:2:2', 'asset:2:3']
+
+    # reuse cache for user 1 and its asset - the names isn't changed
+    u1_x = user_data(1)
+    assert [asset['name'] for asset in u1_x['assets']] == ['ring', 'ding', 'dong']
+    assert u1 == u1_x
+    assert history == ['user:1', 'asset:1:1', 'asset:1:2', 'asset:1:3', 'user:2', 'asset:2:1', 'asset:2:2', 'asset:2:3']
+
+    # but because we changed asset name of 3, it must be notified
+    fx_ding.expire(user_id=1, asset_id=3)
+
+    # then u1 will be also expired, but not about asset1 and asset2
+    u1 = user_data(1)
+    assert [asset['name'] for asset in u1['assets']] == ['ring', 'ding', 'doh!']
+    assert history[-5:] == ['asset:2:1', 'asset:2:2', 'asset:2:3', 'user:1', 'asset:1:3']
+
+    # what if only user changed - it will not affect any assets. only user is
+    # updated
+    fx_ring.expire(user_id=1)
+    u1 = user_data(1)
+    assert [asset['name'] for asset in u1['assets']] == ['ring', 'ding', 'doh!']
+    assert history[-5:] == ['asset:2:2', 'asset:2:3', 'user:1', 'asset:1:3', 'user:1']
