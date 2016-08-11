@@ -1,6 +1,6 @@
 
 from ring.storage import DictStorage
-from ring.ring import Ring
+from ring.ring import Ring, Link
 
 
 import pytest
@@ -20,19 +20,19 @@ def fx_ding(fx_ring):
     return ring
 
 
-def test_ring_get_set(fx_ring):
+def test_ring_get_update(fx_ring):
     assert fx_ring.get(user_id=1) is None
-    fx_ring.set(lambda user_id: 100, user_id=1)
+    fx_ring.update(lambda user_id: 100, user_id=1)
     assert fx_ring.get(user_id=1) == 100
-    fx_ring.delete(user_id=1)
+    fx_ring.expire(user_id=1)
     assert fx_ring.get(user_id=1) is None
 
 
-def test_ring_get_or_set(fx_ring):
+def test_ring_get_or_update(fx_ring):
     assert fx_ring.get(user_id=1) is None
-    assert fx_ring.get_or_set(lambda user_id: 100, user_id=1) == 100
+    assert fx_ring.get_or_update(lambda user_id: 100, user_id=1) == 100
     assert fx_ring.get(user_id=1) == 100
-    fx_ring.delete(user_id=1)
+    fx_ring.expire(user_id=1)
     assert fx_ring.get(user_id=1) is None
 
 
@@ -69,14 +69,65 @@ def test_decorator(fx_ring):
 
 def test_link(fx_ring, fx_ding):
 
-    fx_ring.set(lambda user_id: user_id, user_id=1)
-    fx_ding.set(lambda user_id, asset_id: user_id * 1000 + asset_id, user_id=1, asset_id=1)
+    fx_ring.update(lambda user_id: user_id, user_id=1)
+    fx_ding.update(lambda user_id, asset_id: user_id * 1000 + asset_id, user_id=1, asset_id=1)
 
     assert fx_ring.get(user_id=1) == 1
     assert fx_ding.get(user_id=1, asset_id=1) == 1001
 
-    fx_ding.link(fx_ring, ['user_id'])
+    fx_ding.link(fx_ring)
+    assert Link(fx_ring) in fx_ding.direct_links[fx_ring.key.partial_keys]
 
-    fx_ding.set(1003, user_id=1, asset_id=1)
+    fx_ding.update(1003, user_id=1, asset_id=1)
     assert fx_ring.get(user_id=1) is None
+    assert fx_ding.get(user_id=1, asset_id=1) == 1003
+
+    fx_ring.update(2, user_id=1)
+
+    assert fx_ring.get(user_id=1) == 2
+    assert fx_ding.get(user_id=1, asset_id=1) == 1003
+
+    fx_ding.expire(user_id=1, asset_id=1)
+
+    assert fx_ring.get(user_id=1) is None
+    assert fx_ding.get(user_id=1, asset_id=1) is None
+
+
+def test_indirect_marker(fx_ring, fx_ding):
+    fx_ring.indirect_link(fx_ding)
+    assert Link(fx_ding) in fx_ring.indirect_links[frozenset(['user_id'])]
+    assert Link(fx_ring) in fx_ding.incoming_links[frozenset(['user_id'])]
+
+
+def test_indirect_link(fx_ring, fx_ding):
+
+    fx_ring.update(lambda user_id: user_id, user_id=1)
+    fx_ding.update(lambda user_id, asset_id: user_id * 1000 + asset_id, user_id=1, asset_id=1)
+    fx_ding.update(lambda user_id, asset_id: user_id * 1000 + asset_id, user_id=1, asset_id=2)
+    fx_ding.update(lambda user_id, asset_id: user_id * 1000 + asset_id, user_id=2, asset_id=1)
+
+    assert fx_ring.get(user_id=1) == 1
     assert fx_ding.get(user_id=1, asset_id=1) == 1001
+    assert fx_ding.get(user_id=1, asset_id=2) == 1002
+    assert fx_ding.get(user_id=2, asset_id=1) == 2001
+
+    fx_ring.indirect_link(fx_ding)
+
+    fx_ring.update(2, user_id=1)
+    assert fx_ring.get(user_id=1) == 2
+    assert fx_ding.get(user_id=1, asset_id=1) is None
+    assert fx_ding.get(user_id=1, asset_id=2) is None
+    assert fx_ding.get(user_id=2, asset_id=1) == 2001
+
+    fx_ring.update(lambda user_id: user_id, user_id=1)
+    fx_ding.update(lambda user_id, asset_id: user_id * 1000 + asset_id, user_id=1, asset_id=1)
+    fx_ding.update(lambda user_id, asset_id: user_id * 1000 + asset_id, user_id=1, asset_id=2)
+
+    fx_ring.expire(user_id=1)
+    assert fx_ring.get(user_id=1) is None
+    assert fx_ding.get(user_id=1, asset_id=1) is None
+    assert fx_ding.get(user_id=1, asset_id=2) is None
+    assert fx_ding.get(user_id=2, asset_id=1) == 2001
+
+    fx_ring.expire(user_id=2)
+    assert fx_ding.get(user_id=2, asset_id=1) is None

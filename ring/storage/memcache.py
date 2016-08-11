@@ -12,5 +12,5 @@ class MemcacheStorage(BaseStorage):
     def get(self, key):
         return self.storage.get(key)
 
-    def set(self, key, value, expire=None):
-        return self.storage.set(value, time=expire)
+    def update(self, key, value, expire=None):
+        return self.storage.update(value, time=expire)
