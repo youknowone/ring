@@ -6,6 +6,12 @@ from collections import defaultdict
 from .key import Key, FormatKey, CallableKey
 
 
+try:
+    unicode()
+except NameError:
+    unicode = str
+
+
 def _build_func_key(f, args, kwargs):
     f_code = f.__code__
     for i, arg in enumerate(args):
@@ -84,7 +90,8 @@ class Ring(object):
         for partial_keys in self.incoming_links.keys():
             indirect_args = {key: key_args[key] for key in partial_keys}
             indirect_marker = self.key.build_indirect_marker(indirect_args)
-            if self.storage.get(indirect_marker).time > time:
+            marked_time = self.storage.get(indirect_marker).time
+            if marked_time is not None and marked_time > time:
                 return True
         return False
 
