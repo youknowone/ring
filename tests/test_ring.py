@@ -1,6 +1,6 @@
 
 from ring.storage import DictStorage
-from ring.ring import Ring, Link
+from ring.ring import CallableRing, Link
 
 
 import pytest
@@ -9,14 +9,14 @@ import pytest
 @pytest.fixture
 def fx_ring():
     storage = DictStorage({})
-    ring = Ring(storage, 'user:{user_id}')
+    ring = CallableRing(storage, 'user:{user_id}')
     return ring
 
 
 @pytest.fixture
 def fx_ding(fx_ring):
     storage = DictStorage({})
-    ring = Ring(storage, 'asset:{user_id}:{asset_id}')
+    ring = CallableRing(storage, 'asset:{user_id}:{asset_id}')
     return ring
 
 

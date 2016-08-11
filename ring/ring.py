@@ -12,22 +12,6 @@ except NameError:
     unicode = str
 
 
-def _build_func_key(f, args, kwargs):
-    f_code = f.__code__
-    for i, arg in enumerate(args):
-        if i >= f_code.co_argcount:
-            raise TypeError(
-                '{} takes {} positional arguments but 4 were given'.format(
-                    f_code.co_name, f_code.co_argcount, len(args)))
-        varname = f_code.co_varnames[i]
-        if varname in kwargs:
-            raise TypeError(
-                "{}() got multiple values for argument '{}'".format(
-                    f_code.co_name, varname))
-        kwargs[varname] = arg
-    return kwargs
-
-
 class Link(object):
 
     def __init__(self, ring):
@@ -74,14 +58,6 @@ class Ring(object):
         return u'<{}.{} key={} storage={}>'.format(
             self.__class__.__module__, self.__class__.__name__,
             self.key, self.storage)
-
-    def __call__(self, key=_build_func_key, expire=None):
-        def _wrapper(f):
-            def get_or_update(*args, **kwargs):
-                built_args = key(f, args, kwargs)
-                return self.get_or_update(f, **built_args)
-            return get_or_update
-        return _wrapper
 
     def get(self, **kwargs):
         return self.get_by_key(kwargs)
@@ -162,3 +138,30 @@ class Ring(object):
             raise TypeError(
                 'Target has smaller keys. Direct links are recommended. '
                 'Ignore this error to keep to use indirect links.')
+
+
+def _build_func_key(f, args, kwargs):
+    f_code = f.__code__
+    for i, arg in enumerate(args):
+        if i >= f_code.co_argcount:
+            raise TypeError(
+                '{} takes {} positional arguments but 4 were given'.format(
+                    f_code.co_name, f_code.co_argcount, len(args)))
+        varname = f_code.co_varnames[i]
+        if varname in kwargs:
+            raise TypeError(
+                "{}() got multiple values for argument '{}'".format(
+                    f_code.co_name, varname))
+        kwargs[varname] = arg
+    return kwargs
+
+
+class CallableRing(Ring):
+
+    def __call__(self, key=_build_func_key, expire=None):
+        def _wrapper(f):
+            def get_or_update(*args, **kwargs):
+                built_args = key(f, args, kwargs)
+                return self.get_or_update(f, **built_args)
+            return get_or_update
+        return _wrapper
