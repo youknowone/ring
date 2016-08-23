@@ -3,13 +3,9 @@ from __future__ import absolute_import
 
 import time
 from collections import defaultdict
-from .key import Key, FormatKey, CallableKey
-
-
-try:
-    unicode()
-except NameError:
-    unicode = str
+from prettyexc import PrettyException
+from .key import adapt_key
+from .tools import hybridmethod
 
 
 class Link(object):
@@ -37,30 +33,14 @@ class LinkDict(defaultdict):
                 yield key, link
 
 
-class Ring(object):
+class Dependency(object):
 
-    def __init__(self, storage, key, now=time.time):
-        self.storage = storage
-        if not isinstance(key, Key):
-            if isinstance(key, (str, unicode)):
-                key = FormatKey(key)
-            elif callable(key):
-                key = CallableKey(key)
-            else:
-                raise TypeError
-        self.key = key
-        self.func_now = now
+    def __init__(self, *args, **kwargs):
+        super(Dependency, self).__init__()
+
         self.direct_links = LinkDict(set)
         self.indirect_links = LinkDict(set)
         self.incoming_links = LinkDict(set)
-
-    def __repr__(self):
-        return u'<{}.{} key={} storage={}>'.format(
-            self.__class__.__module__, self.__class__.__name__,
-            self.key, self.storage)
-
-    def get(self, **kwargs):
-        return self.get_by_key(kwargs)
 
     def has_indirect_marker(self, key_args, time):
         for partial_keys in self.incoming_links.keys():
@@ -71,52 +51,12 @@ class Ring(object):
                 return True
         return False
 
-    def get_by_key(self, key_args):
-        built_key = self.key.build(key_args)
-        result = self.storage.get(built_key)
-        if result.time is None:
-            return result.value
-        if self.has_indirect_marker(key_args, result.time):
-            # expire if it is marked indirectly
-            self.storage.expire(built_key)
-            return None
-        return result.value
-
-    def _mark_by_key(self, key_args):
-        indirect_marker = self.key.build_indirect_marker(key_args)
-        self.storage.update(indirect_marker, None, now=self.func_now())
-
-    def expire(self, **kwargs):
-        return self.expire_by_key(kwargs)
-
     def _chain_expire(self, key_args):
         for key, link in self.direct_links.link_items():
             link.ring.expire_by_key(key_args)
         for key, link in self.indirect_links.link_items():
             indirect_key_args = {k: v for k, v in key_args.items() if k in key}
             link.ring._mark_by_key(indirect_key_args)
-
-    def expire_by_key(self, key_args):
-        built_key = self.key.build(key_args)
-        self.storage.expire(built_key)
-        self._chain_expire(key_args)
-
-    def update(self, _value, **kwargs):
-        if callable(_value):
-            _value = _value(**kwargs)
-        return self.update_by_key(_value, kwargs)
-
-    def update_by_key(self, value, key_args):
-        built_key = self.key.build(key_args)
-        self.storage.update(built_key, value, now=self.func_now())
-        self._chain_expire(key_args)
-
-    def get_or_update(self, _value, **kwargs):
-        value = self.get_by_key(kwargs)
-        if value is None:
-            value = _value(**kwargs)
-            self.update_by_key(value, kwargs)
-        return value
 
     def link(self, target, keys=None):
         if keys is None:
@@ -140,6 +80,50 @@ class Ring(object):
                 'Ignore this error to keep to use indirect links.')
 
 
+class Ring(Dependency):
+
+    def __repr__(self):
+        return u'<{}.{} key={} storage={}>'.format(
+            self.__class__.__module__, self.__class__.__name__,
+            self.key, self.storage)
+
+    def get_by_key(self, key_args):
+        built_key = self.key.build(key_args)
+        result = self.storage.get(built_key)
+        if result.time is None:
+            return result.value
+        if self.has_indirect_marker(key_args, result.time):
+            # expire if it is marked indirectly
+            self.storage.expire(built_key)
+            return None
+        return result.value
+
+    def _mark_by_key(self, key_args):
+        indirect_marker = self.key.build_indirect_marker(key_args)
+        self.storage.update(indirect_marker, None, now=self.func_now())
+
+    def expire_by_key(self, key_args):
+        built_key = self.key.build(key_args)
+        self.storage.expire(built_key)
+        self._chain_expire(key_args)
+
+    def update_by_key(self, value, key_args):
+        built_key = self.key.build(key_args)
+        self.storage.update(built_key, value, now=self.func_now())
+        self._chain_expire(key_args)
+
+    def get_or_update(self, _value, _value_keys=None, **kwargs):
+        value = self.get_by_key(kwargs)
+        if value is None:
+            if _value_keys is None:
+                value_kwargs = kwargs
+            else:
+                value_kwargs = {k: kwargs[k] for k in _value_keys}
+            value = _value(**value_kwargs)
+            self.update_by_key(value, kwargs)
+        return value
+
+
 def _build_func_key(f, args, kwargs):
     f_code = f.__code__
     for i, arg in enumerate(args):
@@ -158,6 +142,13 @@ def _build_func_key(f, args, kwargs):
 
 class CallableRing(Ring):
 
+    def __init__(self, storage, key, now=time.time):
+        super(Ring, self).__init__()
+
+        self.storage = storage
+        self.key = adapt_key(key)
+        self.func_now = now
+
     def __call__(self, key=_build_func_key, expire=None):
         def _wrapper(f):
             def get_or_update(*args, **kwargs):
@@ -165,3 +156,92 @@ class CallableRing(Ring):
                 return self.get_or_update(f, **built_args)
             return get_or_update
         return _wrapper
+
+    def get(self, **kwargs):
+        return self.get_by_key(kwargs)
+
+    def expire(self, **kwargs):
+        return self.expire_by_key(kwargs)
+
+    def update(self, _value, **kwargs):
+        if callable(_value):
+            _value = _value(**kwargs)
+        return self.update_by_key(_value, kwargs)
+
+
+def _raise(e):
+    raise e
+
+
+class ModelTypeError(PrettyException, TypeError):
+    pass
+
+
+class Model(Dependency):
+
+    def __init__(self, default_storage=None, bound_object=None, **kwargs):
+        super(Model, self).__init__()
+        self.default_storage = default_storage or getattr(bound_object, '__ring_storage__')
+        if bound_object is not None:
+            self.bind(bound_object, **kwargs)
+        elif kwargs:
+            raise TypeError
+
+    def bind(self, model, key=None, key_mapper=None):
+        self.key = adapt_key(key or getattr(model, '__ring_key_format__', None) or _raise(ModelTypeError('argument key or class attribute __ring_key_format__ is required')))
+        assert self.key is not None
+        self.bound_object = model
+        model._ring_model = self
+
+        mapper = key_mapper or getattr(model, '__ring_key_mapper__', None) or {}
+        for partial_key in self.key.partial_keys:
+            if partial_key in mapper.values():
+                continue
+            mapper[partial_key] = partial_key
+
+        self.key_mapper = mapper
+
+        return model
+
+    def ring(self, tag):
+        return ModelRing(self, {'_tag': tag})
+
+    def model_key_args(self):
+        self._key
+
+
+class ModelRing(Ring):
+
+    def __init__(self, model, keys, storage=None, now=time.time):
+        super(ModelRing, self).__init__()
+        self.model = model
+        self.storage = storage or model.default_storage
+        self.func_now = now
+        self.given_keys = keys
+
+    def __call__(self, f):
+        def get_or_update(_self, *args, **kwargs):
+            built_args = {v: getattr(_self, k) for k, v in self.model.key_mapper.items() if v != '_tag'}
+            tags = _build_func_key(f, args, kwargs)
+            tags['_name'] = f.__code__.co_name
+            built_args['_tag'] = tags
+            value_keys = [k for k in built_args if k not in self.model.key_mapper.values()]
+            new_f = lambda *args, **kwargs: f(_self, *args, **kwargs)
+            return self.get_or_update(new_f, value_keys, **built_args)
+        return get_or_update
+
+    @property
+    def key(self):
+        return self.model.key
+
+
+class ModelMixin(object):
+
+    @hybridmethod
+    def ring(self, tag):
+        if type(self) == type:
+            """classmethod"""
+            return self._ring_model.ring(tag)
+        else:
+            """method"""
+            raise NotImplementedError

@@ -5,6 +5,12 @@ import re
 from .tools import lazy_property
 
 
+try:
+    unicode()
+except NameError:
+    unicode = str
+
+
 class Key(object):
 
     def __init__(self, key, indirect_marker='*'):
@@ -50,3 +56,13 @@ class CallableKey(Key):
         code = self.key.__code__
         keys = code.co_varnames
         return frozenset(keys)
+
+
+def adapt_key(key):
+    if isinstance(key, Key):
+        return key
+    if isinstance(key, (str, unicode)):
+        return FormatKey(key)
+    if callable(key):
+        return CallableKey(key)
+    raise TypeError
