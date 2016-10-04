@@ -3,11 +3,6 @@ from __future__ import with_statement
 from setuptools import setup
 
 
-def get_version():
-    with open('ring/version.txt') as f:
-        return f.read().strip()
-
-
 def get_readme():
     try:
         with open('README.rst') as f:
@@ -18,8 +13,8 @@ def get_readme():
 
 setup(
     name='ring',
-    version=get_version(),
-    description='Cache chain manager for abstract models.',
+    version='0.1.0',
+    description='Generic cache decorator with built-in memcache & redis support.',
     long_description=get_readme(),
     author='Jeong YunWon',
     author_email='ring@youknowone.org',
@@ -27,14 +22,13 @@ setup(
     packages=(
         'ring',
     ),
-    package_data={
-        'ring': ['version.txt']
-    },
     install_requires=[
         'prettyexc>=0.6.0',
     ],
     tests_require=[
         'pytest', 'tox', 'mock', 'patch',
+        'pymemcache',
+        'redis',
     ],
     classifiers=[
         'Intended Audience :: Developers',

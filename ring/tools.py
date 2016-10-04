@@ -1,33 +1,34 @@
 
-from functools import wraps
+_missing = object()
 
 
-class lazy_property(object):
-    '''http://stackoverflow.com/questions/3012421/python-lazy-property-decorator
-    '''
+class cached_property(property):
+    """
 
-    def __init__(self, function):
-        self.function = function
+    Import from:
+        https://github.com/pallets/werkzeug/blob/master/werkzeug/utils.py
+    """
 
-    def __get__(self, obj, cls):
-        value = self.function(obj)
-        setattr(obj, self.function.__name__, value)
-        return value
+    # implementation detail: A subclass of python's builtin property
+    # decorator, we override __get__ to check for a cached value. If one
+    # choses to invoke __get__ by hand the property will still work as
+    # expected because the lookup logic is replicated in __get__ for
+    # manual invocation.
 
-
-class hybridmethod(object):
-    def __init__(self, func):
+    def __init__(self, func, name=None, doc=None):
+        self.__name__ = name or func.__name__
+        self.__module__ = func.__module__
+        self.__doc__ = doc or func.__doc__
         self.func = func
 
-    def __get__(self, obj, cls):
-        context = obj if obj is not None else cls
+    def __set__(self, obj, value):
+        obj.__dict__[self.__name__] = value
 
-        @wraps(self.func)
-        def hybrid(*args, **kw):
-            return self.func(context, *args, **kw)
-
-        # optional, mimic methods some more
-        hybrid.__func__ = hybrid.im_func = self.func
-        hybrid.__self__ = hybrid.im_self = context
-
-        return hybrid
+    def __get__(self, obj, type=None):
+        if obj is None:
+            return self
+        value = obj.__dict__.get(self.__name__, _missing)
+        if value is _missing:
+            value = self.func(obj)
+            obj.__dict__[self.__name__] = value
+        return value
