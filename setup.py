@@ -1,6 +1,19 @@
 from __future__ import with_statement
 
 from setuptools import setup
+import sys
+
+tests_require = [
+    'pytest', 'tox', 'mock', 'patch',
+    'pymemcache',
+    'redis',
+]
+
+if sys.version_info >= (3, 3):
+    tests_require.extend([
+        'aiomcache',
+        'aioredis',
+    ])
 
 
 def get_readme():
@@ -24,12 +37,12 @@ setup(
     ),
     install_requires=[
         'prettyexc>=0.6.0',
+        'six>=1.10.0',
     ],
-    tests_require=[
-        'pytest', 'tox', 'mock', 'patch',
-        'pymemcache',
-        'redis',
-    ],
+    tests_require=tests_require,
+    extras_require={
+        'tests': tests_require,
+    },
     classifiers=[
         'Intended Audience :: Developers',
         'Operating System :: OS Independent',
@@ -41,5 +54,6 @@ setup(
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
     ],
 )
