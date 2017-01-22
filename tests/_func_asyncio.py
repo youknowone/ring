@@ -1,14 +1,36 @@
 
 import ring
-
-try:
-    import asyncio
-except:
-    class asyncio(object):
-        def coroutine(x):
-            return x
+import asyncio
 
 import pytest
+
+
+@pytest.mark.asyncio
+@asyncio.coroutine
+def test_func_method():
+    import ring.func_asyncio
+    cache = {}
+
+    class A(object):
+        @ring.func_asyncio.async_dict(cache)
+        @asyncio.coroutine
+        def method(self, a, b):
+            return base + a * 100 + b
+
+        @classmethod
+        @ring.func_asyncio.async_dict(cache)
+        @asyncio.coroutine
+        def cmethod(cls, a, b):
+            return base + a * 200 + b
+
+    obj = A()
+
+    base = 10000
+    obj.method.delete(1, 2)
+    assert ((yield from obj.method(1, 2))) == 10102
+
+    obj.cmethod.delete(1, 2)
+    assert ((yield from obj.cmethod(1, 2))) == 10202
 
 
 @pytest.mark.asyncio

@@ -2,7 +2,7 @@
 from __future__ import absolute_import
 
 import re
-from ring.tools import cached_property
+from ring.util import cached_property
 
 
 try:
@@ -69,14 +69,19 @@ class CallableWrapper(object):
             code = c.__code__
         return code
 
+    @cached_property
+    def first_varname(self):
+        if not self.code.co_varnames:
+            return None
+        return self.code.co_varnames[0]
+
 
 class CallableKey(Key):
 
-    def __init__(self, provider, indirect_marker='*', format_prefix=None, args_prefix_size=0, ignorable_keys=[], verbose=False):
+    def __init__(self, provider, indirect_marker='*', format_prefix=None, ignorable_keys=[], verbose=False):
         if not isinstance(provider, CallableWrapper):
             provider = CallableWrapper(provider)
         super(CallableKey, self).__init__(provider, indirect_marker)
-        self.args_prefix_size = args_prefix_size
         self.ignorable_keys = ignorable_keys
         if format_prefix is None:
             format_prefix = self.default_format_prefix
@@ -87,7 +92,7 @@ class CallableKey(Key):
     @cached_property
     def ordered_provider_keys(self):
         varnames = self.provider.code.co_varnames
-        keys = varnames[self.args_prefix_size:]
+        keys = list(varnames)
         for key in self.ignorable_keys:
             if key not in self.ignorable_keys:
                 raise KeyError(
@@ -114,8 +119,6 @@ class CallableKey(Key):
         f_code = self.provider.code
         kwargs = kwargs.copy()
         for i, arg in enumerate(args):
-            if i < self.args_prefix_size:
-                continue
             if i >= f_code.co_argcount:
                 raise TypeError(
                     '{} takes {} positional arguments but {} were given'.format(

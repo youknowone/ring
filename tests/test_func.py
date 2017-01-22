@@ -53,6 +53,9 @@ def test_func_method():
     obj.method.delete(1, 2)
     assert obj.method(1, 2) == 10102
 
+    obj.cmethod.delete(1, 2)
+    assert obj.cmethod(1, 2) == 10202
+
 
 def test_func_dict_delete():
     cache = {}

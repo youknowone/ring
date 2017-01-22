@@ -1,5 +1,4 @@
 
-import functools
 from ring.key import CallableWrapper, CallableKey
 
 
@@ -30,15 +29,40 @@ def unpack_coder(coder):
 
 def is_method(f):
     fw = CallableWrapper(f)
-    return fw.code.co_varnames and fw.code.co_varnames[0] in ('self', 'cls')
+    return fw.first_varname == 'self'
 
 
-def create_ckey(f, key_prefix, args_prefix_size, ignorable_keys, encoding=None):
+def is_classmethod(f):
     fw = CallableWrapper(f)
+    return fw.first_varname == 'cls'
+
+
+def suggest_ignorable_keys(f, ignorable_keys):
+    if ignorable_keys is None:
+        if is_classmethod(f):
+            _ignorable_keys = ['cls']
+        else:
+            _ignorable_keys = []
+    else:
+        _ignorable_keys = ignorable_keys
+    return _ignorable_keys
+
+
+def suggest_key_prefix(f, key_prefix):
+    if key_prefix is None:
+        if is_method(f):
+            key_prefix = '{0.__module__}.{{self.__class__.__name__}}.{0.__name__}'.format(f)
+        elif is_classmethod(f):
+            # No guess supported for classmethod yet.
+            key_prefix = '{0.__module__}.{0.__name__}'.format(f)
+        else:
+            key_prefix = '{0.__module__}.{0.__name__}'.format(f)
+    return key_prefix
+
+
+def create_ckey(f, key_prefix, ignorable_keys, encoding=None):
     ckey = CallableKey(
-        fw, format_prefix=key_prefix,
-        args_prefix_size=args_prefix_size,
-        ignorable_keys=ignorable_keys or [])
+        f, format_prefix=key_prefix, ignorable_keys=ignorable_keys)
 
     def build_key(args, kwargs):
         full_kwargs = ckey.merge_kwargs(args, kwargs)
@@ -54,11 +78,14 @@ def create_ckey(f, key_prefix, args_prefix_size, ignorable_keys, encoding=None):
 
 class WrapperBase(object):
 
-    def __init__(self, preargs):
+    def __init__(self, preargs, anon_padding=False):
         assert isinstance(preargs, tuple)
         self.preargs = preargs
+        self.anon_padding = anon_padding
 
-    def reargs(self, args):
+    def reargs(self, args, padding):
         if self.preargs:
             args = self.preargs + args
+        elif padding and self.anon_padding:
+            args = (None,) + args
         return args
