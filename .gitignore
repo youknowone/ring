@@ -1,6 +1,7 @@
 
 dist
-.env
+.env*
+.python-version
 *.pyc
 *.egg-info
 MANIFEST

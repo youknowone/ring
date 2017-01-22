@@ -65,7 +65,7 @@ def test_pymemcache():
     base = 10000
     assert None is cached_function.get(1, b=2)
     assert 10102 == int(cached_function(1, b=2))
-    #assert 10102 == int(client.get('ring-test:1:2'))
+    assert 10102 == int(client.get('ring-test:1:2'))
 
     base = 20000
     assert 10102 == int(cached_function(1, b=2))
@@ -90,7 +90,7 @@ def test_redis():
     base = 10000
     assert None is cached_function.get(1, b=2)
     assert 10102 == int(cached_function(1, b=2))
-    #assert 10102 == int(client.get('ring-test:1:2'))
+    assert 10102 == int(client.get('ring-test:1:2'))
 
     base = 20000
     assert 10102 == int(cached_function(1, b=2))

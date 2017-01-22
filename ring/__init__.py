@@ -1,2 +1,2 @@
 
-import ring.func
+import ring.func  # noqa

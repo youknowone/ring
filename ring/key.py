@@ -64,8 +64,17 @@ class CallableKey(Key):
         self.format = format_prefix + self.default_format_body(self.ordered_provider_keys)
 
     @cached_property
+    def provider_code(self):
+        p = self.provider
+        if hasattr(p, '_is_coroutine'):
+            code = p.__wrapped__.__code__
+        else:
+            code = p.__code__
+        return code
+
+    @cached_property
     def ordered_provider_keys(self):
-        varnames = self.provider.__code__.co_varnames
+        varnames = self.provider_code.co_varnames
         keys = varnames[self.args_prefix_size:]
         for key in self.ignorable_keys:
             if key not in self.ignorable_keys:
@@ -89,7 +98,7 @@ class CallableKey(Key):
         return ''.join(parts)
 
     def merge_kwargs(self, args, kwargs):
-        f_code = self.provider.__code__
+        f_code = self.provider_code
         kwargs = kwargs.copy()
         for i, arg in enumerate(args[self.args_prefix_size:]):
             if i >= f_code.co_argcount:

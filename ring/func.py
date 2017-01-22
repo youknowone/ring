@@ -1,49 +1,31 @@
 """Collection of cache decorators"""
 import functools
 import time
-from ring.key import CallableKey
+from ring._func_util import _unpack_coder, _create_ckey
 
+try:
+    import asyncio
+except ImportError:
+    asyncio = False
 
-def _bypass(x):
-    return x
+__all__ = ('memcache', 'redis_py', 'redis', 'aiomcache', 'aioredis')
 
 
 def _factory(
         context, key_prefix,
         get_value, set_value, del_value, touch_value, miss_value, coder,
-        args_prefix_size=None, ignorable_keys=None):
+        args_prefix_size=None, ignorable_keys=None, key_encoding=None):
 
-    if coder:
-        if isinstance(coder, str):
-            import ring.coder
-            loaded_coder = getattr(ring.coder, coder, None)
-            if loaded_coder is None:
-                raise TypeError(
-                    "Argument 'coder' is an instance of 'str' but built-in coder "
-                    "'{}' does not exist".format(coder))
-            coder = loaded_coder
-
-        if isinstance(coder, tuple):
-            encode, decode = coder
-        else:
-            encode, decode = coder.encode, coder.decode
-    else:
-        encode, decode = _bypass, _bypass
+    encode, decode = _unpack_coder(coder)
 
     def _decorator(f):
-        ckey = CallableKey(f, format_prefix=key_prefix, args_prefix_size=args_prefix_size or 0, ignorable_keys=ignorable_keys or [])
-        if args_prefix_size is None:
-            if f.__code__.co_varnames and f.__code__.co_varnames[0] in ('self', 'cls'):
-                ckey.args_prefix_size = 1
 
-        def build_key(args, kwargs):
-            full_kwargs = ckey.merge_kwargs(args, kwargs)
-            key = ckey.build(full_kwargs)
-            return key
+        ckey = _create_ckey(
+            f, key_prefix, args_prefix_size, ignorable_keys, key_encoding)
 
         @functools.wraps(f)
         def _get_or_update(*args, **kwargs):
-            key = build_key(args, kwargs)
+            key = ckey.build_key(args, kwargs)
             value = get_value(context, key)
             if value == miss_value:
                 result = f(*args, **kwargs)
@@ -54,7 +36,7 @@ def _factory(
             return value
 
         def _get(*args, **kwargs):
-            key = build_key(args, kwargs)
+            key = ckey.build_key(args, kwargs)
             value = get_value(context, key)
             if value == miss_value:
                 return miss_value
@@ -62,18 +44,18 @@ def _factory(
                 return decode(value)
 
         def _update(*args, **kwargs):
-            key = build_key(args, kwargs)
+            key = ckey.build_key(args, kwargs)
             result = f(*args, **kwargs)
             value = encode(result)
             set_value(context, key, value)
             return result
 
         def _delete(*args, **kwargs):
-            key = build_key(args, kwargs)
+            key = ckey.build_key(args, kwargs)
             del_value(context, key)
 
         def _touch(*args, **kwargs):
-            key = build_key(args, kwargs)
+            key = ckey.build_key(args, kwargs)
             touch_value(context, key)
 
         _f = _get_or_update
@@ -84,11 +66,12 @@ def _factory(
         if touch_value:
             _f.touch = _touch
 
-        return _f
+        return functools.wraps(f)(_f)
+
     return _decorator
 
 
-def dict(obj, key_prefix='', expire=None, coder=None, args_prefix_size=None, ignorable_keys=None, now=None):
+def dict(obj, key_prefix='', expire=None, coder=None, args_prefix_size=None, ignorable_keys=None, now=time.time):
     miss_value = None
 
     def get_value(obj, key):
@@ -122,6 +105,10 @@ def dict(obj, key_prefix='', expire=None, coder=None, args_prefix_size=None, ign
             pass
 
     def touch_value(obj, key):
+        if now is None:
+            _now = time.time()
+        else:
+            _now = now
         try:
             expired_time, value = obj[key]
         except KeyError:
@@ -148,7 +135,6 @@ def memcache(client, key_prefix, time=0, coder=None, args_prefix_size=None, igno
         return value
 
     def set_value(client, key, value):
-        print(key, value, time)
         client.set(key, value, time)
 
     def del_value(client, key):
@@ -189,4 +175,8 @@ def redis_py(client, key_prefix, expire, coder=None, args_prefix_size=None, igno
         args_prefix_size=args_prefix_size, ignorable_keys=ignorable_keys)
 
 
-redis = redis_py  # de facto standard
+redis = redis_py  # de facto standard of redis
+
+
+if asyncio:
+    from ring.func_asyncio import aiomcache, aioredis

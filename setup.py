@@ -4,13 +4,19 @@ from setuptools import setup
 import sys
 
 tests_require = [
-    'pytest', 'tox', 'mock', 'patch',
+    'pytest>=3.0.2', 'pytest-cov', 'mock', 'patch',
     'pymemcache',
     'redis',
 ]
 
+if sys.version_info[:2] == (3, 3):
+    tests_require.extend([
+        'asyncio',
+    ])
+
 if sys.version_info >= (3, 3):
     tests_require.extend([
+        'pytest-asyncio',
         'aiomcache',
         'aioredis',
     ])
@@ -37,9 +43,8 @@ setup(
     ),
     install_requires=[
         'prettyexc>=0.6.0',
-        'six>=1.10.0',
     ],
-    tests_require=tests_require,
+    tests_require=tests_require + ['tox', 'tox-pyenv'],
     extras_require={
         'tests': tests_require,
     },
