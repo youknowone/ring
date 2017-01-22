@@ -1,12 +1,13 @@
 
-from ring.key import CallableKey
+import functools
+from ring.key import CallableWrapper, CallableKey
 
 
-def _bypass(x):
+def bypass(x):
     return x
 
 
-def _unpack_coder(coder):
+def unpack_coder(coder):
     if coder:
         if isinstance(coder, str):
             import ring.coder
@@ -22,19 +23,22 @@ def _unpack_coder(coder):
         else:
             encode, decode = coder.encode, coder.decode
     else:
-        encode, decode = _bypass, _bypass
+        encode, decode = bypass, bypass
 
     return encode, decode
 
 
-def _create_ckey(f, key_prefix, args_prefix_size, ignorable_keys, encoding=None):
+def is_method(f):
+    fw = CallableWrapper(f)
+    return fw.code.co_varnames and fw.code.co_varnames[0] in ('self', 'cls')
+
+
+def create_ckey(f, key_prefix, args_prefix_size, ignorable_keys, encoding=None):
+    fw = CallableWrapper(f)
     ckey = CallableKey(
-        f, format_prefix=key_prefix,
-        args_prefix_size=args_prefix_size or 0,
+        fw, format_prefix=key_prefix,
+        args_prefix_size=args_prefix_size,
         ignorable_keys=ignorable_keys or [])
-    if args_prefix_size is None:
-        if f.__code__.co_varnames and f.__code__.co_varnames[0] in ('self', 'cls'):
-            ckey.args_prefix_size = 1
 
     def build_key(args, kwargs):
         full_kwargs = ckey.merge_kwargs(args, kwargs)
@@ -46,3 +50,15 @@ def _create_ckey(f, key_prefix, args_prefix_size, ignorable_keys, encoding=None)
     ckey.build_key = build_key
 
     return ckey
+
+
+class WrapperBase(object):
+
+    def __init__(self, preargs):
+        assert isinstance(preargs, tuple)
+        self.preargs = preargs
+
+    def reargs(self, args):
+        if self.preargs:
+            args = self.preargs + args
+        return args

@@ -1,7 +1,8 @@
 """Collection of cache decorators"""
 import asyncio
 import inspect
-from ring._func_util import _unpack_coder, _create_ckey
+import functools
+from ring import _func_util as futil
 
 inspect_iscoroutinefunction = getattr(inspect, 'iscoroutinefunction', None)
 
@@ -16,7 +17,7 @@ def _factory(
         get_value, set_value, del_value, touch_value, miss_value, coder,
         args_prefix_size=None, ignorable_keys=None, key_encoding=None):
 
-    encode, decode = _unpack_coder(coder)
+    encode, decode = futil.unpack_coder(coder)
 
     def _decorator(f):
         if not _is_coroutine(f):
@@ -24,55 +25,71 @@ def _factory(
                 "The funciton for cache '{}' must be an async function.".format(
                     f.__name__))
 
-        ckey = _create_ckey(
-            f, key_prefix, args_prefix_size, ignorable_keys, key_encoding)
+        if args_prefix_size is None:
+            if futil.is_method(f):
+                _args_prefix_size = 1
+            else:
+                _args_prefix_size = 0
 
-        @asyncio.coroutine
-        def _get_or_update(*args, **kwargs):
-            key = ckey.build_key(args, kwargs)
-            value = yield from get_value(context, key)
-            if value == miss_value:
+        ckey = futil.create_ckey(
+            f, key_prefix, _args_prefix_size, ignorable_keys, key_encoding)
+
+        class _Wrapper(futil.WrapperBase):
+
+            @functools.wraps(f)
+            def __call__(self, *args, **kwargs):
+                return self.get_or_update(*args, **kwargs)
+
+            @asyncio.coroutine
+            def get_or_update(self, *args, **kwargs):
+                args = self.reargs(args)
+                key = ckey.build_key(args, kwargs)
+                value = yield from get_value(context, key)
+                if value == miss_value:
+                    result = yield from f(*args, **kwargs)
+                    value = encode(result)
+                    yield from set_value(context, key, value)
+                else:
+                    result = decode(value)
+                return value
+
+            @asyncio.coroutine
+            def get(self, *args, **kwargs):
+                args = self.reargs(args)
+                key = ckey.build_key(args, kwargs)
+                value = yield from get_value(context, key)
+                if value == miss_value:
+                    return miss_value
+                else:
+                    return decode(value)
+
+            @asyncio.coroutine
+            def update(self, *args, **kwargs):
+                args = self.reargs(args)
+                key = ckey.build_key(args, kwargs)
                 result = yield from f(*args, **kwargs)
                 value = encode(result)
                 yield from set_value(context, key, value)
-            else:
-                result = decode(value)
-            return value
+                return result
 
-        @asyncio.coroutine
-        def _get(*args, **kwargs):
-            key = ckey.build_key(args, kwargs)
-            value = yield from get_value(context, key)
-            if value == miss_value:
-                return miss_value
-            else:
-                return decode(value)
+            def delete(self, *args, **kwargs):
+                args = self.reargs(args)
+                key = ckey.build_key(args, kwargs)
+                return del_value(context, key)
 
-        @asyncio.coroutine
-        def _update(*args, **kwargs):
-            key = ckey.build_key(args, kwargs)
-            result = yield from f(*args, **kwargs)
-            value = encode(result)
-            yield from set_value(context, key, value)
-            return result
+            def touch(self, *args, **kwargs):
+                args = self.reargs(args)
+                key = ckey.build_key(args, kwargs)
+                return touch_value(context, key)
 
-        def _delete(*args, **kwargs):
-            key = ckey.build_key(args, kwargs)
-            return del_value(context, key)
+        if futil.is_method(f):
+            @property
+            def _w(self):
+                return _Wrapper((self,))
+        else:
+            _w = _Wrapper(())
 
-        def _touch(*args, **kwargs):
-            key = ckey.build_key(args, kwargs)
-            return touch_value(context, key)
-
-        _f = _get_or_update
-        _f.get = _get
-        _f.update = _update
-        _f.get_or_update = _get_or_update
-        _f.delete = _delete
-        if touch_value:
-            _f.touch = _touch
-
-        return _f
+        return _w
 
     return _decorator
 

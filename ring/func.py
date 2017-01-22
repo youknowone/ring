@@ -1,7 +1,7 @@
 """Collection of cache decorators"""
-import functools
 import time
-from ring._func_util import _unpack_coder, _create_ckey
+import functools
+from ring import _func_util as futil
 
 try:
     import asyncio
@@ -16,57 +16,73 @@ def _factory(
         get_value, set_value, del_value, touch_value, miss_value, coder,
         args_prefix_size=None, ignorable_keys=None, key_encoding=None):
 
-    encode, decode = _unpack_coder(coder)
+    encode, decode = futil.unpack_coder(coder)
 
     def _decorator(f):
+        if args_prefix_size is None:
+            if futil.is_method(f):
+                _args_prefix_size = 1
+            else:
+                _args_prefix_size = 0
 
-        ckey = _create_ckey(
-            f, key_prefix, args_prefix_size, ignorable_keys, key_encoding)
+        ckey = futil.create_ckey(
+            f, key_prefix, _args_prefix_size, ignorable_keys, key_encoding)
 
-        @functools.wraps(f)
-        def _get_or_update(*args, **kwargs):
-            key = ckey.build_key(args, kwargs)
-            value = get_value(context, key)
-            if value == miss_value:
+        class _Wrapper(futil.WrapperBase):
+
+            @functools.wraps(f)
+            def __call__(self, *args, **kwargs):
+                return self.get_or_update(*args, **kwargs)
+
+            def get_or_update(self, *args, **kwargs):
+                args = self.reargs(args)
+                key = ckey.build_key(args, kwargs)
+                value = get_value(context, key)
+                if value == miss_value:
+                    result = f(*args, **kwargs)
+                    value = encode(result)
+                    set_value(context, key, value)
+                else:
+                    result = decode(value)
+                return value
+
+            def get(self, *args, **kwargs):
+                args = self.reargs(args)
+                key = ckey.build_key(args, kwargs)
+                value = get_value(context, key)
+                if value == miss_value:
+                    return miss_value
+                else:
+                    return decode(value)
+
+            def update(self, *args, **kwargs):
+                args = self.reargs(args)
+                key = ckey.build_key(args, kwargs)
                 result = f(*args, **kwargs)
                 value = encode(result)
                 set_value(context, key, value)
-            else:
-                result = decode(value)
-            return value
+                return result
 
-        def _get(*args, **kwargs):
-            key = ckey.build_key(args, kwargs)
-            value = get_value(context, key)
-            if value == miss_value:
-                return miss_value
-            else:
-                return decode(value)
+            def delete(self, *args, **kwargs):
+                args = self.reargs(args)
+                key = ckey.build_key(args, kwargs)
+                del_value(context, key)
 
-        def _update(*args, **kwargs):
-            key = ckey.build_key(args, kwargs)
-            result = f(*args, **kwargs)
-            value = encode(result)
-            set_value(context, key, value)
-            return result
+            def touch(self, *args, **kwargs):
+                if not touch_value:
+                    f.touch  # to raise AttributeError
+                args = self.reargs(args)
+                key = ckey.build_key(args, kwargs)
+                touch_value(context, key)
 
-        def _delete(*args, **kwargs):
-            key = ckey.build_key(args, kwargs)
-            del_value(context, key)
+        if futil.is_method(f):
+            @property
+            def _w(self):
+                return _Wrapper((self,))
+        else:
+            _w = _Wrapper(())
 
-        def _touch(*args, **kwargs):
-            key = ckey.build_key(args, kwargs)
-            touch_value(context, key)
-
-        _f = _get_or_update
-        _f.get = _get
-        _f.update = _update
-        _f.get_or_update = _get_or_update
-        _f.delete = _delete
-        if touch_value:
-            _f.touch = _touch
-
-        return functools.wraps(f)(_f)
+        return _w
 
     return _decorator
 

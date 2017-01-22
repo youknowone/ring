@@ -4,7 +4,16 @@ from __future__ import absolute_import
 import time
 from collections import defaultdict
 from prettyexc import PrettyException
-from .key import adapt_key
+
+
+def adapt_key(key):
+    if isinstance(key, Key):
+        return key
+    if isinstance(key, (str, unicode)):
+        return FormatKey(key)
+    if callable(key):
+        return CallableKey(key)
+    raise TypeError
 
 
 class hybridmethod(object):

@@ -5,7 +5,7 @@ import ring
 def test_func_dict():
     cache = {}
 
-    @ring.func.dict(cache)
+    @ring.func.dict(cache, key_prefix='')
     def cached_function(a, b):
         return base + a * 100 + b
 
@@ -32,6 +32,26 @@ def test_func_dict():
     base = 30000
     assert 30102 == cached_function.update(1, b=2)
     cached_function.touch(1, b=2)
+
+
+def test_func_method():
+    cache = {}
+
+    class A(object):
+        @ring.func.dict(cache)
+        def method(self, a, b):
+            return base + a * 100 + b
+
+        @classmethod
+        @ring.func.dict(cache)
+        def cmethod(cls, a, b):
+            return base + a * 200 + b
+
+    obj = A()
+
+    base = 10000
+    obj.method.delete(1, 2)
+    assert obj.method(1, 2) == 10102
 
 
 def test_func_dict_delete():

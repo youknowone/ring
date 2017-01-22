@@ -50,10 +50,31 @@ class FormatKey(Key):
         return keys
 
 
+class CallableWrapper(object):
+    def __init__(self, c):
+        assert callable(c)
+        self.callable = c
+
+    @cached_property
+    def identifier(self):
+        return '{self.callable.__module__}.{self.callable.__name__}'.format(
+            self=self)
+
+    @cached_property
+    def code(self):
+        c = self.callable
+        if hasattr(c, '_is_coroutine'):
+            code = c.__wrapped__.__code__
+        else:
+            code = c.__code__
+        return code
+
+
 class CallableKey(Key):
 
-    def __init__(self, provider, indirect_marker='*', format_prefix=None, args_prefix_size=0, ignorable_keys=[]):
-        assert callable(provider)
+    def __init__(self, provider, indirect_marker='*', format_prefix=None, args_prefix_size=0, ignorable_keys=[], verbose=False):
+        if not isinstance(provider, CallableWrapper):
+            provider = CallableWrapper(provider)
         super(CallableKey, self).__init__(provider, indirect_marker)
         self.args_prefix_size = args_prefix_size
         self.ignorable_keys = ignorable_keys
@@ -61,20 +82,11 @@ class CallableKey(Key):
             format_prefix = self.default_format_prefix
         if callable(format_prefix):
             format_prefix = format_prefix(provider)
-        self.format = format_prefix + self.default_format_body(self.ordered_provider_keys)
-
-    @cached_property
-    def provider_code(self):
-        p = self.provider
-        if hasattr(p, '_is_coroutine'):
-            code = p.__wrapped__.__code__
-        else:
-            code = p.__code__
-        return code
+        self.format = format_prefix + self.default_format_body(self.ordered_provider_keys, verbose=verbose)
 
     @cached_property
     def ordered_provider_keys(self):
-        varnames = self.provider_code.co_varnames
+        varnames = self.provider.code.co_varnames
         keys = varnames[self.args_prefix_size:]
         for key in self.ignorable_keys:
             if key not in self.ignorable_keys:
@@ -86,21 +98,24 @@ class CallableKey(Key):
 
     @staticmethod
     def default_format_prefix(provider):
-        return '{}.{}'.format(provider.__module__, provider.__name__)
+        return provider.identifier
 
     @staticmethod
-    def default_format_body(provider_keys):
+    def default_format_body(provider_keys, verbose):
         parts = []
         for key in provider_keys:
-            parts.append(':{')
-            parts.append(key)
-            parts.append('}')
+            if verbose:
+                parts.append(':{key}={{{key}}}'.format(key=key))
+            else:
+                parts.append(':{{{key}}}'.format(key=key))
         return ''.join(parts)
 
     def merge_kwargs(self, args, kwargs):
-        f_code = self.provider_code
+        f_code = self.provider.code
         kwargs = kwargs.copy()
-        for i, arg in enumerate(args[self.args_prefix_size:]):
+        for i, arg in enumerate(args):
+            if i < self.args_prefix_size:
+                continue
             if i >= f_code.co_argcount:
                 raise TypeError(
                     '{} takes {} positional arguments but {} were given'.format(
@@ -117,13 +132,3 @@ class CallableKey(Key):
 
     def build(self, full_kwargs):
         return self.format.format(**full_kwargs)
-
-
-def adapt_key(key):
-    if isinstance(key, Key):
-        return key
-    if isinstance(key, (str, unicode)):
-        return FormatKey(key)
-    if callable(key):
-        return CallableKey(key)
-    raise TypeError
