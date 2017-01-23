@@ -32,7 +32,7 @@ def get_readme():
 
 setup(
     name='ring',
-    version='0.1.0',
+    version='0.2.0',
     description='Generic cache decorator with built-in memcache & redis support.',
     long_description=get_readme(),
     author='Jeong YunWon',
