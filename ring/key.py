@@ -7,8 +7,10 @@ from ring.util import cached_property
 
 try:
     unicode()
+    py3 = False
 except NameError:
     unicode = str
+    py3 = True
 
 
 class Key(object):
@@ -70,6 +72,14 @@ class CallableWrapper(object):
         return code
 
     @cached_property
+    def varnames(self):
+        code = self.code
+        arg_count = code.co_argcount
+        if py3:
+            arg_count += code.co_kwonlyargcount
+        return code.co_varnames[:arg_count]
+
+    @cached_property
     def first_varname(self):
         if not self.code.co_varnames:
             return None
@@ -91,7 +101,7 @@ class CallableKey(Key):
 
     @cached_property
     def ordered_provider_keys(self):
-        varnames = self.provider.code.co_varnames
+        varnames = self.provider.varnames
         keys = list(varnames)
         for key in self.ignorable_keys:
             if key not in self.ignorable_keys:
