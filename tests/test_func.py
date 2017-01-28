@@ -6,32 +6,36 @@ def test_func_dict():
     cache = {}
 
     @ring.func.dict(cache, key_prefix='')
-    def cached_function(a, b):
+    def f(a, b):
         return base + a * 100 + b
 
-    assert None is cached_function.get(1, b=2)
+    assert None is f.get(1, b=2)
 
     base = 10000
-    assert 10102 == cached_function(1, b=2)
-    print(cache)
-    assert cache[':1:2'][1] == 10102
-    assert 10103 == cached_function(1, b=3)
-    assert cache[':1:3'][1] == 10103
+    assert 10102 == f(1, b=2)
+
+    assert f.key(1, 2) == ':1:2'
+    assert f.key(1, b=2) == ':1:2'
+    assert f.key(a=1, b=2) == ':1:2'
+
+    assert cache[f.key(1, 2)][1] == 10102
+    assert 10103 == f(1, b=3)
+    assert cache[f.key(1, 3)][1] == 10103
 
     base = 20000
-    assert 10102 == cached_function(1, b=2)
-    assert 10103 == cached_function(1, b=3)
-    assert 20204 == cached_function(2, b=4)
+    assert 10102 == f(1, b=2)
+    assert 10103 == f(1, b=3)
+    assert 20204 == f(2, b=4)
 
     cache.clear()
 
-    assert 20102 == cached_function(1, b=2)
-    assert 20103 == cached_function(1, b=3)
-    assert 20204 == cached_function(2, b=4)
+    assert 20102 == f(1, b=2)
+    assert 20103 == f(1, b=3)
+    assert 20204 == f(2, b=4)
 
     base = 30000
-    assert 30102 == cached_function.update(1, b=2)
-    cached_function.touch(1, b=2)
+    assert 30102 == f.update(1, b=2)
+    f.touch(1, b=2)
 
 
 def test_func_method():

@@ -27,13 +27,18 @@ def _factory(
 
         class _Wrapper(futil.WrapperBase):
 
+            _key = ckey
+
             @functools.wraps(f)
             def __call__(self, *args, **kwargs):
                 args = self.reargs(args, padding=False)
                 return self._get_or_update(args, kwargs)
 
+            def key(self, *args, **kwargs):
+                return self._key.build_key(args, kwargs)
+
             def _get_or_update(self, args, kwargs):
-                key = ckey.build_key(args, kwargs)
+                key = self.key(*args, **kwargs)
                 value = get_value(context, key)
                 if value == miss_value:
                     result = f(*args, **kwargs)
@@ -49,7 +54,7 @@ def _factory(
 
             def get(self, *args, **kwargs):
                 args = self.reargs(args, padding=True)
-                key = ckey.build_key(args, kwargs)
+                key = self.key(*args, **kwargs)
                 value = get_value(context, key)
                 if value == miss_value:
                     return miss_value
@@ -58,7 +63,7 @@ def _factory(
 
             def update(self, *args, **kwargs):
                 args = self.reargs(args, padding=True)
-                key = ckey.build_key(args, kwargs)
+                key = self.key(*args, **kwargs)
                 result = f(*args, **kwargs)
                 value = encode(result)
                 set_value(context, key, value)
@@ -66,15 +71,14 @@ def _factory(
 
             def delete(self, *args, **kwargs):
                 args = self.reargs(args, padding=True)
-                print('del:', args, kwargs)
-                key = ckey.build_key(args, kwargs)
+                key = self.key(*args, **kwargs)
                 del_value(context, key)
 
             def touch(self, *args, **kwargs):
                 if not touch_value:
                     f.touch  # to raise AttributeError
                 args = self.reargs(args, padding=True)
-                key = ckey.build_key(args, kwargs)
+                key = self.key(*args, **kwargs)
                 touch_value(context, key)
 
         if futil.is_method(f):

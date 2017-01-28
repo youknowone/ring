@@ -33,14 +33,19 @@ def _factory(
 
         class _Wrapper(futil.WrapperBase):
 
+            _key = ckey
+
             @functools.wraps(f)
             def __call__(self, *args, **kwargs):
                 args = self.reargs(args, padding=False)
                 return self._get_or_update(*args, **kwargs)
 
+            def key(self, *args, **kwargs):
+                return self._key.build_key(args, kwargs)
+
             @asyncio.coroutine
             def _get_or_update(self, *args, **kwargs):
-                key = ckey.build_key(args, kwargs)
+                key = self.key(*args, **kwargs)
                 value = yield from get_value(context, key)
                 if value == miss_value:
                     result = yield from f(*args, **kwargs)
@@ -57,7 +62,7 @@ def _factory(
             @asyncio.coroutine
             def get(self, *args, **kwargs):
                 args = self.reargs(args, padding=True)
-                key = ckey.build_key(args, kwargs)
+                key = self.key(*args, **kwargs)
                 value = yield from get_value(context, key)
                 if value == miss_value:
                     return miss_value
@@ -67,7 +72,7 @@ def _factory(
             @asyncio.coroutine
             def update(self, *args, **kwargs):
                 args = self.reargs(args, padding=True)
-                key = ckey.build_key(args, kwargs)
+                key = self.key(*args, **kwargs)
                 result = yield from f(*args, **kwargs)
                 value = encode(result)
                 yield from set_value(context, key, value)
@@ -75,12 +80,12 @@ def _factory(
 
             def delete(self, *args, **kwargs):
                 args = self.reargs(args, padding=True)
-                key = ckey.build_key(args, kwargs)
+                key = self.key(*args, **kwargs)
                 return del_value(context, key)
 
             def touch(self, *args, **kwargs):
                 args = self.reargs(args, padding=True)
-                key = ckey.build_key(args, kwargs)
+                key = self.key(*args, **kwargs)
                 return touch_value(context, key)
 
         if futil.is_method(f):
