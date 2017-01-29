@@ -23,22 +23,26 @@ def _factory(
         _ignorable_keys = futil.suggest_ignorable_keys(f, ignorable_keys)
         _key_prefix = futil.suggest_key_prefix(f, key_prefix)
         ckey = futil.create_ckey(
-            f, _key_prefix, _ignorable_keys, key_encoding)
+            f, _key_prefix, _ignorable_keys, encoding=key_encoding)
 
         class _Wrapper(futil.WrapperBase):
 
-            _key = ckey
+            _ckey = ckey
 
             @functools.wraps(f)
             def __call__(self, *args, **kwargs):
                 args = self.reargs(args, padding=False)
                 return self._get_or_update(args, kwargs)
 
+            def _key(self, args, kwargs):
+                return self._ckey.build_key(args, kwargs)
+
             def key(self, *args, **kwargs):
-                return self._key.build_key(args, kwargs)
+                args = self.reargs(args, padding=True)
+                return self._key(args, kwargs)
 
             def _get_or_update(self, args, kwargs):
-                key = self.key(*args, **kwargs)
+                key = self._key(args, kwargs)
                 value = get_value(context, key)
                 if value == miss_value:
                     result = f(*args, **kwargs)
@@ -53,7 +57,6 @@ def _factory(
                 return self._get_or_update(args, kwargs)
 
             def get(self, *args, **kwargs):
-                args = self.reargs(args, padding=True)
                 key = self.key(*args, **kwargs)
                 value = get_value(context, key)
                 if value == miss_value:
@@ -62,7 +65,6 @@ def _factory(
                     return decode(value)
 
             def update(self, *args, **kwargs):
-                args = self.reargs(args, padding=True)
                 key = self.key(*args, **kwargs)
                 result = f(*args, **kwargs)
                 value = encode(result)
@@ -70,14 +72,12 @@ def _factory(
                 return result
 
             def delete(self, *args, **kwargs):
-                args = self.reargs(args, padding=True)
                 key = self.key(*args, **kwargs)
                 del_value(context, key)
 
             def touch(self, *args, **kwargs):
                 if not touch_value:
                     f.touch  # to raise AttributeError
-                args = self.reargs(args, padding=True)
                 key = self.key(*args, **kwargs)
                 touch_value(context, key)
 

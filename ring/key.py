@@ -144,5 +144,6 @@ class CallableKey(Key):
         return kwargs
 
     def build(self, full_kwargs):
+        # print(self.format, full_kwargs)
         key = self.format.format(**full_kwargs)
         return key

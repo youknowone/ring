@@ -60,13 +60,30 @@ def suggest_key_prefix(f, key_prefix):
     return key_prefix
 
 
-def create_ckey(f, key_prefix, ignorable_keys, encoding=None):
+def coerce_value(v):
+    if isinstance(v, (int, str, bool)):
+        return v
+
+    if hasattr(v, '__ring_key__'):
+        return v.__ring_key__()
+
+    cls = v.__class__
+    if cls.__str__ != object.__str__:
+        return str(v)
+
+    raise TypeError(
+        "The given value '{}' of type '{}' is not key-compatible type. "
+        "Add __ring_key__() or __str__().".format(v, cls))
+
+
+def create_ckey(f, key_prefix, ignorable_keys, coerce=coerce_value, encoding=None):
     ckey = CallableKey(
         f, format_prefix=key_prefix, ignorable_keys=ignorable_keys)
 
     def build_key(args, kwargs):
         full_kwargs = ckey.merge_kwargs(args, kwargs)
-        key = ckey.build(full_kwargs)
+        coerced_kwargs = {k: coerce(v) for k, v in full_kwargs.items()}
+        key = ckey.build(coerced_kwargs)
         if encoding:
             key = key.encode(encoding)
         return key

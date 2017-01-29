@@ -11,6 +11,9 @@ async def test_async_func_method():
         return n
 
     class A(object):
+        def __str__(self):
+            return 'A'
+
         @ring.func_asyncio.async_dict(cache)
         async def method(self, a, b):
             x = await async_func(100)

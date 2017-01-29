@@ -42,6 +42,9 @@ def test_func_method():
     cache = {}
 
     class A(object):
+        def __ring_key__(self):
+            return 'A'
+
         @ring.func.dict(cache)
         def method(self, a, b):
             return base + a * 100 + b

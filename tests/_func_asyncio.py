@@ -12,6 +12,9 @@ def test_func_method():
     cache = {}
 
     class A(object):
+        def __ring_key__(self):
+            return 'A'
+
         @ring.func_asyncio.async_dict(cache)
         @asyncio.coroutine
         def method(self, a, b):

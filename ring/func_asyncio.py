@@ -29,7 +29,7 @@ def _factory(
         _ignorable_keys = futil.suggest_ignorable_keys(f, ignorable_keys)
         _key_prefix = futil.suggest_key_prefix(f, key_prefix)
         ckey = futil.create_ckey(
-            f, _key_prefix, _ignorable_keys, key_encoding)
+            f, _key_prefix, _ignorable_keys, encoding=key_encoding)
 
         class _Wrapper(futil.WrapperBase):
 
