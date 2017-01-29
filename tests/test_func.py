@@ -2,27 +2,74 @@
 import ring
 
 
+def common_test(f, base):
+    # `f` is a callable with argument `a` and `b`
+    # test f is correct
+    assert f.key(a=0, b=0)  # f takes a, b
+    assert base[0] is not None  # f has attr base for test
+    assert f.execute(a=1, b=2) != f.execute(a=1, b=3)  # f is not singular
+    assert f.execute(a=2, b=2) != f.execute(a=1, b=2)  # f is not singular
+    r = f.execute(0, 0)
+    base[0] += 1
+    assert r != f.execute(0, 0)  # base has side effect
+    f.delete(1, 2)  # delete sample cache
+
+    # test: parametrized key build
+    assert f.key(1, 2) == f.key(1, b=2) == f.key(a=1, b=2)
+    assert f.key(1, 2) != f.key(1, 3)
+
+    # set base
+    base[0] = 10000
+
+    # test: 'get' 'execute' 'delete' 'get_or_update'
+    assert None is f.get(1, 2)  # not cached yet
+    r1 = f.execute(1, 2)  # run without cache
+
+    assert r1 == f(1, 2)  # create and return cache
+    assert f.get(1, 2) == f(a=1, b=2)  # cached now
+
+    f.delete(b=2, a=1)  # delete cache
+    assert f.get(1, 2) is None  # of course get fails
+    assert r1 == f.get_or_update(1, 2)  # this is equivalent to call the func
+
+    # reset base
+    base[0] = 20000
+
+    # test: actually cached or not
+    r2 = f.execute(1, 2)
+    assert r1 != r2  # base has side effect
+    assert r1 == f(1, 2)  # still cached
+    assert r2 != f(1, 2)
+
+    # test: 'update'
+    assert r2 == f.update(1, 2)  # immediate update
+
+    f.touch(1, 2)  # just a running test
+
+    f.delete(1, 2)  # finallize
+
+
 def test_func_dict():
     cache = {}
 
+    base = [0]
+
     @ring.func.dict(cache, key_prefix='')
     def f(a, b):
-        return base + a * 100 + b
+        return base[0] + a * 100 + b
 
-    assert None is f.get(1, b=2)
+    common_test(f, base)
 
-    base = 10000
+    assert f.key(1, 2) == ':1:2'  # dict doesn't have prefix by default
+
+    base[0] = 10000
     assert 10102 == f(1, b=2)
-
-    assert f.key(1, 2) == ':1:2'
-    assert f.key(1, b=2) == ':1:2'
-    assert f.key(a=1, b=2) == ':1:2'
 
     assert cache[f.key(1, 2)][1] == 10102
     assert 10103 == f(1, b=3)
     assert cache[f.key(1, 3)][1] == 10103
 
-    base = 20000
+    base[0] = 20000
     assert 10102 == f(1, b=2)
     assert 10103 == f(1, b=3)
     assert 20204 == f(2, b=4)
@@ -33,100 +80,74 @@ def test_func_dict():
     assert 20103 == f(1, b=3)
     assert 20204 == f(2, b=4)
 
-    base = 30000
+    base[0] = 30000
     assert 30102 == f.update(1, b=2)
     f.touch(1, b=2)
 
 
-def test_func_method():
+def test_func_dict_method():
     cache = {}
 
     class A(object):
+
+        base = [0]
+
         def __ring_key__(self):
             return 'A'
 
         @ring.func.dict(cache)
         def method(self, a, b):
-            return base + a * 100 + b
+            return self.base[0] + a * 100 + b
 
         @classmethod
         @ring.func.dict(cache)
         def cmethod(cls, a, b):
-            return base + a * 200 + b
+            # cls can be None
+            return A.base[0] + a * 200 + b
 
     obj = A()
-
-    base = 10000
-    obj.method.delete(1, 2)
-    assert obj.method(1, 2) == 10102
-
-    obj.cmethod.delete(1, 2)
-    assert obj.cmethod(1, 2) == 10202
-
-
-def test_func_dict_delete():
-    cache = {}
-
-    @ring.func.dict(cache)
-    def cached_function(a, b):
-        return base + a * 100 + b
-
-    base = 10000
-    assert 10102 == cached_function(1, b=2)
-
-    base = 20000
-    assert 10102 == cached_function(1, b=2)
-
-    cached_function.delete(1, b=2)
-
-    assert 20102 == cached_function(1, b=2)
+    common_test(obj.method, A.base)
+    common_test(obj.cmethod, A.base)
+    common_test(A.cmethod, A.base)
 
 
 def test_pymemcache():
     import pymemcache.client
     client = pymemcache.client.Client(('127.0.0.1', 11211))
 
+    base = [0]
+
     @ring.func.memcache(client, 'ring-test')
-    def cached_function(a, b):
-        return base + a * 100 + b
+    def f(a, b):
+        r = base[0] + a * 100 + b
+        return str(r).encode('utf-8')
 
-    client.delete('ring-test:1:2')
+    common_test(f, base)
 
-    base = 10000
-    assert None is cached_function.get(1, b=2)
-    assert 10102 == int(cached_function(1, b=2))
-    assert 10102 == int(client.get('ring-test:1:2'))
+    assert f.key(1, 2) == 'ring-test:1:2'
 
-    base = 20000
-    assert 10102 == int(cached_function(1, b=2))
-
-    cached_function.delete(1, b=2)
-
-    assert 20102 == int(cached_function(1, b=2))
-
-    cached_function.touch(1, b=2)
+    base[0] = 10000
+    assert None is f.get(1, b=2)
+    assert 10102 == int(f(1, b=2))
+    assert 10102 == int(client.get(f.key(1, 2)))
 
 
 def test_redis():
     import redis
     client = redis.StrictRedis()
 
+    base = [0]
+
     @ring.func.redis(client, 'ring-test', 5)
-    def cached_function(a, b):
-        return base + a * 100 + b
+    def f(a, b):
+        r = base[0] + a * 100 + b
+        return str(r).encode('utf-8')
 
-    client.delete('ring-test:1:2')
+    common_test(f, base)
 
-    base = 10000
-    assert None is cached_function.get(1, b=2)
-    assert 10102 == int(cached_function(1, b=2))
-    assert 10102 == int(client.get('ring-test:1:2'))
+    assert f.key(1, 2) == 'ring-test:1:2'
 
-    base = 20000
-    assert 10102 == int(cached_function(1, b=2))
-
-    cached_function.delete(1, b=2)
-
-    assert 20102 == int(cached_function(1, b=2))
-
-    cached_function.touch(1, b=2)
+    base[0] = 10000
+    assert None is f.get(1, b=2)
+    assert 10102 == int(f(1, b=2))
+    assert 10102 == int(client.get(f.key(1, 2)))

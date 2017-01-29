@@ -11,6 +11,71 @@ except ImportError:
 __all__ = ('memcache', 'redis_py', 'redis', 'aiomcache', 'aioredis')
 
 
+def wrapper_class(f, context, get_value, set_value, del_value, touch_value, miss_value, encode, decode, ckey):
+    class _Wrapper(futil.WrapperBase):
+
+        _ckey = ckey
+
+        @functools.wraps(f)
+        def __call__(self, *args, **kwargs):
+            args = self.reargs(args, padding=False)
+            return self._get_or_update(args, kwargs)
+
+        def _key(self, args, kwargs):
+            return self._ckey.build_key(args, kwargs)
+
+        def _get_or_update(self, args, kwargs):
+            key = self._key(args, kwargs)
+            value = get_value(context, key)
+            if value == miss_value:
+                result = f(*args, **kwargs)
+                value = encode(result)
+                set_value(context, key, value)
+            else:
+                result = decode(value)
+            return result
+
+        def execute(self, *args, **kwargs):
+            args = self.reargs(args, padding=True)
+            return f(*args, **kwargs)
+
+        def key(self, *args, **kwargs):
+            args = self.reargs(args, padding=True)
+            return self._key(args, kwargs)
+
+        def get_or_update(self, *args, **kwargs):
+            args = self.reargs(args, padding=True)
+            return self._get_or_update(args, kwargs)
+
+        def get(self, *args, **kwargs):
+            key = self.key(*args, **kwargs)
+            value = get_value(context, key)
+            if value == miss_value:
+                return miss_value
+            else:
+                return decode(value)
+
+        def update(self, *args, **kwargs):
+            args = self.reargs(args, padding=True)
+            key = self._key(args, kwargs)
+            result = f(*args, **kwargs)
+            value = encode(result)
+            set_value(context, key, value)
+            return result
+
+        def delete(self, *args, **kwargs):
+            key = self.key(*args, **kwargs)
+            del_value(context, key)
+
+        def touch(self, *args, **kwargs):
+            if not touch_value:
+                f.touch  # to raise AttributeError
+            key = self.key(*args, **kwargs)
+            touch_value(context, key)
+
+    return _Wrapper
+
+
 def _factory(
         context, key_prefix,
         get_value, set_value, del_value, touch_value, miss_value, coder,
@@ -24,71 +89,18 @@ def _factory(
         ckey = futil.create_ckey(
             f, _key_prefix, _ignorable_keys, encoding=key_encoding)
 
-        class _Wrapper(futil.WrapperBase):
-
-            _ckey = ckey
-
-            @functools.wraps(f)
-            def __call__(self, *args, **kwargs):
-                args = self.reargs(args, padding=False)
-                return self._get_or_update(args, kwargs)
-
-            def _key(self, args, kwargs):
-                return self._ckey.build_key(args, kwargs)
-
-            def key(self, *args, **kwargs):
-                args = self.reargs(args, padding=True)
-                return self._key(args, kwargs)
-
-            def execute(self, *args, **kwargs):
-                args = self.reargs(args, padding=True)
-                return f(*args, **kwargs)
-
-            def _get_or_update(self, args, kwargs):
-                key = self._key(args, kwargs)
-                value = get_value(context, key)
-                if value == miss_value:
-                    result = f(*args, **kwargs)
-                    value = encode(result)
-                    set_value(context, key, value)
-                else:
-                    result = decode(value)
-                return value
-
-            def get_or_update(self, *args, **kwargs):
-                args = self.reargs(args, padding=True)
-                return self._get_or_update(args, kwargs)
-
-            def get(self, *args, **kwargs):
-                key = self.key(*args, **kwargs)
-                value = get_value(context, key)
-                if value == miss_value:
-                    return miss_value
-                else:
-                    return decode(value)
-
-            def update(self, *args, **kwargs):
-                args = self.reargs(args, padding=True)
-                key = self._key(args, kwargs)
-                result = f(*args, **kwargs)
-                value = encode(result)
-                set_value(context, key, value)
-                return result
-
-            def delete(self, *args, **kwargs):
-                key = self.key(*args, **kwargs)
-                del_value(context, key)
-
-            def touch(self, *args, **kwargs):
-                if not touch_value:
-                    f.touch  # to raise AttributeError
-                key = self.key(*args, **kwargs)
-                touch_value(context, key)
+        _Wrapper = wrapper_class(f, context, get_value, set_value, del_value, touch_value, miss_value, encode, decode, ckey)
 
         if futil.is_method(f):
             @property
             def _w(self):
-                return _Wrapper((self,))
+                wrapper_name = '__wrapper_' + f.__name__
+                wrapper = getattr(self, wrapper_name, None)
+                if wrapper is None:
+                    _wrapper = _Wrapper((self,))
+                    wrapper = functools.wraps(f)(_wrapper)
+                    setattr(self, wrapper_name, wrapper)
+                return wrapper
         elif futil.is_classmethod(f):
             _w = _Wrapper((), anon_padding=True)
         else:
