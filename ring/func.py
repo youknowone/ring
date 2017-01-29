@@ -1,7 +1,6 @@
 """Collection of cache decorators"""
 import time
 import functools
-from ring.util import cached_property
 from ring import _func_util as futil
 
 try:
@@ -41,6 +40,10 @@ def _factory(
                 args = self.reargs(args, padding=True)
                 return self._key(args, kwargs)
 
+            def execute(self, *args, **kwargs):
+                args = self.reargs(args, padding=True)
+                return f(*args, **kwargs)
+
             def _get_or_update(self, args, kwargs):
                 key = self._key(args, kwargs)
                 value = get_value(context, key)
@@ -65,7 +68,8 @@ def _factory(
                     return decode(value)
 
             def update(self, *args, **kwargs):
-                key = self.key(*args, **kwargs)
+                args = self.reargs(args, padding=True)
+                key = self._key(args, kwargs)
                 result = f(*args, **kwargs)
                 value = encode(result)
                 set_value(context, key, value)
@@ -82,7 +86,7 @@ def _factory(
                 touch_value(context, key)
 
         if futil.is_method(f):
-            @cached_property
+            @property
             def _w(self):
                 return _Wrapper((self,))
         elif futil.is_classmethod(f):
