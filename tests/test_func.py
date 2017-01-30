@@ -127,9 +127,9 @@ def test_func_dict_method():
 @pytest.mark.parametrize('client,binary,has_touch', [
     (memcache_client, False, False),
     (pymemcache_client, True, True),
-    (pylibmc_client, True, True),
+    (pylibmc_client, True, False),  # actually has_touch but not in travis
 ])
-def test_pymemcache(client, binary, has_touch):
+def test_memcache(client, binary, has_touch):
     base = [0]
 
     @ring.func.memcache(client, 'ring-test')
