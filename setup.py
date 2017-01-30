@@ -33,7 +33,7 @@ def get_readme():
 setup(
     name='ring',
     version='0.2.0',
-    description='Generic cache decorator with built-in memcache & redis support.',
+    description='The ultimate cache with built-in memcache & redis + asyncio support.',
     long_description=get_readme(),
     author='Jeong YunWon',
     author_email='ring@youknowone.org',
@@ -61,4 +61,4 @@ setup(
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
     ],
-)
+)  # noqa

@@ -11,8 +11,14 @@ except ImportError:
 __all__ = ('memcache', 'redis_py', 'redis', 'aiomcache', 'aioredis')
 
 
-def wrapper_class(f, context, get_value, set_value, del_value, touch_value, miss_value, encode, decode, ckey):
-    class _Wrapper(futil.WrapperBase):
+def wrapper_class(
+        f, context, ckey,
+        get_value, set_value, del_value, touch_value, miss_value,
+        encode, decode):
+
+    miss = object()
+
+    class Ring(futil.WrapperBase):
 
         _ckey = ckey
 
@@ -24,44 +30,50 @@ def wrapper_class(f, context, get_value, set_value, del_value, touch_value, miss
         def _key(self, args, kwargs):
             return self._ckey.build_key(args, kwargs)
 
-        def _get_or_update(self, args, kwargs):
-            key = self._key(args, kwargs)
+        def _get(self, key):
             value = get_value(context, key)
             if value == miss_value:
-                result = f(*args, **kwargs)
-                value = encode(result)
-                set_value(context, key, value)
+                return miss
             else:
-                result = decode(value)
+                return decode(value)
+
+        def _update(self, key, args, kwargs):
+            result = f(*args, **kwargs)
+            value = encode(result)
+            set_value(context, key, value)
             return result
 
-        def execute(self, *args, **kwargs):
-            args = self.reargs(args, padding=True)
-            return f(*args, **kwargs)
+        def _get_or_update(self, args, kwargs):
+            key = self._key(args, kwargs)
+            result = self._get(key)
+            if result == miss:
+                result = self._update(key, args, kwargs)
+            return result
 
         def key(self, *args, **kwargs):
             args = self.reargs(args, padding=True)
             return self._key(args, kwargs)
 
-        def get_or_update(self, *args, **kwargs):
+        def execute(self, *args, **kwargs):
             args = self.reargs(args, padding=True)
-            return self._get_or_update(args, kwargs)
+            return f(*args, **kwargs)
 
         def get(self, *args, **kwargs):
-            key = self.key(*args, **kwargs)
-            value = get_value(context, key)
-            if value == miss_value:
-                return miss_value
-            else:
-                return decode(value)
+            args = self.reargs(args, padding=True)
+            key = self._key(args, kwargs)
+            result = self._get(key)
+            if result == miss:
+                result = miss_value
+            return result
 
         def update(self, *args, **kwargs):
             args = self.reargs(args, padding=True)
             key = self._key(args, kwargs)
-            result = f(*args, **kwargs)
-            value = encode(result)
-            set_value(context, key, value)
-            return result
+            return self._update(key, args, kwargs)
+
+        def get_or_update(self, *args, **kwargs):
+            args = self.reargs(args, padding=True)
+            return self._get_or_update(args, kwargs)
 
         def delete(self, *args, **kwargs):
             key = self.key(*args, **kwargs)
@@ -73,45 +85,13 @@ def wrapper_class(f, context, get_value, set_value, del_value, touch_value, miss
             key = self.key(*args, **kwargs)
             touch_value(context, key)
 
-    return _Wrapper
+    return Ring
 
 
-def _factory(
-        context, key_prefix,
-        get_value, set_value, del_value, touch_value, miss_value, coder,
-        ignorable_keys=None, key_encoding=None):
+def dict(
+        obj, key_prefix='', expire=None, coder=None, ignorable_keys=None,
+        now=time.time):
 
-    encode, decode = futil.unpack_coder(coder)
-
-    def _decorator(f):
-        _ignorable_keys = futil.suggest_ignorable_keys(f, ignorable_keys)
-        _key_prefix = futil.suggest_key_prefix(f, key_prefix)
-        ckey = futil.create_ckey(
-            f, _key_prefix, _ignorable_keys, encoding=key_encoding)
-
-        _Wrapper = wrapper_class(f, context, get_value, set_value, del_value, touch_value, miss_value, encode, decode, ckey)
-
-        if futil.is_method(f):
-            @property
-            def _w(self):
-                wrapper_name = '__wrapper_' + f.__name__
-                wrapper = getattr(self, wrapper_name, None)
-                if wrapper is None:
-                    _wrapper = _Wrapper((self,))
-                    wrapper = functools.wraps(f)(_wrapper)
-                    setattr(self, wrapper_name, wrapper)
-                return wrapper
-        elif futil.is_classmethod(f):
-            _w = _Wrapper((), anon_padding=True)
-        else:
-            _w = _Wrapper(())
-
-        return _w
-
-    return _decorator
-
-
-def dict(obj, key_prefix='', expire=None, coder=None, ignorable_keys=None, now=time.time):
     miss_value = None
 
     def get_value(obj, key):
@@ -159,8 +139,8 @@ def dict(obj, key_prefix='', expire=None, coder=None, ignorable_keys=None, now=t
             expired_time = _now + expire
         obj[key] = expired_time, value
 
-    return _factory(
-        obj, key_prefix=key_prefix,
+    return futil.factory(
+        obj, key_prefix=key_prefix, wrapper_class=wrapper_class,
         get_value=get_value, set_value=set_value, del_value=del_value,
         touch_value=touch_value,
         miss_value=miss_value, coder=coder,
@@ -183,15 +163,16 @@ def memcache(client, key_prefix=None, time=0, coder=None, ignorable_keys=None):
     def touch_value(client, key):
         client.touch(key, time)
 
-    return _factory(
-        client, key_prefix=key_prefix,
+    return futil.factory(
+        client, key_prefix=key_prefix, wrapper_class=wrapper_class,
         get_value=get_value, set_value=set_value, del_value=del_value,
         touch_value=touch_value,
         miss_value=miss_value, coder=coder,
         ignorable_keys=ignorable_keys)
 
 
-def redis_py(client, key_prefix=None, expire=None, coder=None, ignorable_keys=None):
+def redis_py(
+        client, key_prefix=None, expire=None, coder=None, ignorable_keys=None):
     miss_value = None
 
     def get_value(client, key):
@@ -209,8 +190,8 @@ def redis_py(client, key_prefix=None, expire=None, coder=None, ignorable_keys=No
             raise TypeError("'touch' is requested for persistant cache")
         client.expire(key, expire)
 
-    return _factory(
-        client, key_prefix=key_prefix,
+    return futil.factory(
+        client, key_prefix=key_prefix, wrapper_class=wrapper_class,
         get_value=get_value, set_value=set_value, del_value=del_value,
         touch_value=touch_value,
         miss_value=miss_value, coder=coder,

@@ -1,4 +1,4 @@
-
+import functools
 from ring.key import CallableWrapper, CallableKey
 
 
@@ -13,8 +13,8 @@ def unpack_coder(coder):
             loaded_coder = getattr(ring.coder, coder, None)
             if loaded_coder is None:
                 raise TypeError(
-                    "Argument 'coder' is an instance of 'str' but built-in coder "
-                    "'{}' does not exist".format(coder))
+                    "Argument 'coder' is an instance of 'str' but built-in "
+                    "coder '{}' does not exist".format(coder))
             coder = loaded_coder
 
         if isinstance(coder, tuple):
@@ -51,7 +51,9 @@ def suggest_ignorable_keys(f, ignorable_keys):
 def suggest_key_prefix(f, key_prefix):
     if key_prefix is None:
         if is_method(f):
-            key_prefix = '{0.__module__}.{{self.__class__.__name__}}.{0.__name__}'.format(f)
+            key_prefix = \
+                '{0.__module__}.{{self.__class__.__name__}}.' \
+                '{0.__name__}'.format(f)
         elif is_classmethod(f):
             # No guess supported for classmethod yet.
             key_prefix = '{0.__module__}.{0.__name__}'.format(f)
@@ -60,7 +62,7 @@ def suggest_key_prefix(f, key_prefix):
     return key_prefix
 
 
-def coerce_value(v):
+def coerce(v):
     if isinstance(v, (int, str, bool)):
         return v
 
@@ -76,7 +78,7 @@ def coerce_value(v):
         "Add __ring_key__() or __str__().".format(v, cls))
 
 
-def create_ckey(f, key_prefix, ignorable_keys, coerce=coerce_value, encoding=None):
+def create_ckey(f, key_prefix, ignorable_keys, coerce=coerce, encoding=None):
     ckey = CallableKey(
         f, format_prefix=key_prefix, ignorable_keys=ignorable_keys)
 
@@ -106,3 +108,41 @@ class WrapperBase(object):
         elif padding and self.anon_padding:
             args = (None,) + args
         return args
+
+
+def factory(
+        context, key_prefix, wrapper_class,
+        get_value, set_value, del_value, touch_value, miss_value, coder,
+        ignorable_keys=None, key_encoding=None):
+
+    encode, decode = unpack_coder(coder)
+
+    def _decorator(f):
+        _ignorable_keys = suggest_ignorable_keys(f, ignorable_keys)
+        _key_prefix = suggest_key_prefix(f, key_prefix)
+        ckey = create_ckey(
+            f, _key_prefix, _ignorable_keys, encoding=key_encoding)
+
+        _Wrapper = wrapper_class(
+            f, context, ckey,
+            get_value, set_value, del_value, touch_value, miss_value,
+            encode, decode)
+
+        if is_method(f):
+            @property
+            def _w(self):
+                wrapper_name = '__wrapper_' + f.__name__
+                wrapper = getattr(self, wrapper_name, None)
+                if wrapper is None:
+                    _wrapper = _Wrapper((self,))
+                    wrapper = functools.wraps(f)(_wrapper)
+                    setattr(self, wrapper_name, wrapper)
+                return wrapper
+        elif is_classmethod(f):
+            _w = _Wrapper((), anon_padding=True)
+        else:
+            _w = _Wrapper(())
+
+        return _w
+
+    return _decorator

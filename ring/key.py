@@ -88,7 +88,10 @@ class CallableWrapper(object):
 
 class CallableKey(Key):
 
-    def __init__(self, provider, indirect_marker='*', format_prefix=None, ignorable_keys=[], verbose=False):
+    def __init__(
+            self, provider, indirect_marker='*', format_prefix=None,
+            ignorable_keys=[], verbose=False):
+
         if not isinstance(provider, CallableWrapper):
             provider = CallableWrapper(provider)
         super(CallableKey, self).__init__(provider, indirect_marker)
@@ -97,7 +100,9 @@ class CallableKey(Key):
             format_prefix = self.default_format_prefix
         if callable(format_prefix):
             format_prefix = format_prefix(provider)
-        self.format = format_prefix + self.default_format_body(self.ordered_provider_keys, verbose=verbose)
+        self.format = format_prefix + \
+            self.default_format_body(
+                self.ordered_provider_keys, verbose=verbose)
 
     @cached_property
     def ordered_provider_keys(self):
@@ -106,8 +111,8 @@ class CallableKey(Key):
         for key in self.ignorable_keys:
             if key not in self.ignorable_keys:
                 raise KeyError(
-                    "'{}' is not a varname but in ignorable_keys argument.".format(
-                        key))
+                    "'{}' is not a varname but in ignorable_keys argument"
+                    .format(key))
             del keys[keys.index(key)]
         return keys
 
@@ -131,8 +136,8 @@ class CallableKey(Key):
         for i, arg in enumerate(args):
             if i >= f_code.co_argcount:
                 raise TypeError(
-                    '{} takes {} positional arguments but {} were given'.format(
-                        f_code.co_name, f_code.co_argcount, len(args)))
+                    '{} takes {} positional arguments but {} were given'
+                    .format(f_code.co_name, f_code.co_argcount, len(args)))
             varname = f_code.co_varnames[i]
             if varname in kwargs:
                 raise TypeError(

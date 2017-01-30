@@ -13,96 +13,98 @@ def _is_coroutine(f):
         (inspect_iscoroutinefunction and inspect_iscoroutinefunction(f))
 
 
-def _factory(
-        context, key_prefix,
-        get_value, set_value, del_value, touch_value, miss_value, coder,
-        ignorable_keys=None, key_encoding=None):
+def wrapper_class(
+        f, context, ckey,
+        get_value, set_value, del_value, touch_value, miss_value,
+        encode, decode):
 
-    encode, decode = futil.unpack_coder(coder)
+    if not _is_coroutine(f):
+        raise TypeError(
+            "The funciton for cache '{}' must be an async function.".format(
+                f.__name__))
 
-    def _decorator(f):
-        if not _is_coroutine(f):
-            raise TypeError(
-                "The funciton for cache '{}' must be an async function.".format(
-                    f.__name__))
+    miss = object()
 
-        _ignorable_keys = futil.suggest_ignorable_keys(f, ignorable_keys)
-        _key_prefix = futil.suggest_key_prefix(f, key_prefix)
-        ckey = futil.create_ckey(
-            f, _key_prefix, _ignorable_keys, encoding=key_encoding)
+    class Ring(futil.WrapperBase):
 
-        class _Wrapper(futil.WrapperBase):
+        _ckey = ckey
 
-            _key = ckey
+        @functools.wraps(f)
+        def __call__(self, *args, **kwargs):
+            args = self.reargs(args, padding=False)
+            return self._get_or_update(args, kwargs)
 
-            @functools.wraps(f)
-            def __call__(self, *args, **kwargs):
-                args = self.reargs(args, padding=False)
-                return self._get_or_update(*args, **kwargs)
+        def _key(self, args, kwargs):
+            return self._ckey.build_key(args, kwargs)
 
-            def key(self, *args, **kwargs):
-                return self._key.build_key(args, kwargs)
+        @asyncio.coroutine
+        def _get(self, key):
+            value = yield from get_value(context, key)
+            if value == miss_value:
+                return miss
+            else:
+                return decode(value)
 
-            @asyncio.coroutine
-            def _get_or_update(self, *args, **kwargs):
-                key = self.key(*args, **kwargs)
-                value = yield from get_value(context, key)
-                if value == miss_value:
-                    result = yield from f(*args, **kwargs)
-                    value = encode(result)
-                    yield from set_value(context, key, value)
-                else:
-                    result = decode(value)
-                return value
+        @asyncio.coroutine
+        def _update(self, key, args, kwargs):
+            result = yield from f(*args, **kwargs)
+            value = encode(result)
+            yield from set_value(context, key, value)
+            return result
 
-            def get_or_update(self, *args, **kwargs):
-                args = self.reargs(args, padding=True)
-                return self._get_or_update(*args, **kwargs)
+        @asyncio.coroutine
+        def _get_or_update(self, args, kwargs):
+            key = self._key(args, kwargs)
+            result = yield from self._get(key)
+            if result == miss:
+                result = yield from self._update(key, args, kwargs)
+            return result
 
-            @asyncio.coroutine
-            def get(self, *args, **kwargs):
-                args = self.reargs(args, padding=True)
-                key = self.key(*args, **kwargs)
-                value = yield from get_value(context, key)
-                if value == miss_value:
-                    return miss_value
-                else:
-                    return decode(value)
+        def key(self, *args, **kwargs):
+            args = self.reargs(args, padding=True)
+            return self._key(args, kwargs)
 
-            @asyncio.coroutine
-            def update(self, *args, **kwargs):
-                args = self.reargs(args, padding=True)
-                key = self.key(*args, **kwargs)
-                result = yield from f(*args, **kwargs)
-                value = encode(result)
-                yield from set_value(context, key, value)
-                return result
+        @asyncio.coroutine
+        def execute(self, *args, **kwargs):
+            args = self.reargs(args, padding=True)
+            result = yield from f(*args, **kwargs)
+            return result
 
-            def delete(self, *args, **kwargs):
-                args = self.reargs(args, padding=True)
-                key = self.key(*args, **kwargs)
-                return del_value(context, key)
+        @asyncio.coroutine
+        def get(self, *args, **kwargs):
+            args = self.reargs(args, padding=True)
+            key = self._key(args, kwargs)
+            result = yield from self._get(key)
+            if result == miss:
+                result = miss_value
+            return result
 
-            def touch(self, *args, **kwargs):
-                args = self.reargs(args, padding=True)
-                key = self.key(*args, **kwargs)
-                return touch_value(context, key)
+        def update(self, *args, **kwargs):
+            args = self.reargs(args, padding=True)
+            key = self._key(args, kwargs)
+            return self._update(key, args, kwargs)
 
-        if futil.is_method(f):
-            @property
-            def _w(self):
-                return _Wrapper((self,))
-        elif futil.is_classmethod(f):
-            _w = _Wrapper((), anon_padding=True)
-        else:
-            _w = _Wrapper(())
+        def get_or_update(self, *args, **kwargs):
+            args = self.reargs(args, padding=True)
+            return self._get_or_update(args, kwargs)
 
-        return _w
+        def delete(self, *args, **kwargs):
+            args = self.reargs(args, padding=True)
+            key = self._key(args, kwargs)
+            return del_value(context, key)
 
-    return _decorator
+        def touch(self, *args, **kwargs):
+            args = self.reargs(args, padding=True)
+            key = self._key(args, kwargs)
+            return touch_value(context, key)
+
+    return Ring
 
 
-def async_dict(obj, key_prefix='', expire=None, coder=None, ignorable_keys=None, now=time.time):
+def async_dict(
+        obj, key_prefix='', expire=None, coder=None, ignorable_keys=None,
+        now=time.time):
+
     miss_value = None
 
     @asyncio.coroutine
@@ -154,15 +156,18 @@ def async_dict(obj, key_prefix='', expire=None, coder=None, ignorable_keys=None,
             expired_time = _now + expire
         obj[key] = expired_time, value
 
-    return _factory(
-        obj, key_prefix=key_prefix,
+    return futil.factory(
+        obj, key_prefix=key_prefix, wrapper_class=wrapper_class,
         get_value=get_value, set_value=set_value, del_value=del_value,
         touch_value=touch_value,
         miss_value=miss_value, coder=coder,
         ignorable_keys=ignorable_keys)
 
 
-def aiomcache(client, key_prefix, time=0, coder=None, ignorable_keys=None, key_encoding='utf-8'):
+def aiomcache(
+        client, key_prefix, time=0, coder=None, ignorable_keys=None,
+        key_encoding='utf-8'):
+
     miss_value = None
 
     def get_value(client, key):
@@ -177,8 +182,8 @@ def aiomcache(client, key_prefix, time=0, coder=None, ignorable_keys=None, key_e
     def touch_value(client, key):
         return client.touch(key, time)
 
-    return _factory(
-        client, key_prefix=key_prefix,
+    return futil.factory(
+        client, key_prefix=key_prefix, wrapper_class=wrapper_class,
         get_value=get_value, set_value=set_value, del_value=del_value,
         touch_value=touch_value,
         miss_value=miss_value, coder=coder,
@@ -222,8 +227,8 @@ def aioredis(pool, key_prefix, expire, coder=None, ignorable_keys=None):
         finally:
             pool.release(client)
 
-    return _factory(
-        pool, key_prefix=key_prefix,
+    return futil.factory(
+        pool, key_prefix=key_prefix, wrapper_class=wrapper_class,
         get_value=get_value, set_value=set_value, del_value=del_value,
         touch_value=touch_value,
         miss_value=miss_value, coder=coder,
