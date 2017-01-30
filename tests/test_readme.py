@@ -1,19 +1,5 @@
-Ring - The ultimate cache interface.
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. image:: https://travis-ci.org/youknowone/ring.svg?branch=master
-    :target: https://travis-ci.org/youknowone/ring
-
-asyncio support!
-
-Take an explicit but fully automated cache.
-Ring decorators convert your functions to cached version of them, with extra control methods.
-
-
-Function cache
---------------
-
-.. code:: python
+def test_readme_function():
     import ring
     import memcache
     import requests
@@ -27,21 +13,24 @@ Function cache
 
     # normal way - it is cached
     data = get_url('http://example.com')
+    assert data
     # delete the cache
     get_url.delete('http://example.com')
     # get cached data or None
     data_or_none = get_url.get('http://example.com')
+    assert data_or_none is None
+    # force to update
+    updated_data = get_url.update('http://example.com')
+    assert updated_data == data
 
     # get internal cache key
     key = get_url.key('http://example.com')
     # and access directly to the backend
     direct_data = mc.get(key)
+    assert data == direct_data
 
 
-Method cache
-------------
-
-.. code:: python
+def test_readme_method():
     import ring
     import redis
 
@@ -52,7 +41,7 @@ Method cache
             return self['id']
 
         # working for rc, no expiration
-        # using json coder for non-bytes cache data
+        # using json coder to cache and load
         @ring.func.redis(rc, coder='json')
         def data(self):
             return self.copy()
@@ -76,5 +65,8 @@ Method cache
 
     # id is the cache key so...
     user2 = User(id=42)
-    # still hitting the same cache
-    assert user_data == user2.data()
+    # still hitting the same cache without `name`
+    assert updated_data == user2.data()
+
+    # cleanup
+    user.data.delete()

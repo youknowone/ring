@@ -41,7 +41,7 @@ def get_readme():
 
 setup(
     name='ring',
-    version='0.2.0',
+    version='0.2.1',
     description='The ultimate cache with built-in memcache & redis + asyncio support.',
     long_description=get_readme(),
     author='Jeong YunWon',
