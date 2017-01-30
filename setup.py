@@ -5,9 +5,18 @@ import sys
 
 tests_require = [
     'pytest>=3.0.2', 'pytest-cov', 'mock', 'patch',
-    'pymemcache',
+    'pymemcache', 'pylibmc',
     'redis',
 ]
+
+if sys.version_info[0] == 2:
+    tests_require.extend([
+        'python-memcached',
+    ])
+else:
+    tests_require.extend([
+        'python3-memcached',
+    ])
 
 if sys.version_info[:2] == (3, 3):
     tests_require.extend([

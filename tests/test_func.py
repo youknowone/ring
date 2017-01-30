@@ -1,8 +1,20 @@
 
 import ring
+import pymemcache.client
+import memcache
+import pylibmc
+import redis
+
+import pytest
 
 
-def common_test(f, base):
+pymemcache_client = pymemcache.client.Client(('127.0.0.1', 11211))
+memcache_client = memcache.Client(["127.0.0.1:11211"])
+pylibmc_client = pylibmc.Client(['127.0.0.1'])
+redis_client = redis.StrictRedis()
+
+
+def common_test(f, base, has_touch=True):
     # `f` is a callable with argument `a` and `b`
     # test f is correct
     assert f.key(a=0, b=0)  # f takes a, b
@@ -44,7 +56,8 @@ def common_test(f, base):
     # test: 'update'
     assert r2 == f.update(1, 2)  # immediate update
 
-    f.touch(1, 2)  # just a running test
+    if has_touch:
+        f.touch(1, 2)  # just a running test
 
     f.delete(1, 2)  # finallize
 
@@ -111,18 +124,23 @@ def test_func_dict_method():
     common_test(A.cmethod, A.base)
 
 
-def test_pymemcache():
-    import pymemcache.client
-    client = pymemcache.client.Client(('127.0.0.1', 11211))
-
+@pytest.mark.parametrize('client,binary,has_touch', [
+    (memcache_client, False, False),
+    (pymemcache_client, True, True),
+    (pylibmc_client, True, True),
+])
+def test_pymemcache(client, binary, has_touch):
     base = [0]
 
     @ring.func.memcache(client, 'ring-test')
     def f(a, b):
         r = base[0] + a * 100 + b
-        return str(r).encode('utf-8')
+        sr = str(r)
+        if binary:
+            sr = sr.encode('utf-8')
+        return sr
 
-    common_test(f, base)
+    common_test(f, base, has_touch)
 
     assert f.key(1, 2) == 'ring-test:1:2'
 
@@ -133,8 +151,7 @@ def test_pymemcache():
 
 
 def test_redis():
-    import redis
-    client = redis.StrictRedis()
+    client = redis_client
 
     base = [0]
 
