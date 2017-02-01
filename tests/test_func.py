@@ -176,3 +176,25 @@ def test_redis():
     assert None is f.get(1, b=2)
     assert 10102 == int(f(1, b=2))
     assert 10102 == int(client.get(f.key(1, 2)))
+
+
+def test_unexisting_coder():
+    cache = {}
+
+    with pytest.raises(TypeError):
+        @ring.func.dict(cache, coder='messed-up')
+        def f():
+            pass
+
+
+def test_unexisting_ring_key():
+    cache = {}
+
+    class A(object):
+        @ring.func.dict(cache)
+        def f(self):
+            return 0
+
+    a = A()
+    with pytest.raises(TypeError):
+        a.f()
