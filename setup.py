@@ -5,9 +5,16 @@ import sys
 
 tests_require = [
     'pytest>=3.0.2', 'pytest-cov', 'mock', 'patch',
-    'pymemcache', 'pylibmc',
+    'pymemcache',
     'redis', 'requests',
 ]
+
+try:
+    import __pypy__  # noqa
+except ImportError:
+    tests_require.extend([
+        'pylibmc',
+    ])
 
 if sys.version_info[0] == 2:
     tests_require.extend([

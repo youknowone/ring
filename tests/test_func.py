@@ -2,7 +2,6 @@
 import ring
 import pymemcache.client
 import memcache
-import pylibmc
 import redis
 
 import pytest
@@ -10,8 +9,14 @@ import pytest
 
 pymemcache_client = pymemcache.client.Client(('127.0.0.1', 11211))
 memcache_client = memcache.Client(["127.0.0.1:11211"])
-pylibmc_client = pylibmc.Client(['127.0.0.1'])
 redis_client = redis.StrictRedis()
+
+try:
+    import pylibmc
+except ImportError:
+    pylibmc_client = None
+else:
+    pylibmc_client = pylibmc.Client(['127.0.0.1'])
 
 
 def common_test(f, base, has_touch=True):
@@ -130,6 +135,9 @@ def test_func_dict_method():
     (pylibmc_client, True, False),  # actually has_touch but not in travis
 ])
 def test_memcache(client, binary, has_touch):
+    if client is None:
+        pytest.skip()
+
     base = [0]
 
     @ring.func.memcache(client, 'ring-test')
