@@ -63,7 +63,7 @@ def suggest_key_prefix(f, key_prefix):
 
 
 def coerce(v):
-    if isinstance(v, (int, str, bool)):
+    if isinstance(v, (int, str, bool, list)):
         return v
 
     if hasattr(v, '__ring_key__'):
