@@ -70,7 +70,7 @@ def coerce(v):
         return v.__ring_key__()
 
     cls = v.__class__
-    if cls.__str__ != object.__str__:
+    if hasattr(cls, '__str__') and cls.__str__ != object.__str__:
         return str(v)
 
     raise TypeError(
