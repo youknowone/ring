@@ -103,6 +103,27 @@ def test_func_dict():
     f.touch(1, b=2)
 
 
+@pytest.mark.parametrize('value', [
+    1,
+    0,
+    True,
+    False,
+    u'str',
+    b'bytes',
+    ['list', 'with', 'values'],
+    {'dict': 'also', 'matters': '!'},
+    set(['set', 'should', 'be', 'ordered']),
+])
+def test_ring_key(value):
+    # test only with real cache backends. dict doesn't help this
+    @ring.func.memcache(memcache_client)
+    def simple(key):
+        return key
+
+    assert simple(value) == value  # cache miss
+    assert simple(value) == value  # cache hit
+
+
 def test_func_dict_method():
     cache = {}
 
