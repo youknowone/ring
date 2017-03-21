@@ -72,12 +72,21 @@ def coerce(v):
     if hasattr(v, '__ring_key__'):
         return v.__ring_key__()
 
+    if isinstance(v, dict):
+        return ','.join(['{},{}'.format(k, v[k]) for k in sorted(v.keys())])
+
+    if isinstance(v, (set, frozenset)):
+        return ','.join(sorted(v))
+
+    # NOTE: general sequence processing is good -
+    # but NEVER add a general iterator processing. it will cause user bug.
+
     cls = v.__class__
     if cls.__str__ != object.__str__:
         return str(v)
 
     raise TypeError(
-        "The given value '{}' of type '{}' is not key-compatible type. "
+        "The given value '{}' of type '{}' is not a key-compatible type. "
         "Add __ring_key__() or __str__().".format(v, cls))
 
 
