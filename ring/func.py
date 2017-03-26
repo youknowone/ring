@@ -148,6 +148,8 @@ def dict(
 
 
 def memcache(client, key_prefix=None, time=0, coder=None, ignorable_keys=None):
+    import re
+    import hashlib
     miss_value = None
 
     def get_value(client, key):
@@ -163,12 +165,26 @@ def memcache(client, key_prefix=None, time=0, coder=None, ignorable_keys=None):
     def touch_value(client, key):
         client.touch(key, time)
 
+    rule = re.compile(r'[!-~]+')
+
+    def key_refactor(key):
+        if len(key) < 250 and rule.match(key).group(0) == key:
+            return key
+        try:
+            hashed = hashlib.sha1(key).hexdigest()
+        except TypeError:
+            # FIXME: ensure key is bytes before key_refactor
+            key = key.encode('utf-8')
+            hashed = hashlib.sha1(key).hexdigest()
+        return 'ring-sha1:' + hashed
+
     return futil.factory(
         client, key_prefix=key_prefix, wrapper_class=wrapper_class,
         get_value=get_value, set_value=set_value, del_value=del_value,
         touch_value=touch_value,
         miss_value=miss_value, coder=coder,
-        ignorable_keys=ignorable_keys)
+        ignorable_keys=ignorable_keys,
+        key_refactor=key_refactor)
 
 
 def redis_py(

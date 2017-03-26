@@ -90,7 +90,7 @@ def coerce(v):
         "Add __ring_key__() or __str__().".format(v, cls))
 
 
-def create_ckey(f, key_prefix, ignorable_keys, coerce=coerce, encoding=None):
+def create_ckey(f, key_prefix, ignorable_keys, coerce=coerce, encoding=None, key_refactor=lambda x: x):
     ckey = CallableKey(
         f, format_prefix=key_prefix, ignorable_keys=ignorable_keys)
 
@@ -100,6 +100,7 @@ def create_ckey(f, key_prefix, ignorable_keys, coerce=coerce, encoding=None):
         key = ckey.build(coerced_kwargs)
         if encoding:
             key = key.encode(encoding)
+        key = key_refactor(key)
         return key
 
     ckey.build_key = build_key
@@ -125,7 +126,7 @@ class WrapperBase(object):
 def factory(
         context, key_prefix, wrapper_class,
         get_value, set_value, del_value, touch_value, miss_value, coder,
-        ignorable_keys=None, key_encoding=None):
+        ignorable_keys=None, key_encoding=None, key_refactor=lambda x: x):
 
     encode, decode = unpack_coder(coder)
 
@@ -133,7 +134,7 @@ def factory(
         _ignorable_keys = suggest_ignorable_keys(f, ignorable_keys)
         _key_prefix = suggest_key_prefix(f, key_prefix)
         ckey = create_ckey(
-            f, _key_prefix, _ignorable_keys, encoding=key_encoding)
+            f, _key_prefix, _ignorable_keys, encoding=key_encoding, key_refactor=key_refactor)
 
         _Wrapper = wrapper_class(
             f, context, ckey,
