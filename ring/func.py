@@ -221,7 +221,7 @@ def kazoo_py(client, key_prefix=None, expire=0, coder=None, ignorable_keys=None,
 
     def get_value(client, key):
         # FIXME: get_async()
-        try: 
+        try:
             ret = client.get(key)
         except _kazoo.exceptions.NoNodeError:
             return miss_value
@@ -233,7 +233,7 @@ def kazoo_py(client, key_prefix=None, expire=0, coder=None, ignorable_keys=None,
 
         if ret is not None and ret[0] is not None:
             x = ret[0].find('\x01')
-            expired_time, value = float(ret[0][:x]), ret[0][x+1:]
+            expired_time, value = float(ret[0][:x]), ret[0][x + 1:]
             if expired_time < _now:
                 return miss_value
             else:
@@ -257,7 +257,7 @@ def kazoo_py(client, key_prefix=None, expire=0, coder=None, ignorable_keys=None,
 
     def del_value(client, key):
         client.delete(key)
-        
+
     def touch_value(client, key):
         if now is None:
             _now = time.time()
@@ -266,7 +266,7 @@ def kazoo_py(client, key_prefix=None, expire=0, coder=None, ignorable_keys=None,
         ret = client.get(key)
         if ret is not None and ret[0] is not None:
             x = ret[0].find('\x01')
-            expired_time, value = float(ret[0][:x]), ret[0][x+1:]
+            expired_time, value = float(ret[0][:x]), ret[0][x + 1:]
             if expire == 0:
                 expired_time = 0
             else:
@@ -280,8 +280,11 @@ def kazoo_py(client, key_prefix=None, expire=0, coder=None, ignorable_keys=None,
         miss_value=miss_value, coder=coder,
         ignorable_keys=ignorable_keys)
 
-redis = redis_py  # de facto standard of redis
-kazoo = kazoo_py  # de facto standard of kazoo
+
+# de facto standard of redis
+redis = redis_py
+# de facto standard of kazoo
+kazoo = kazoo_py
 
 
 if asyncio:
