@@ -8,7 +8,7 @@ try:
 except ImportError:
     asyncio = False
 
-__all__ = ('memcache', 'redis_py', 'redis', 'aiomcache', 'aioredis', 'kazoo')
+__all__ = ('memcache', 'redis_py', 'redis', 'aiomcache', 'aioredis', 'kazoo_py', 'kazoo')
 
 
 def wrapper_class(
@@ -281,6 +281,7 @@ def kazoo_py(client, key_prefix=None, expire=0, coder=None, ignorable_keys=None,
         ignorable_keys=ignorable_keys)
 
 redis = redis_py  # de facto standard of redis
+kazoo = kazoo_py  # de facto standard of kazoo
 
 
 if asyncio:
