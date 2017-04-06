@@ -214,7 +214,7 @@ def redis_py(
         ignorable_keys=ignorable_keys)
 
 
-def kazoo_py(client, key_prefix=None, expire=0, coder=None, ignorable_keys=None, now=time.time()):
+def kazoo(client, key_prefix=None, expire=0, coder=None, ignorable_keys=None, now=time.time()):
     import kazoo as _kazoo
 
     miss_value = None
@@ -281,10 +281,48 @@ def kazoo_py(client, key_prefix=None, expire=0, coder=None, ignorable_keys=None,
         ignorable_keys=ignorable_keys)
 
 
+def arcus(client, key_prefix=None, time=0, coder=None, ignorable_keys=None):
+    import re
+    import hashlib
+    miss_value = None
+
+    def get_value(client, key):
+        value = client.get(key).get_result()
+        return value
+
+    def set_value(client, key, value):
+        client.set(key, value, time)
+
+    def del_value(client, key):
+        client.delete(key)
+
+    def touch_value(client, key):
+        client.touch(key, time)
+
+    rule = re.compile(r'[!-~]+')
+
+    def key_refactor(key):
+        if len(key) < 250 and rule.match(key).group(0) == key:
+            return key
+        try:
+            hashed = hashlib.sha1(key).hexdigest()
+        except TypeError:
+            # FIXME: ensure key is bytes before key_refactor
+            key = key.encode('utf-8')
+            hashed = hashlib.sha1(key).hexdigest()
+        return 'ring-sha1:' + hashed
+
+    return futil.factory(
+        client, key_prefix=key_prefix, wrapper_class=wrapper_class,
+        get_value=get_value, set_value=set_value, del_value=del_value,
+        touch_value=touch_value,
+        miss_value=miss_value, coder=coder,
+        ignorable_keys=ignorable_keys,
+        key_refactor=key_refactor)
+
+
 # de facto standard of redis
 redis = redis_py
-# de facto standard of kazoo
-kazoo = kazoo_py
 
 
 if asyncio:
