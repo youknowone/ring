@@ -8,7 +8,7 @@ try:
 except ImportError:
     asyncio = False
 
-__all__ = ('memcache', 'redis_py', 'redis', 'aiomcache', 'aioredis', 'kazoo_py', 'kazoo')
+__all__ = ('memcache', 'redis_py', 'redis', 'aiomcache', 'aioredis', 'kazoo', 'arcus')
 
 
 def wrapper_class(
