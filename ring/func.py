@@ -148,19 +148,34 @@ def dict(
 
 
 def python_dict(
-        obj, key_prefix='', coder=None, ignorable_keys=None):
+        obj, key_prefix='', expire=None, coder=None, ignorable_keys=None,
+        now=time.time):
 
     miss_value = None
 
     def get_value(obj, key):
+        if now is None:
+            _now = time.time()
+        else:
+            _now = now
         try:
-            value = obj[key]
+            (expired_time, value) = obj[key]
         except KeyError:
+            return miss_value
+        if expired_time is not None and expired_time < _now:
             return miss_value
         return value
 
     def set_value(obj, key, value):
-        obj[key] = value
+        if now is None:
+            _now = time.time()
+        else:
+            _now = now
+        if expire is None:
+            expired_time = None
+        else:
+            expired_time = _now + expire
+        obj[key] = (expired_time, value)
 
     def del_value(obj, key):
         try:
@@ -169,11 +184,19 @@ def python_dict(
             pass
 
     def touch_value(obj, key):
+        if now is None:
+            _now = time.time()
+        else:
+            _now = now
         try:
-            value = obj[key]
+            (expired_time, value) = obj[key]
         except KeyError:
             return
-        obj[key] = value
+        if expire is None:
+            expired_time = None
+        else:
+            expired_time = _now + expire
+        obj[key] = (expired_time, value)
 
     return futil.factory(
         obj, key_prefix=key_prefix, wrapper_class=wrapper_class,
