@@ -8,7 +8,7 @@ try:
 except ImportError:
     asyncio = False
 
-__all__ = ('memcache', 'redis_py', 'redis', 'aiomcache', 'aioredis', 'kazoo_py', 'kazoo')
+__all__ = ('memcache', 'redis_py', 'redis', 'aiomcache', 'aioredis', 'kazoo_py', 'kazoo', 'python_dict')
 
 
 def wrapper_class(
@@ -138,6 +138,42 @@ def dict(
         else:
             expired_time = _now + expire
         obj[key] = expired_time, value
+
+    return futil.factory(
+        obj, key_prefix=key_prefix, wrapper_class=wrapper_class,
+        get_value=get_value, set_value=set_value, del_value=del_value,
+        touch_value=touch_value,
+        miss_value=miss_value, coder=coder,
+        ignorable_keys=ignorable_keys)
+
+
+def python_dict(
+        obj, key_prefix='', coder=None, ignorable_keys=None):
+
+    miss_value = None
+
+    def get_value(obj, key):
+        try:
+            value = obj[key]
+        except KeyError:
+            return miss_value
+        return value
+
+    def set_value(obj, key, value):
+        obj[key] = value
+
+    def del_value(obj, key):
+        try:
+            del obj[key]
+        except KeyError:
+            pass
+
+    def touch_value(obj, key):
+        try:
+            value = obj[key]
+        except KeyError:
+            return
+        obj[key] = value
 
     return futil.factory(
         obj, key_prefix=key_prefix, wrapper_class=wrapper_class,
