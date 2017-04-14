@@ -167,6 +167,7 @@ def async_dict(
 def aiomcache(
         client, key_prefix, time=0, coder=None, ignorable_keys=None,
         key_encoding='utf-8'):
+    from ring._memcache import key_refactor
 
     miss_value = None
 
@@ -188,7 +189,8 @@ def aiomcache(
         touch_value=touch_value,
         miss_value=miss_value, coder=coder,
         ignorable_keys=ignorable_keys,
-        key_encoding=key_encoding)
+        key_encoding=key_encoding,
+        key_refactor=key_refactor)
 
 
 def aioredis(pool, key_prefix, expire, coder=None, ignorable_keys=None):
