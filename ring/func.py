@@ -148,8 +148,7 @@ def dict(
 
 
 def memcache(client, key_prefix=None, time=0, coder=None, ignorable_keys=None):
-    import re
-    import hashlib
+    from ring._memcache import key_refactor
     miss_value = None
 
     def get_value(client, key):
@@ -164,19 +163,6 @@ def memcache(client, key_prefix=None, time=0, coder=None, ignorable_keys=None):
 
     def touch_value(client, key):
         client.touch(key, time)
-
-    rule = re.compile(r'[!-~]+')
-
-    def key_refactor(key):
-        if len(key) < 250 and rule.match(key).group(0) == key:
-            return key
-        try:
-            hashed = hashlib.sha1(key).hexdigest()
-        except TypeError:
-            # FIXME: ensure key is bytes before key_refactor
-            key = key.encode('utf-8')
-            hashed = hashlib.sha1(key).hexdigest()
-        return 'ring-sha1:' + hashed
 
     return futil.factory(
         client, key_prefix=key_prefix, wrapper_class=wrapper_class,
