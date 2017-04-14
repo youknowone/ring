@@ -92,7 +92,7 @@ def test_aiomcache():
 
     base = [0]
 
-    @ring.func.aiomcache(client, 'ring-test')
+    @ring.func.aiomcache(client, 'ring-test !@#')
     @asyncio.coroutine
     def cached_function(a, b):
         return str(base[0] + a * 100 + b).encode()
