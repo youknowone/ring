@@ -95,8 +95,8 @@ def dict(
     miss_value = None
 
     def get_value(obj, key):
-        if now is None:
-            _now = time.time()
+        if callable(now):
+            _now = now()
         else:
             _now = now
         try:
@@ -108,8 +108,8 @@ def dict(
         return value
 
     def set_value(obj, key, value):
-        if now is None:
-            _now = time.time()
+        if callable(now):
+            _now = now()
         else:
             _now = now
         if expire is None:
@@ -125,8 +125,8 @@ def dict(
             pass
 
     def touch_value(obj, key):
-        if now is None:
-            _now = time.time()
+        if callable(now):
+            _now = now()
         else:
             _now = now
         try:

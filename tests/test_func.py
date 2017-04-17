@@ -103,6 +103,20 @@ def test_func_dict():
     f.touch(1, b=2)
 
 
+def test_func_dict_expire():
+    cache = {}
+
+    @ring.func.dict(cache, expire=1)
+    def f(a, b):
+        return a * 100 + b
+
+    assert f.get(1, 2) is None
+    assert f(1, 2) == 102
+    assert f.update(1, 2) == 102
+    f.delete(1, 2)
+    assert f.get(1, 2) is None
+
+
 @pytest.mark.parametrize('value', [
     1,
     0,
