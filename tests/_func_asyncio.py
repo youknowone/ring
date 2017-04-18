@@ -55,8 +55,31 @@ def common_test(f, base):
 
 @pytest.mark.asyncio
 @asyncio.coroutine
+def test_func_dict():
+    cache = {}
+
+    @ring.func_asyncio.async_dict(cache)
+    @asyncio.coroutine
+    def f1(a, b):
+        return a * 100 + b
+
+    yield from f1(1, 2)
+    yield from f1(1, 2)
+
+    cache = {}
+
+    @ring.func_asyncio.async_dict(cache, expire=1)
+    @asyncio.coroutine
+    def f2(a, b):
+        return a * 100 + b
+
+    yield from f2(1, 2)
+    yield from f2(1, 2)
+
+
+@pytest.mark.asyncio
+@asyncio.coroutine
 def test_func_method():
-    import ring.func_asyncio
     cache = {}
 
     class A(object):
