@@ -61,10 +61,10 @@ class CallableWrapper(Callable):
             self=self)
 
     @cached_property
-    def first_varname(self):
+    def first_argument(self):
         if not self.arguments:
             return None
-        return self.arguments[0].varname
+        return self.arguments[0]
 
 
 class CallableKey(Key):

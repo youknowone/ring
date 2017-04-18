@@ -29,12 +29,16 @@ def unpack_coder(coder):
 
 def is_method(f):
     fw = CallableWrapper(f)
-    return fw.first_varname == 'self'
+    if not fw.first_argument:
+        return False
+    return fw.first_argument.varname == 'self'
 
 
 def is_classmethod(f):
     fw = CallableWrapper(f)
-    return fw.first_varname == 'cls'
+    if not fw.first_argument:
+        return False
+    return fw.first_argument.varname == 'cls'
 
 
 def suggest_ignorable_keys(f, ignorable_keys):
