@@ -59,7 +59,7 @@ setup(
     ),
     install_requires=[
         'prettyexc>=0.6.0',
-        'callable>=0.1',
+        'callable>=0.1.1',
     ],
     tests_require=tests_require + ['tox', 'tox-pyenv'],
     extras_require={
