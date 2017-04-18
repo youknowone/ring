@@ -48,7 +48,7 @@ def get_readme():
 
 setup(
     name='ring',
-    version='0.2.6',
+    version='0.3.1',
     description='The ultimate cache with built-in memcache & redis + asyncio support.',
     long_description=get_readme(),
     author='Jeong YunWon',
@@ -59,6 +59,7 @@ setup(
     ),
     install_requires=[
         'prettyexc>=0.6.0',
+        'callable>=0.1',
     ],
     tests_require=tests_require + ['tox', 'tox-pyenv'],
     extras_require={
