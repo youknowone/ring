@@ -2,6 +2,7 @@
 from __future__ import absolute_import
 
 import re
+from callable import Callable
 from ring.util import cached_property
 
 
@@ -52,10 +53,7 @@ class FormatKey(Key):
         return keys
 
 
-class CallableWrapper(object):
-    def __init__(self, c):
-        assert callable(c)
-        self.callable = c
+class CallableWrapper(Callable):
 
     @cached_property
     def identifier(self):
@@ -63,27 +61,10 @@ class CallableWrapper(object):
             self=self)
 
     @cached_property
-    def code(self):
-        c = self.callable
-        if hasattr(c, '_is_coroutine'):
-            code = c.__wrapped__.__code__
-        else:
-            code = c.__code__
-        return code
-
-    @cached_property
-    def varnames(self):
-        code = self.code
-        arg_count = code.co_argcount
-        if py3:
-            arg_count += code.co_kwonlyargcount
-        return code.co_varnames[:arg_count]
-
-    @cached_property
     def first_varname(self):
-        if not self.code.co_varnames:
+        if not self.arguments:
             return None
-        return self.code.co_varnames[0]
+        return self.arguments[0].varname
 
 
 class CallableKey(Key):
@@ -106,14 +87,13 @@ class CallableKey(Key):
 
     @cached_property
     def ordered_provider_keys(self):
-        varnames = self.provider.varnames
-        keys = list(varnames)
+        keys = [arg.varname for arg in self.provider.arguments]
         for key in self.ignorable_keys:
-            if key not in self.ignorable_keys:
+            if key not in keys:
                 raise KeyError(
-                    "'{}' is not a varname but in ignorable_keys argument"
+                    "'{}' is not an argument name but in 'ignorable_keys'"
                     .format(key))
-            del keys[keys.index(key)]
+            keys.remove(key)
         return keys
 
     @staticmethod
@@ -131,22 +111,10 @@ class CallableKey(Key):
         return ''.join(parts)
 
     def merge_kwargs(self, args, kwargs):
-        f_code = self.provider.code
-        kwargs = kwargs.copy()
-        for i, arg in enumerate(args):
-            if i >= f_code.co_argcount:
-                raise TypeError(
-                    '{} takes {} positional arguments but {} were given'
-                    .format(f_code.co_name, f_code.co_argcount, len(args)))
-            varname = f_code.co_varnames[i]
-            if varname in kwargs:
-                raise TypeError(
-                    "{}() got multiple values for argument '{}'".format(
-                        f_code.co_name, varname))
-            kwargs[varname] = arg
+        merged = self.provider.kwargify(args, kwargs)
         for key in self.ignorable_keys:
-            del kwargs[key]
-        return kwargs
+            del merged[key]
+        return merged
 
     def build(self, full_kwargs):
         # print(self.format, full_kwargs)
