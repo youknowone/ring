@@ -109,10 +109,11 @@ def async_dict(
 
     @asyncio.coroutine
     def get_value(obj, key):
-        if now is None:
+        if callable(now):
             _now = time.time()
         else:
             _now = now
+
         try:
             expired_time, value = obj[key]
         except KeyError:
@@ -123,10 +124,11 @@ def async_dict(
 
     @asyncio.coroutine
     def set_value(obj, key, value):
-        if now is None:
+        if callable(now):
             _now = time.time()
         else:
             _now = now
+
         if expire is None:
             expired_time = None
         else:
@@ -142,10 +144,11 @@ def async_dict(
 
     @asyncio.coroutine
     def touch_value(obj, key):
-        if now is None:
+        if callable(now):
             _now = time.time()
         else:
             _now = now
+
         try:
             expired_time, value = obj[key]
         except KeyError:
