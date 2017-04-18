@@ -66,7 +66,6 @@ def common_test(f, base, has_touch=True):
 
     f.delete(1, 2)  # finallize
 
-
 def test_func_dict():
     cache = {}
 
@@ -233,3 +232,43 @@ def test_unexisting_ring_key():
     a = A()
     with pytest.raises(TypeError):
         a.f()
+
+
+def common_value_test(deco):
+    base = ['a']
+    @deco
+    def ff():
+        base[0] += 'a'
+        return base[0]
+
+    # set
+    v1 = ff()
+    b1 = base[0]
+
+    # get
+    v2 = ff()
+    b2 = base[0]
+
+    assert v1 == v2
+    assert b1 == b2
+
+@pytest.mark.parametrize('client', [
+    (memcache_client),
+    (pymemcache_client),
+    (pylibmc_client),
+])
+def test_value_memcache(client):
+    if client is None:
+        pytest.skip()
+    deco = ring.func.memcache(client, time=5)
+    common_value_test(deco)
+
+
+def test_value_redis():
+    deco = ring.func.redis(redis_client, expire=5)
+    common_value_test(deco)
+
+
+def test_value_dict():
+    deco = ring.func.dict({})
+    common_value_test(deco)
