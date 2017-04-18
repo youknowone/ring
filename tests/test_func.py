@@ -66,6 +66,7 @@ def common_test(f, base, has_touch=True):
 
     f.delete(1, 2)  # finallize
 
+
 def test_func_dict():
     cache = {}
 
