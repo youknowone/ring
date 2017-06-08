@@ -31,8 +31,11 @@ if sys.version_info[:2] == (3, 3):
     ])
 
 if sys.version_info >= (3, 3):
+    if sys.version_info < (3, 5):
+        tests_require.append('pytest-asyncio==0.5.0')
+    else:
+        tests_require.append('pytest-asyncio')
     tests_require.extend([
-        'pytest-asyncio',
         'aiomcache',
         'aioredis',
     ])
