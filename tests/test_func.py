@@ -235,12 +235,12 @@ def test_unexisting_ring_key():
         a.f()
 
 
-def common_value_test(deco):
-    base = ['a']
+def common_value_test(ring_decorator):
+    base = [b'a']
 
-    @deco
+    @ring_decorator
     def ff():
-        base[0] += 'a'
+        base[0] += b'b'
         return base[0]
 
     b0 = base[0]
@@ -267,15 +267,15 @@ def common_value_test(deco):
 def test_value_memcache(client):
     if client is None:
         pytest.skip()
-    deco = ring.func.memcache(client, key_prefix=str(client), time=5)
-    common_value_test(deco)
+    ring_decorator = ring.func.memcache(client, key_prefix=str(client), time=5)
+    common_value_test(ring_decorator)
 
 
 def test_value_redis():
-    deco = ring.func.redis(redis_client, key_prefix=str(redis_client), expire=5)
-    common_value_test(deco)
+    ring_decorator = ring.func.redis(redis_client, key_prefix=str(redis_client), expire=5)
+    common_value_test(ring_decorator)
 
 
 def test_value_dict():
-    deco = ring.func.dict({}, key_prefix='', expire=5)
-    common_value_test(deco)
+    ring_decorator = ring.func.dict({}, key_prefix='', expire=5)
+    common_value_test(ring_decorator)
