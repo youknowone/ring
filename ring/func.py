@@ -8,7 +8,7 @@ try:
 except ImportError:
     asyncio = False
 
-__all__ = ('memcache', 'redis_py', 'redis', 'aiomcache', 'aioredis', 'kazoo', 'arcus')
+__all__ = ('memcache', 'redis_py', 'redis', 'aiomcache', 'aioredis', 'arcus')
 
 
 def wrapper_class(
@@ -191,73 +191,6 @@ def redis_py(
         if expire is None:
             raise TypeError("'touch' is requested for persistant cache")
         client.expire(key, expire)
-
-    return futil.factory(
-        client, key_prefix=key_prefix, wrapper_class=wrapper_class,
-        get_value=get_value, set_value=set_value, del_value=del_value,
-        touch_value=touch_value,
-        miss_value=miss_value, coder=coder,
-        ignorable_keys=ignorable_keys)
-
-
-def kazoo(client, key_prefix=None, expire=0, coder=None, ignorable_keys=None, now=time.time()):
-    import kazoo as _kazoo
-
-    miss_value = None
-
-    def get_value(client, key):
-        # FIXME: get_async()
-        try:
-            ret = client.get(key)
-        except _kazoo.exceptions.NoNodeError:
-            return miss_value
-
-        if now is None:
-            _now = time.time()
-        else:
-            _now = now
-
-        if ret is not None and ret[0] is not None:
-            x = ret[0].find('\x01')
-            expired_time, value = float(ret[0][:x]), ret[0][x + 1:]
-            if expired_time < _now:
-                return miss_value
-            else:
-                return value
-        else:
-            return miss_value
-
-    def set_value(client, key, value):
-        if now is None:
-            _now = time.time()
-        else:
-            _now = now
-        if expire == 0:
-            expired_time = 0
-        else:
-            expired_time = _now + expire
-        if client.exists(key) is None:
-            client.create(key, str(expired_time) + '\x01' + value)
-        else:
-            client.set(key, str(expired_time) + '\x01' + value)
-
-    def del_value(client, key):
-        client.delete(key)
-
-    def touch_value(client, key):
-        if now is None:
-            _now = time.time()
-        else:
-            _now = now
-        ret = client.get(key)
-        if ret is not None and ret[0] is not None:
-            x = ret[0].find('\x01')
-            expired_time, value = float(ret[0][:x]), ret[0][x + 1:]
-            if expire == 0:
-                expired_time = 0
-            else:
-                expired_time = _now + expire
-            value = client.set(key, (expired_time, value))
 
     return futil.factory(
         client, key_prefix=key_prefix, wrapper_class=wrapper_class,
