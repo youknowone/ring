@@ -125,7 +125,7 @@ class WrapperBase(object):
 
 def factory(
         context, key_prefix, wrapper_class,
-        interface, implementation, miss_value, coder,
+        interface, storage_implementation, miss_value, expire_default, coder,
         ignorable_keys=None, key_encoding=None, key_refactor=lambda x: x):
 
     encode, decode = unpack_coder(coder)
@@ -138,7 +138,7 @@ def factory(
 
         _Wrapper = wrapper_class(
             f, context, ckey,
-            interface, implementation, miss_value,
+            interface, storage_implementation, miss_value, expire_default,
             encode, decode)
 
         if is_method(f):
@@ -165,24 +165,22 @@ class NotFound(Exception):
     pass
 
 
-class Implementation(object):
+class StorageImplementation(object):
 
     def get_value(self, obj, key):
         raise NotImplementedError
 
-    def set_value(self, obj, key, value):
+    def set_value(self, obj, key, value, expire):
         raise NotImplementedError
 
     def del_value(self, obj, key):
         raise NotImplementedError
 
-    def touch_value(self, obj, key):
+    def touch_value(self, obj, key, expire):
         raise NotImplementedError
 
 
-
 class BaseInterface(object):
-
     def _key(self, args, kwargs):
         return self._ckey.build_key(args, kwargs)
 

@@ -25,7 +25,7 @@ else:
         'python3-memcached',
     ])
 
-if sys.version_info[:2] == (3, 3):
+if (3, 3) <= sys.version_info[:2] <= (3, 4):
     tests_require.extend([
         'asyncio',
     ])
@@ -51,7 +51,7 @@ def get_readme():
 
 setup(
     name='ring',
-    version='0.3.1',
+    version='0.4.0',
     description='The ultimate cache with built-in memcache & redis + asyncio support.',
     long_description=get_readme(),
     author='Jeong YunWon',
