@@ -125,7 +125,7 @@ class WrapperBase(object):
 
 def factory(
         context, key_prefix, wrapper_class,
-        get_value, set_value, del_value, touch_value, miss_value, coder,
+        interface, storage_implementation, miss_value, expire_default, coder,
         ignorable_keys=None, key_encoding=None, key_refactor=lambda x: x):
 
     encode, decode = unpack_coder(coder)
@@ -138,7 +138,7 @@ def factory(
 
         _Wrapper = wrapper_class(
             f, context, ckey,
-            get_value, set_value, del_value, touch_value, miss_value,
+            interface, storage_implementation, miss_value, expire_default,
             encode, decode)
 
         if is_method(f):
@@ -159,3 +159,45 @@ def factory(
         return _w
 
     return _decorator
+
+
+class NotFound(Exception):
+    pass
+
+
+class StorageImplementation(object):
+
+    def get_value(self, obj, key):
+        raise NotImplementedError
+
+    def set_value(self, obj, key, value, expire):
+        raise NotImplementedError
+
+    def del_value(self, obj, key):
+        raise NotImplementedError
+
+    def touch_value(self, obj, key, expire):
+        raise NotImplementedError
+
+
+class BaseInterface(object):
+    def _key(self, args, kwargs):
+        return self._ckey.build_key(args, kwargs)
+
+    def _execute(self, args, kwargs):
+        return self._p_execute(args, kwargs)
+
+    def _get(self, args, kwargs):
+        raise NotImplementedError
+
+    def _update(self, args, kwargs):
+        raise NotImplementedError
+
+    def _get_or_update(self, args, kwargs):
+        raise NotImplementedError
+
+    def _delete(self, args, kwargs):
+        raise NotImplementedError
+
+    def _touch(self, args, kwargs):
+        raise NotImplementedError

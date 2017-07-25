@@ -4,10 +4,7 @@ import pytest
 
 
 if sys.version_info >= (3, 3):
-    from ._test_func_asyncio import *  # noqa
-
-    if sys.version_info >= (3, 5):
-        from ._test_func_async_def import *  # noqa
+    from ._test_interface import *  # noqa
 
 else:
     @pytest.mark.skip

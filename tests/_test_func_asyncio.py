@@ -26,10 +26,12 @@ def common_test(f, base):
     base[0] = 10000
 
     # test: 'get' 'execute' 'delete' 'get_or_update'
-    assert None is ((yield from f.get(1, 2)))  # not cached yet
+    rn = yield from f.get(1, 2)
+    assert rn is None, (rn, f.key(1, 2))  # not cached yet
     r1 = yield from f.execute(1, 2)  # run without cache
 
-    assert r1 == ((yield from f(1, 2)))  # create and return cache
+    r2 = yield from f(1, 2)
+    assert r1 == r2, (r1, r2)  # create and return cache
     assert ((yield from f.get(1, 2))) == ((yield from f(a=1, b=2)))  # cached now
 
     yield from f.delete(b=2, a=1)  # delete cache
@@ -40,13 +42,13 @@ def common_test(f, base):
     base[0] = 20000
 
     # test: actually cached or not
-    r2 = ((yield from f.execute(1, 2)))
-    assert r1 != r2  # base has side effect
+    r3 = yield from f.execute(1, 2)
+    assert r1 != r3  # base has side effect
     assert r1 == ((yield from f(1, 2)))  # still cached
-    assert r2 != ((yield from f(1, 2)))
+    assert r3 != ((yield from f(1, 2)))
 
     # test: 'update'
-    assert r2 == ((yield from f.update(1, 2)))  # immediate update
+    assert r3 == ((yield from f.update(1, 2)))  # immediate update
 
     yield from f.touch(1, 2)  # just a running test
 
