@@ -28,6 +28,14 @@ Function cache
 
     # normal way - it is cached
     data = get_url('http://example.com')
+
+It is a normal smart cache flow.
+
+But ring is different when you want to explicitly control it.
+
+
+.. code:: python
+
     # delete the cache
     get_url.delete('http://example.com')
     # get cached data or None
