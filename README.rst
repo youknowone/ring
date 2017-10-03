@@ -88,3 +88,21 @@ Method cache
     user2 = User(id=42)
     # still hitting the same cache
     assert user_data == user2.data()
+
+
+Contribution
+------------
+
+First, install ring in editable mode. Use 'tests' extra to install tests requirements.
+
+.. code:: sh
+
+   $ pip install -e '.[tests]'
+
+
+Run pytest to check the test set is ready.
+
+.. code:: sh
+
+   $ pytest -vv
+
