@@ -87,7 +87,7 @@ Method cache
     # id is the cache key so...
     user2 = User(id=42)
     # still hitting the same cache
-    assert user_data == user2.data()
+    assert updated_data == user2.data()
 
 
 Contribution
