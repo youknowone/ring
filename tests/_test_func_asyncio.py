@@ -57,6 +57,22 @@ def common_test(f, base):
 
 @pytest.mark.asyncio
 @asyncio.coroutine
+def test_complicated_key():
+    cache = {}
+
+    @ring.func_asyncio.async_dict(cache)
+    @asyncio.coroutine
+    def complicated(a, *args, b, **kw):
+        return b'42'
+
+    # set
+    v1 = yield from complicated(0, 1, 2, 3, b=4, c=5, d=6)
+    v2 = yield from complicated.get(0, 1, 2, 3, b=4, c=5, d=6)
+    assert v1 == v2, (v1, v2)
+
+
+@pytest.mark.asyncio
+@asyncio.coroutine
 def test_func_dict():
     cache = {}
 

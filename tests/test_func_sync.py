@@ -258,6 +258,16 @@ def common_value_test(ring_decorator):
     assert v2 == b1
     assert b1 == b2
 
+    # py3 test in asyncio
+    @ring_decorator
+    def complicated(a, *args, **kw):
+        return b'42'
+
+    # set
+    v1 = complicated(0, 1, 2, 3, b=4, c=5, d=6)
+    v2 = complicated.get(0, 1, 2, 3, b=4, c=5, d=6)
+    assert v1 == v2
+
 
 @pytest.mark.parametrize('client', [
     (memcache_client),
