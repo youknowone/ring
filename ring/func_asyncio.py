@@ -3,6 +3,7 @@ import asyncio
 import inspect
 import functools
 import time
+from ring.wire import Wire
 from ring import func_base as fbase
 
 __all__ = ('aiomcache', 'aioredis', )
@@ -25,7 +26,7 @@ def wrapper_class(
             "The funciton for cache '{}' must be an async function.".format(
                 f.__name__))
 
-    class Ring(fbase.WrapperBase, Interface):
+    class Ring(Wire, Interface):
 
         _ckey = ckey
         _storage = storage

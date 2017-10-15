@@ -4,8 +4,8 @@ import functools
 import re
 import hashlib
 from ring import func_base as fbase
+from ring.wire import Wire
 from ring.func_base import NotFound
-
 
 __all__ = ('memcache', 'redis_py', 'redis', 'arcus')
 
@@ -16,7 +16,7 @@ def wrapper_class(
         miss_value, expire_default,
         encode, decode):
 
-    class Ring(fbase.WrapperBase, Interface):
+    class Ring(Wire, Interface):
 
         _ckey = ckey
         _expire_default = expire_default
