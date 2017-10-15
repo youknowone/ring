@@ -3,13 +3,17 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to Ring's documentation!
-================================
+Ring - An universal cache interface
+===================================
+
+Ring provides function-oriented cache interface for various backends.
+
 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
+.. include:: ../README.rst
 
 
 Indices and tables

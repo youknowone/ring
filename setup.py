@@ -3,6 +3,12 @@ from __future__ import with_statement
 from setuptools import setup
 import sys
 
+
+def get_version():
+    with open('ring/version.txt') as f:
+        return f.read().strip()
+
+
 tests_require = [
     'pytest>=3.0.2', 'pytest-cov', 'mock', 'patch',
     'pymemcache',
@@ -51,7 +57,7 @@ def get_readme():
 
 setup(
     name='ring',
-    version='0.4.0',
+    version=get_version(),
     description='The ultimate cache with built-in memcache & redis + asyncio support.',
     long_description=get_readme(),
     author='Jeong YunWon',

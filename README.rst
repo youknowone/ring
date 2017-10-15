@@ -1,10 +1,12 @@
-Ring - The ultimate cache interface.
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Ring
+~~~~
 
 .. image:: https://travis-ci.org/youknowone/ring.svg?branch=master
     :target: https://travis-ci.org/youknowone/ring
 
-asyncio support!
+An universal cache interface.
+
+:mod:`asyncio` support!
 
 Take an explicit but fully automated cache.
 Ring decorators convert your functions to cached version of them, with extra control methods.
@@ -88,6 +90,19 @@ Method cache
     user2 = User(id=42)
     # still hitting the same cache
     assert updated_data == user2.data()
+
+
+Installation
+------------
+
+PyPI is the recommended way.
+
+.. sourcecode:: shell
+
+    $ pip install ring
+
+To browse versions and tarballs, visit:
+    `<https://pypi.python.org/pypi/ring/>`_
 
 
 Contribution
