@@ -1,4 +1,3 @@
-import functools
 from ring.key import CallableWrapper, CallableKey
 
 
@@ -92,12 +91,15 @@ def coerce(v):
         "Add __ring_key__() or __str__().".format(v, cls))
 
 
-def create_ckey(f, key_prefix, ignorable_keys, coerce=coerce, encoding=None, key_refactor=lambda x: x):
+def create_ckey(c, key_prefix, ignorable_keys, coerce=coerce, encoding=None, key_refactor=lambda x: x):
+    assert isinstance(c, CallableWrapper)
     ckey = CallableKey(
-        f, format_prefix=key_prefix, ignorable_keys=ignorable_keys)
+        c, format_prefix=key_prefix, ignorable_keys=ignorable_keys)
 
-    def build_key(args, kwargs):
-        full_kwargs = ckey.merge_kwargs(args, kwargs)
+    def build_key(preargs, kwargs):
+        full_kwargs = kwargs.copy()
+        for i, prearg in enumerate(preargs):
+            full_kwargs[c.positional_arguments[i].varname] = preargs[i]
         coerced_kwargs = {k: coerce(v) for k, v in full_kwargs.items()}
         key = ckey.build(coerced_kwargs)
         if encoding:
@@ -111,18 +113,6 @@ def create_ckey(f, key_prefix, ignorable_keys, coerce=coerce, encoding=None, key
 
 
 function_type = type(bypass)
-
-
-class WiredProperty(object):
-
-    def __init__(self, func):
-        self.__func__ = func
-
-    def __get__(self, obj, type=None):
-        if obj is None:
-            return self.__func__(type)
-        else:
-            return self.__func__(obj)
 
 
 def factory(
@@ -139,35 +129,10 @@ def factory(
         ckey = create_ckey(
             _callable, _key_prefix, _ignorable_keys, encoding=key_encoding, key_refactor=key_refactor)
 
-        _Wrapper = wrapper_class(
+        return wrapper_class(
             _callable, context, ckey,
             interface, storage_implementation, miss_value, expire_default,
-            encode, decode)
-
-        if is_method(_callable):
-            @WiredProperty
-            def _w(self):
-                wrapper_name = '__wrapper_' + _callable.code.co_name
-                wrapper = getattr(self, wrapper_name, None)
-                if wrapper is None:
-                    _wrapper = _Wrapper((self,))
-                    wrapper = functools.wraps(_callable.callable)(_wrapper)
-                    setattr(self, wrapper_name, wrapper)
-                return wrapper
-        elif is_classmethod(_callable):
-            @WiredProperty
-            def _w(self):
-                wrapper_name = '__wrapper_' + _callable.code.co_name
-                wrapper = getattr(self, wrapper_name, None)
-                if wrapper is None:
-                    _wrapper = _Wrapper((self,))
-                    wrapper = functools.wraps(_callable.callable)(_wrapper)
-                    setattr(self, wrapper_name, wrapper)
-                return wrapper
-        else:
-            _w = _Wrapper(())
-
-        return _w
+            encode, decode).for_callable()
 
     return _decorator
 
@@ -178,13 +143,13 @@ class NotFound(Exception):
 
 class StorageImplementation(object):
 
-    def get_value(self, obj, key):
+    def get_value(self, obj, key):  # pragma: no cover
         raise NotImplementedError
 
-    def set_value(self, obj, key, value, expire):
+    def set_value(self, obj, key, value, expire):  # pragma: no cover
         raise NotImplementedError
 
-    def del_value(self, obj, key):
+    def del_value(self, obj, key):  # pragma: no cover
         raise NotImplementedError
 
     def touch_value(self, obj, key, expire):
@@ -193,25 +158,26 @@ class StorageImplementation(object):
 
 class BaseInterface(object):
 
-    def _key(self, args, kwargs):
+    def _key(self, **kwargs):
+        args = self.preargs
         return self._ckey.build_key(args, kwargs)
 
-    def _execute(self, args, kwargs):
-        return self._p_execute(args, kwargs)
+    def _execute(self, **kwargs):
+        return self._p_execute(kwargs)
 
-    def _get(self, args, kwargs):
+    def _get(self, **kwargs):  # pragma: no cover
         raise NotImplementedError
 
-    def _update(self, args, kwargs):
+    def _update(self, **kwargs):  # pragma: no cover
         raise NotImplementedError
 
-    def _get_or_update(self, args, kwargs):
+    def _get_or_update(self, **kwargs):  # pragma: no cover
         raise NotImplementedError
 
-    def _delete(self, args, kwargs):
+    def _delete(self, **kwargs):  # pragma: no cover
         raise NotImplementedError
 
-    def _touch(self, args, kwargs):
+    def _touch(self, **kwargs):
         raise NotImplementedError
 
     def run(self, action, *args, **kwargs):
