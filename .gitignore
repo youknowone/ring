@@ -9,6 +9,7 @@ MANIFEST
 .cache
 .eggs
 .idea
+.vscode
 .tox
 .ropeproject
 .*.swp
