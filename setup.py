@@ -9,17 +9,16 @@ def get_version():
         return f.read().strip()
 
 
-docs_require = [
-    'sphinx',
-]
-
 tests_require = [
     'pytest>=3.0.2', 'pytest-cov', 'mock', 'patch',
     'pymemcache',
     'redis', 'requests',
 ]
+docs_require = [
+    'sphinx',
+]
 
-dev_require = docs_require + tests_require
+dev_require = tests_require + docs_require
 
 try:
     import __pypy__  # noqa
