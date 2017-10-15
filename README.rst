@@ -112,7 +112,7 @@ First, install ring in editable mode. Use 'tests' extra to install tests require
 
 .. code:: sh
 
-   $ pip install -e '.[tests]'
+   $ pip install -e '.[dev]'
 
 
 Run pytest to check the test set is ready.

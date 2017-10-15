@@ -9,11 +9,17 @@ def get_version():
         return f.read().strip()
 
 
+docs_require = [
+    'sphinx',
+]
+
 tests_require = [
     'pytest>=3.0.2', 'pytest-cov', 'mock', 'patch',
     'pymemcache',
     'redis', 'requests',
 ]
+
+dev_require = docs_require + tests_require
 
 try:
     import __pypy__  # noqa
@@ -73,6 +79,8 @@ setup(
     tests_require=tests_require + ['tox', 'tox-pyenv'],
     extras_require={
         'tests': tests_require,
+        'docs': docs_require,
+        'dev': dev_require,
     },
     classifiers=[
         'Intended Audience :: Developers',
