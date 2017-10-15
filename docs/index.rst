@@ -13,6 +13,8 @@ Ring provides function-oriented cache interface for various backends.
    :maxdepth: 2
    :caption: Contents:
 
+   quick.rst
+
 .. include:: ../README.rst
 
 
