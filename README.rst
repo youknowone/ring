@@ -105,6 +105,12 @@ To browse versions and tarballs, visit:
     `<https://pypi.python.org/pypi/ring/>`_
 
 
+To use memcache or redis, don't forget to install related libraries.
+For example: python-memcached, python3-memcached, pylibmc, redis-py etc
+
+It may require to install and run related services too: memcached and redis.
+
+
 Contribution
 ------------
 
@@ -121,3 +127,23 @@ Run pytest to check the test set is ready.
 
     $ pytest -vv
 
+
+Note: Can't you install it because of compile errors?
+Don't forget to install and run memcached and redis locally.
+
+For macOS:
+
+.. code:: sh
+
+    $ brew install libmemcached memcached redis
+    $ brew service start memcached
+    $ brew service start redis
+
+
+For debian/ubuntu:
+
+.. code:: sh
+
+    $ apt install libmemcached-dev memcached redis-server
+    $ service start memcached
+    $ service start redis
