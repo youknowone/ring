@@ -145,5 +145,5 @@ For debian/ubuntu:
 .. code:: sh
 
     $ apt install libmemcached-dev memcached redis-server
-    $ service start memcached
-    $ service start redis
+    $ service memcached start
+    $ service redis start
