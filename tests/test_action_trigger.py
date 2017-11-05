@@ -10,7 +10,7 @@ class Object(object):
     def __getattr__(self, key):
         if key in self._data:
             return self._data[key]
-        return getattr(super(Object, self), key)i
+        return getattr(super(Object, self), key)
 
 
 def test_action_dict():
@@ -40,5 +40,4 @@ def test_action_dict():
     key = u1.data.run(name='User 1', action='key')
     direct_data = cache[key][1]
     assert data == direct_data
-
 

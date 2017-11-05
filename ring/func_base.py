@@ -130,7 +130,7 @@ class WrapperBase(object):
 def factory(
         context, key_prefix, wrapper_class,
         interface, storage_implementation, miss_value, expire_default, coder,
-        ignorable_keys=None, key_encoding=None, action=None, key_refactor=lambda x: x):
+        ignorable_keys=None, key_encoding=None, key_refactor=lambda x: x):
 
     encode, decode = unpack_coder(coder)
 
