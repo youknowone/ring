@@ -170,6 +170,7 @@ class StorageImplementation(object):
 
 
 class BaseInterface(object):
+
     def _key(self, args, kwargs):
         return self._ckey.build_key(args, kwargs)
 
@@ -190,3 +191,16 @@ class BaseInterface(object):
 
     def _touch(self, args, kwargs):
         raise NotImplementedError
+
+    def _run(self, args, kwargs):
+        try:
+            action = kwargs.pop('action')
+        except KeyError as exc:
+            raise TypeError("run() missing 1 required keyword argument: 'action'") from exc
+
+        action_name = '_' + action
+        if hasattr(self, action_name):
+            attr = getattr(self, action_name)
+            return attr(args, kwargs)
+
+        return self.__getattribute__(action)
