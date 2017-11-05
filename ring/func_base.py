@@ -130,7 +130,7 @@ class WrapperBase(object):
 def factory(
         context, key_prefix, wrapper_class,
         interface, storage_implementation, miss_value, expire_default, coder,
-        ignorable_keys=None, key_encoding=None, key_refactor=lambda x: x):
+        ignorable_keys=None, key_encoding=None, action=None, key_refactor=lambda x: x):
 
     encode, decode = unpack_coder(coder)
 
@@ -185,6 +185,7 @@ class StorageImplementation(object):
 
 
 class BaseInterface(object):
+    
     def _key(self, args, kwargs):
         return self._ckey.build_key(args, kwargs)
 
@@ -205,3 +206,15 @@ class BaseInterface(object):
 
     def _touch(self, args, kwargs):
         raise NotImplementedError
+
+    def _run(self, args, kwargs):
+        action = kwargs.pop('action')
+        action_name = '_' + action
+        
+        if hasattr(self, action_name):
+            attr = getattr(self, action_name)
+            return attr(args, kwargs)
+        
+        return self.__getattribute__(action)
+
+
