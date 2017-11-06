@@ -53,7 +53,7 @@ def suggest_ignorable_keys(f, ignorable_keys):
 
 
 def suggest_key_prefix(f, key_prefix):
-    if key_prefix is None:
+    if key_prefix is None or key_prefix == '':
         if is_method(f):
             key_prefix = \
                 '{0.__module__}.{{self.__class__.__name__}}.' \
