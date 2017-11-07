@@ -1,5 +1,6 @@
 import functools
 from ring.key import CallableWrapper, CallableKey
+from six import raise_from
 
 
 def bypass(x):
@@ -196,7 +197,7 @@ class BaseInterface(object):
         try:
             action = kwargs.pop('action')
         except KeyError as exc:
-            raise TypeError("run() missing 1 required keyword argument: 'action'") from exc
+            raise_from(TypeError("run() missing 1 required keyword argument: 'action'"), exc)
 
         action_name = '_' + action
         if hasattr(self, action_name):
