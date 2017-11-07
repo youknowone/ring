@@ -1,6 +1,6 @@
 import functools
-from ring.key import CallableWrapper, CallableKey
 from six import raise_from
+from ring.key import CallableWrapper, CallableKey
 
 
 def bypass(x):
