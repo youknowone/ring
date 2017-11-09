@@ -4,7 +4,10 @@ Ring
 .. image:: https://travis-ci.org/youknowone/ring.svg?branch=master
     :target: https://travis-ci.org/youknowone/ring
 
-An universal cache interface.
+Let's concentrate on code, not about storages.
+
+Ring shows a way to control cache in point of view of code - not about strages.
+Ring's decorator is convinient but also keeping fluency for general scenarios.
 
 :mod:`asyncio` support!
 
