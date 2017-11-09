@@ -6,8 +6,8 @@ Ring
 
 Let's concentrate on code, not about storages.
 
-Ring shows a way to control cache in point of view of code - not about strages.
-Ring's decorator is convinient but also keeping fluency for general scenarios.
+Ring shows a way to control cache in point of view of code - not about storages.
+Ring's decorator is convenient but also keeping fluency for general scenarios.
 
 :mod:`asyncio` support!
 
