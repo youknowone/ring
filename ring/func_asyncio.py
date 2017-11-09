@@ -39,7 +39,7 @@ def wrapper_class(
         def __getattr__(self, name):
             try:
                 return self.__getattribute__(name)
-            except:
+            except AttributeError:
                 pass
 
             interface_name = '_' + name

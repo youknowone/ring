@@ -16,3 +16,4 @@ MANIFEST
 .*.swo
 /build
 setup.cfg
+.coverage
