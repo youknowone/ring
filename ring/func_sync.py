@@ -16,6 +16,9 @@ def wrapper_class(
         miss_value, expire_default,
         encode, decode):
 
+    _encode = encode
+    _decode = decode
+
     class Ring(Wire, Interface):
 
         _ckey = ckey
@@ -24,8 +27,8 @@ def wrapper_class(
         _storage = storage
         _miss_value = miss_value
         _storage_impl = Storage()
-        _encode = staticmethod(encode)
-        _decode = staticmethod(decode)
+        encode = staticmethod(_encode)
+        decode = staticmethod(_decode)
 
         @functools.wraps(f)
         def __call__(self, *args, **kwargs):
@@ -58,10 +61,10 @@ def wrapper_class(
 
         def _p_get(self, key):
             value = self._storage_impl.get_value(self._storage, key)
-            return self._decode(value)
+            return self.decode(value)
 
         def _p_set(self, key, value, expire=expire_default):
-            encoded = self._encode(value)
+            encoded = self.encode(value)
             self._storage_impl.set_value(self._storage, key, encoded, expire)
 
         def _p_delete(self, key):
