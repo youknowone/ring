@@ -26,6 +26,9 @@ def wrapper_class(
             "The funciton for cache '{}' must be an async function.".format(
                 f.__name__))
 
+    _encode = encode
+    _decode = decode
+
     class Ring(Wire, Interface):
 
         _ckey = ckey
@@ -33,8 +36,8 @@ def wrapper_class(
         _storage_impl = StorageImplementation()
         _miss_value = miss_value
         _expire_default = expire_default
-        _encode = staticmethod(encode)
-        _decode = staticmethod(decode)
+        encode = staticmethod(_encode)
+        decode = staticmethod(_decode)
 
         def __getattr__(self, name):
             try:
@@ -71,11 +74,11 @@ def wrapper_class(
         @asyncio.coroutine
         def _p_get(self, key):
             value = yield from self._storage_impl.get_value(self._storage, key)
-            return self._decode(value)
+            return self.decode(value)
 
         @asyncio.coroutine
         def _p_set(self, key, value, expire=_expire_default):
-            encoded = self._encode(value)
+            encoded = self.encode(value)
             yield from self._storage_impl.set_value(self._storage, key, encoded, expire)
 
         @asyncio.coroutine
