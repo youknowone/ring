@@ -15,5 +15,4 @@ MANIFEST
 .*.swp
 .*.swo
 /build
-setup.cfg
 .coverage
