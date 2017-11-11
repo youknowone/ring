@@ -1,6 +1,7 @@
 
 import ring
 
+
 def test_coder_func():
 
     storage = {}
@@ -33,7 +34,6 @@ def test_coder_method():
                 return self._data[key]
             return getattr(super(Object, self), key)
 
-
     class User(Object):
         def __ring_key__(self):
             return 'User{self.user_id}'.format(self=self)
@@ -41,7 +41,6 @@ def test_coder_method():
         @ring.func.dict(storage)
         def data(self):
             return self._data.copy()
-
 
     u1 = User(user_id=42, name='User 1')
     u1.data()
