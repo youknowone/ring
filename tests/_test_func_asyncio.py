@@ -109,8 +109,8 @@ def test_func_method():
         def method(self, a, b):
             return base + a * 100 + b
 
-        @classmethod
         @ring.func_asyncio.async_dict(cache)
+        @classmethod
         @asyncio.coroutine
         def cmethod(cls, a, b):
             return base + a * 200 + b
@@ -118,11 +118,16 @@ def test_func_method():
     obj = A()
 
     base = 10000
-    obj.method.delete(1, 2)
+    yield from obj.method.delete(1, 2)
     assert ((yield from obj.method(1, 2))) == 10102
 
-    obj.cmethod.delete(1, 2)
+    yield from obj.cmethod.delete(1, 2)
     assert ((yield from obj.cmethod(1, 2))) == 10202
+
+    yield from A.cmethod.delete(1, 2)
+    assert ((yield from A.cmethod(1, 2))) == 10202
+
+    assert obj.cmethod.key(3, 4) == A.cmethod.key(3, 4)
 
 
 @pytest.mark.asyncio

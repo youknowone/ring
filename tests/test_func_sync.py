@@ -8,7 +8,7 @@ import pytest
 
 
 pymemcache_client = pymemcache.client.Client(('127.0.0.1', 11211))
-memcache_client = memcache.Client(["127.0.0.1:11211"])
+pythonmemcache_client = memcache.Client(["127.0.0.1:11211"])
 redis_client = redis.StrictRedis()
 
 try:
@@ -130,7 +130,7 @@ def test_func_dict_expire():
 ])
 def test_ring_key(value):
     # test only with real cache backends. dict doesn't help this
-    @ring.func.memcache(memcache_client)
+    @ring.func.memcache(pythonmemcache_client)
     def simple(key):
         return key
 
@@ -152,45 +152,53 @@ def test_func_dict_method():
         def method(self, a, b):
             return self.base[0] + a * 100 + b
 
-        @classmethod
         @ring.func.dict(cache)
+        @classmethod
         def cmethod(cls, a, b):
             # cls can be None
             return A.base[0] + a * 200 + b
 
     obj = A()
+
     common_test(obj.method, A.base)
     common_test(obj.cmethod, A.base)
     common_test(A.cmethod, A.base)
 
 
-@pytest.mark.parametrize('client,binary,has_touch', [
-    (memcache_client, False, False),
+@pytest.fixture(params=[
+    # client, binary, has_touch
+    (pythonmemcache_client, False, False),
     (pymemcache_client, True, True),
     (pylibmc_client, True, False),  # actually has_touch but not in travis
 ])
-def test_memcache(client, binary, has_touch):
+def memcache_client(request):
+    client, is_binary, has_touch = request.param
     if client is None:
         pytest.skip()
+    client.is_binary = is_binary
+    client.has_touch = has_touch
+    return client
 
+
+def test_memcache(memcache_client):
     base = [0]
 
-    @ring.func.memcache(client, 'ring-test')
+    @ring.func.memcache(memcache_client, 'ring-test')
     def f(a, b):
         r = base[0] + a * 100 + b
         sr = str(r)
-        if binary:
+        if memcache_client.is_binary:
             sr = sr.encode('utf-8')
         return sr
 
-    common_test(f, base, has_touch)
+    common_test(f, base, memcache_client.has_touch)
 
     assert f.key(1, 2) == 'ring-test:1:2'
 
     base[0] = 10000
     assert None is f.get(1, b=2)
     assert 10102 == int(f(1, b=2))
-    assert 10102 == int(client.get(f.key(1, 2)))
+    assert 10102 == int(memcache_client.get(f.key(1, 2)))
 
 
 def test_redis():
@@ -269,15 +277,10 @@ def common_value_test(ring_decorator):
     assert v1 == v2
 
 
-@pytest.mark.parametrize('client', [
-    (memcache_client),
-    (pymemcache_client),
-    (pylibmc_client),
-])
-def test_value_memcache(client):
-    if client is None:
+def test_value_memcache(memcache_client):
+    if memcache_client is None:
         pytest.skip()
-    ring_decorator = ring.func.memcache(client, key_prefix=str(client), expire=5)
+    ring_decorator = ring.func.memcache(memcache_client, key_prefix=str(memcache_client), expire=5)
     common_value_test(ring_decorator)
 
 
