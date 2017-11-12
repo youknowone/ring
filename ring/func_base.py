@@ -1,5 +1,4 @@
 import functools
-from six import raise_from
 from ring.key import CallableWrapper, CallableKey
 
 
@@ -215,15 +214,6 @@ class BaseInterface(object):
     def _touch(self, args, kwargs):
         raise NotImplementedError
 
-    def _run(self, args, kwargs):
-        try:
-            action = kwargs.pop('action')
-        except KeyError as exc:
-            raise_from(TypeError("run() missing 1 required keyword argument: 'action'"), exc)
-
-        interface_name = '_' + action
-        if hasattr(self, interface_name):
-            attr = getattr(self, action)
-            return attr()
-
-        return self.__getattribute__(action)
+    def run(self, action, *args, **kwargs):
+        attr = getattr(self, action)
+        return attr(*args, **kwargs)

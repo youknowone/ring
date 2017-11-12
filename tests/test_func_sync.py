@@ -227,8 +227,8 @@ def test_func_dict_expire():
     set(['set', 'should', 'be', 'ordered']),
 ])
 def test_ring_key(value):
-    # test only with real cache backends. dict doesn't help this
-    @ring.func.memcache(pythonmemcache_client)
+    # test only with real cache backends. dict doesn't help this test
+    @ring.func.memcache(pythonmemcache_client, expire=1)
     def simple(key):
         return key
 
