@@ -199,7 +199,7 @@ def dict(
 
 
 def memcache(
-        client, key_prefix=None, time=0, coder=None, ignorable_keys=None,
+        client, key_prefix=None, expire=0, coder=None, ignorable_keys=None,
         interface=CacheInterface, storage_implementation=MemcacheImpl):
     from ring._memcache import key_refactor
     miss_value = None
@@ -207,7 +207,7 @@ def memcache(
     return fbase.factory(
         client, key_prefix=key_prefix, wrapper_class=wrapper_class,
         interface=interface, storage_implementation=storage_implementation,
-        miss_value=miss_value, expire_default=time, coder=coder,
+        miss_value=miss_value, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys,
         key_refactor=key_refactor)
 
@@ -228,7 +228,7 @@ redis = redis_py
 
 
 def arcus(
-        client, key_prefix=None, time=0, coder=None, ignorable_keys=None,
+        client, key_prefix=None, expire=0, coder=None, ignorable_keys=None,
         interface=CacheInterface):
 
     class Impl(fbase.Storage):
@@ -239,12 +239,12 @@ def arcus(
             return value
 
         def set_value(self, client, key, value):
-            client.set(key, value, time)
+            client.set(key, value, expire)
 
         def del_value(self, client, key):
             client.delete(key)
 
-        def touch_value(self, client, key, expire=time):
+        def touch_value(self, client, key, expire):
             client.touch(key, expire)
 
     rule = re.compile(r'[!-~]+')
@@ -263,6 +263,6 @@ def arcus(
     return fbase.factory(
         client, key_prefix=key_prefix, wrapper_class=wrapper_class,
         interface=interface, storage_implementation=Impl,
-        miss_value=None, expire_default=time, coder=coder,
+        miss_value=None, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys,
         key_refactor=key_refactor)
