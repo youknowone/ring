@@ -3,7 +3,17 @@ import pytest
 
 
 @pytest.mark.asyncio
-async def test_async_func_method():
+async def test_async_def_vanilla_function(storage_dict):
+    storage = await storage_dict
+
+    with pytest.raises(TypeError):
+        @storage.ring(storage)
+        def vanilla_function():
+            pass
+
+
+@pytest.mark.asyncio
+async def test_async_def_func_method():
     import ring.func_asyncio
     cache = {}
 
@@ -19,8 +29,8 @@ async def test_async_func_method():
             x = await async_func(100)
             return base + a * x + b
 
-        @classmethod
         @ring.func_asyncio.async_dict(cache)
+        @classmethod
         async def cmethod(cls, a, b):
             x = await async_func(200)
             return base + a * x + b
@@ -28,8 +38,10 @@ async def test_async_func_method():
     obj = A()
 
     base = 10000
-    obj.method.delete(1, 2)
-    assert (await obj.method(1, 2)) == 10102
+    await obj.method.delete(1, 2)
+    value = await obj.method(1, 2)
+    assert value == 10102, value
 
-    obj.cmethod.delete(1, 2)
-    assert (await obj.cmethod(1, 2)) == 10202
+    await obj.cmethod.delete(1, 2)
+    value = await obj.cmethod(1, 2)
+    assert value == 10202, value

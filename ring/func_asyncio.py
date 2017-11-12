@@ -11,20 +11,16 @@ __all__ = ('aiomcache', 'aioredis', )
 inspect_iscoroutinefunction = getattr(inspect, 'iscoroutinefunction', lambda f: False)
 
 
-def _is_coroutine(f):
-    return hasattr(f, '_is_coroutine') or inspect_iscoroutinefunction(f)
-
-
 def wrapper_class(
-        f, storage, ckey,
+        _callable, storage, ckey,
         Interface, StorageImplementation,
         miss_value, expire_default,
         encode, decode):
 
-    if not _is_coroutine(f):
+    if not _callable.is_coroutine:
         raise TypeError(
             "The funciton for cache '{}' must be an async function.".format(
-                f.__name__))
+                _callable.code.co_name))
 
     _encode = encode
     _decode = decode
@@ -39,36 +35,33 @@ def wrapper_class(
         encode = staticmethod(_encode)
         decode = staticmethod(_decode)
 
+        @functools.wraps(_callable.callable)
+        def __call__(self, *args, **kwargs):
+            args = self.reargs(args)
+            return self._get_or_update(args, kwargs)
+
         def __getattr__(self, name):
             try:
-                return self.__getattribute__(name)
+                attr = self.__getattribute__(name)
+                return attr
             except AttributeError:
                 pass
 
             interface_name = '_' + name
-            if hasattr(Interface, interface_name) or name in ['_key', '_execute']:
+            if hasattr(Interface, interface_name):
                 attr = getattr(self, interface_name)
                 if callable(attr):
-                    @functools.wraps(f)
+                    @functools.wraps(_callable.callable)
                     def impl_f(*args, **kwargs):
-                        args = self.reargs(args, padding=True)
+                        args = self.reargs(args)
                         return attr(args, kwargs)
                     setattr(self, name, impl_f)
 
             return self.__getattribute__(name)
 
-        @functools.wraps(f)
-        def __call__(self, *args, **kwargs):
-            args = self.reargs(args, padding=False)
-            return self._get_or_update(args, kwargs)
-
-        def _key(self, args, kwargs):
-            key = self._ckey.build_key(args, kwargs)
-            return key
-
         @asyncio.coroutine
-        def _execute(self, args, kwargs):
-            result = yield from f(*args, **kwargs)
+        def _p_execute(self, args, kwargs):
+            result = yield from _callable.callable(*args, **kwargs)
             return result
 
         @asyncio.coroutine
@@ -116,8 +109,8 @@ class CacheInterface(fbase.BaseInterface):
         try:
             result = yield from self._p_get(key)
         except fbase.NotFound:
-            result = yield from self._execute(args, kwargs)
-            yield from self._p_set(key, result)
+            result = yield from self._p_execute(args, kwargs)
+            yield from self._p_set(key, result, self._expire_default)
         return result
 
     @asyncio.coroutine
@@ -141,11 +134,9 @@ class DictImpl(fbase.StorageImplementation):
         try:
             expired_time, value = obj[key]
         except KeyError:
-            raise fbase.NotFound
-
+            raise fbase.NotFound from KeyError
         if expired_time is not None and expired_time < _now:
             raise fbase.NotFound
-
         return value
 
     @asyncio.coroutine
@@ -236,7 +227,7 @@ class AioredisImpl(fbase.StorageImplementation):
 
 
 def dict(
-        obj, key_prefix='', expire=None, coder=None, ignorable_keys=None,
+        obj, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
         interface=CacheInterface, storage_implementation=DictImpl):
 
     return fbase.factory(
@@ -250,7 +241,7 @@ async_dict = dict
 
 
 def aiomcache(
-        client, key_prefix, expire=0, coder=None, ignorable_keys=None,
+        client, key_prefix=None, expire=0, coder=None, ignorable_keys=None,
         interface=CacheInterface, storage_implementation=AiomcacheImpl,
         key_encoding='utf-8'):
     from ring._memcache import key_refactor
@@ -265,7 +256,7 @@ def aiomcache(
 
 
 def aioredis(
-        pool, key_prefix, expire, coder=None, ignorable_keys=None,
+        pool, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
         interface=CacheInterface, storage_implementation=AioredisImpl):
 
     return fbase.factory(

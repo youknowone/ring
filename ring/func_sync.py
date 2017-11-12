@@ -11,7 +11,7 @@ __all__ = ('memcache', 'redis_py', 'redis', 'arcus')
 
 
 def wrapper_class(
-        f, storage, ckey,
+        _callable, storage, ckey,
         Interface, Storage,
         miss_value, expire_default,
         encode, decode):
@@ -20,7 +20,6 @@ def wrapper_class(
     _decode = decode
 
     class Ring(Wire, Interface):
-
         _ckey = ckey
         _expire_default = expire_default
 
@@ -30,9 +29,9 @@ def wrapper_class(
         encode = staticmethod(_encode)
         decode = staticmethod(_decode)
 
-        @functools.wraps(f)
+        @functools.wraps(_callable.callable)
         def __call__(self, *args, **kwargs):
-            args = self.reargs(args, padding=False)
+            args = self.reargs(args)
             return self._get_or_update(args, kwargs)
 
         def __getattr__(self, name):
@@ -45,9 +44,9 @@ def wrapper_class(
             if hasattr(Interface, interface_name):
                 attr = getattr(self, interface_name)
                 if callable(attr):
-                    @functools.wraps(f)
+                    @functools.wraps(_callable.callable)
                     def impl_f(*args, **kwargs):
-                        args = self.reargs(args, padding=True)
+                        args = self.reargs(args)
                         return attr(args, kwargs)
                     setattr(self, name, impl_f)
 
@@ -56,7 +55,7 @@ def wrapper_class(
         # primary primitive methods
 
         def _p_execute(self, args, kwargs):
-            result = f(*args, **kwargs)
+            result = _callable.callable(*args, **kwargs)
             return result
 
         def _p_get(self, key):

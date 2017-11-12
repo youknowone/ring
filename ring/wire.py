@@ -2,14 +2,11 @@
 
 class Wire(object):
 
-    def __init__(self, preargs, anon_padding=False):
+    def __init__(self, preargs):
         assert isinstance(preargs, tuple)
         self.preargs = preargs
-        self.anon_padding = anon_padding
 
-    def reargs(self, args, padding):
+    def reargs(self, args):
         if self.preargs:
             args = self.preargs + args
-        elif padding and self.anon_padding:
-            args = (None,) + args
         return args

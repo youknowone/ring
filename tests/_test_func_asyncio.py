@@ -1,12 +1,71 @@
 
 import ring
 import asyncio
+import aiomcache
+import aioredis
 
 import pytest
 
+from tests.test_func_sync import StorageDict
 
+
+@pytest.fixture()
 @asyncio.coroutine
-def common_test(f, base):
+def storage_dict():
+    storage = StorageDict()
+    storage.ring = ring.func_asyncio.async_dict
+    return storage
+
+
+@pytest.fixture()
+@asyncio.coroutine
+def aiomcache_client():
+    client = aiomcache.Client('127.0.0.1', 11211)
+    client.ring = ring.func.aiomcache
+    return client
+
+
+@pytest.fixture()
+@asyncio.coroutine
+def aioredis_pool():
+    global _aioredis_pool
+    _aioredis_pool = yield from aioredis.create_pool(
+        ('localhost', 6379), minsize=2, maxsize=2)
+    _aioredis_pool.ring = ring.func.aioredis
+    return _aioredis_pool
+
+
+@pytest.fixture(params=[
+    pytest.lazy_fixture('storage_dict'),
+    pytest.lazy_fixture('aiomcache_client'),
+    pytest.lazy_fixture('aioredis_pool'),
+])
+def gen_storage(request):
+    return request.param
+
+
+@pytest.mark.asyncio
+@asyncio.coroutine
+def test_vanilla_function(storage_dict):
+    storage = yield from storage_dict
+
+    with pytest.raises(TypeError):
+        @storage.ring(storage)
+        def vanilla_function():
+            pass
+
+
+@pytest.mark.asyncio
+@asyncio.coroutine
+def test_common(gen_storage):
+    storage = yield from gen_storage
+    base = [0]
+
+    @storage.ring(storage, 'ring-test !@#', 5)
+    @asyncio.coroutine
+    def f(a, b):
+        return str(base[0] + a * 100 + b).encode()
+
     # `f` is a callable with argument `a` and `b`
     # test f is correct
     assert f.key(a=0, b=0)  # f takes a, b
@@ -57,10 +116,11 @@ def common_test(f, base):
 
 @pytest.mark.asyncio
 @asyncio.coroutine
-def test_complicated_key():
-    cache = {}
+def test_complicated_key(gen_storage):
 
-    @ring.func_asyncio.async_dict(cache)
+    storage = yield from gen_storage
+
+    @storage.ring(storage)
     @asyncio.coroutine
     def complicated(a, *args, b, **kw):
         return b'42'
@@ -97,20 +157,20 @@ def test_func_dict():
 
 @pytest.mark.asyncio
 @asyncio.coroutine
-def test_func_method():
-    cache = {}
+def test_func_method(storage_dict):
+    storage = yield from storage_dict
 
     class A(object):
         def __ring_key__(self):
             return 'A'
 
-        @ring.func_asyncio.async_dict(cache)
+        @ring.func_asyncio.async_dict(storage)
         @asyncio.coroutine
         def method(self, a, b):
             return base + a * 100 + b
 
+        @ring.func_asyncio.async_dict(storage)
         @classmethod
-        @ring.func_asyncio.async_dict(cache)
         @asyncio.coroutine
         def cmethod(cls, a, b):
             return base + a * 200 + b
@@ -118,45 +178,13 @@ def test_func_method():
     obj = A()
 
     base = 10000
-    obj.method.delete(1, 2)
+    yield from obj.method.delete(1, 2)
     assert ((yield from obj.method(1, 2))) == 10102
 
-    obj.cmethod.delete(1, 2)
+    yield from obj.cmethod.delete(1, 2)
     assert ((yield from obj.cmethod(1, 2))) == 10202
 
+    yield from A.cmethod.delete(1, 2)
+    assert ((yield from A.cmethod(1, 2))) == 10202
 
-@pytest.mark.asyncio
-@asyncio.coroutine
-def test_aiomcache():
-    import aiomcache
-    client = aiomcache.Client('127.0.0.1', 11211)
-
-    base = [0]
-
-    @ring.func.aiomcache(client, 'ring-test !@#')
-    @asyncio.coroutine
-    def cached_function(a, b):
-        return str(base[0] + a * 100 + b).encode()
-
-    yield from common_test(cached_function, base)
-
-
-@pytest.mark.asyncio
-@asyncio.coroutine
-def test_aioredis():
-    import aioredis
-    pool = yield from aioredis.create_pool(
-        ('localhost', 6379),
-        minsize=2, maxsize=2)
-
-    base = [0]
-
-    @ring.func.aioredis(pool, 'ring-test', 5)
-    @asyncio.coroutine
-    def cached_function(a, b):
-        return str(base[0] + a * 100 + b).encode()
-
-    yield from common_test(cached_function, base)
-
-    pool.close()
-    yield from pool.wait_closed()
+    assert obj.cmethod.key(3, 4) == A.cmethod.key(3, 4)
