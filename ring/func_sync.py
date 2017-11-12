@@ -188,7 +188,7 @@ class RedisImplementation(fbase.StorageImplementation):
 
 
 def dict(
-        obj, key_prefix='', expire=None, coder=None, ignorable_keys=None,
+        obj, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
         interface=CacheInterface, storage_implementation=DictImpl):
 
     return fbase.factory(
