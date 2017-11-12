@@ -250,7 +250,7 @@ async_dict = dict
 
 
 def aiomcache(
-        client, key_prefix, time=0, coder=None, ignorable_keys=None,
+        client, key_prefix, expire=0, coder=None, ignorable_keys=None,
         interface=CacheInterface, storage_implementation=AiomcacheImpl,
         key_encoding='utf-8'):
     from ring._memcache import key_refactor
@@ -258,7 +258,7 @@ def aiomcache(
     return fbase.factory(
         client, key_prefix=key_prefix, wrapper_class=wrapper_class,
         interface=interface, storage_implementation=storage_implementation,
-        miss_value=None, expire_default=time, coder=coder,
+        miss_value=None, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys,
         key_encoding=key_encoding,
         key_refactor=key_refactor)

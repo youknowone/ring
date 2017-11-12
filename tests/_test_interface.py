@@ -75,14 +75,14 @@ class DoubleCacheInterface(BaseInterface):
 
 
 def doublecache(
-        client, key_prefix, time=0, coder=None, ignorable_keys=None,
+        client, key_prefix, expire=0, coder=None, ignorable_keys=None,
         interface=DoubleCacheInterface):
     from ring.func_asyncio import DictImpl
 
     return factory(
         client, key_prefix=key_prefix, wrapper_class=wrapper_class,
         interface=interface, storage_implementation=DictImpl,
-        miss_value=None, expire_default=time, coder=coder,
+        miss_value=None, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys)
 
 
@@ -92,7 +92,7 @@ def test_x():
 
     f_value = 0
 
-    @doublecache(storage, key_prefix='f', time=10)
+    @doublecache(storage, key_prefix='f', expire=10)
     @asyncio.coroutine
     def f():
         nonlocal f_value
