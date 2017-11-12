@@ -199,9 +199,9 @@ class BaseInterface(object):
         except KeyError as exc:
             raise_from(TypeError("run() missing 1 required keyword argument: 'action'"), exc)
 
-        action_name = '_' + action
-        if hasattr(self, action_name):
-            attr = getattr(self, action_name)
-            return attr(args, kwargs)
+        interface_name = '_' + action
+        if hasattr(self, interface_name):
+            attr = getattr(self, action)
+            return attr()
 
         return self.__getattribute__(action)
