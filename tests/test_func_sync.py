@@ -277,7 +277,7 @@ def common_value_test(ring_decorator):
 def test_value_memcache(client):
     if client is None:
         pytest.skip()
-    ring_decorator = ring.func.memcache(client, key_prefix=str(client), time=5)
+    ring_decorator = ring.func.memcache(client, key_prefix=str(client), expire=5)
     common_value_test(ring_decorator)
 
 
