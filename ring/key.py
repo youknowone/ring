@@ -25,11 +25,10 @@ class Key(object):
             type(self).__module__, type(self).__name__,
             self.provider)
 
-    def build(self, args):
+    def build(self, args):  # pragma: no cover
         raise NotImplementedError
 
-    @cached_property
-    def ordered_provider_keys(self):
+    def ordered_provider_keys(self):  # pragma: no cover
         raise NotImplementedError
 
     @cached_property
@@ -61,7 +60,7 @@ class CallableWrapper(Callable):
             super(CallableWrapper, self).__init__(f)
         elif hasattr(f, '__func__'):
             super(CallableWrapper, self).__init__(f.__func__)
-        else:
+        else:  # pragma: no cover
             assert False
 
     @cached_property

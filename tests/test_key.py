@@ -4,14 +4,42 @@ from ring.key import FormatKey, CallableKey
 import pytest
 
 
-@pytest.mark.parametrize(['key', 'provider_keys_set'], [
-    (FormatKey('prefix:{a}:{b}:{c040}'), {'a', 'b', 'c040'}),
-    (CallableKey(lambda a, b, c040: None), {'a', 'b', 'c040'}),
+@pytest.fixture(scope='session')
+def format_key():
+    return FormatKey('prefix:{a}:{b}:{c040}')
+
+
+@pytest.fixture(scope='session')
+def callable_key():
+    return CallableKey(lambda a, b, c040: None)
+
+
+@pytest.fixture(params=[
+    pytest.lazy_fixture('format_key'),
+    pytest.lazy_fixture('callable_key'),
 ])
-def test_provider_keys(key, provider_keys_set):
-    pkeys = key.provider_keys_set
+def ring_key(request):
+    return request.param
+
+
+def test_provider_keys(ring_key):
+    provider_keys_set = {'a', 'b', 'c040'}
+    pkeys = ring_key.provider_keys_set
     assert isinstance(pkeys, frozenset)
-    assert pkeys == key.provider_keys_set == provider_keys_set
+    assert pkeys == ring_key.provider_keys_set == provider_keys_set
+
+
+def test_key_build(ring_key):
+    assert ring_key.build({'a': 1, 'b': 2, 'c040': 3}).endswith(':1:2:3')
+
+    with pytest.raises(KeyError):
+        ring_key.build({'a': 1, 'b': 2, 'c': 3})
+    with pytest.raises(KeyError):
+        ring_key.build({'a': 1, 'b': 2})
+
+
+def test_key_repr(ring_key):
+    assert repr(ring_key)
 
 
 def test_callable_key():

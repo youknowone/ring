@@ -3,7 +3,17 @@ import pytest
 
 
 @pytest.mark.asyncio
-async def test_async_func_method():
+async def test_async_def_vanilla_function(storage_dict):
+    storage = await storage_dict
+
+    with pytest.raises(TypeError):
+        @storage.ring(storage)
+        def vanilla_function():
+            pass
+
+
+@pytest.mark.asyncio
+async def test_async_def_func_method():
     import ring.func_asyncio
     cache = {}
 

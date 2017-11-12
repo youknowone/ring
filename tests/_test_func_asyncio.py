@@ -46,6 +46,17 @@ def gen_storage(request):
 
 @pytest.mark.asyncio
 @asyncio.coroutine
+def test_vanilla_function(storage_dict):
+    storage = yield from storage_dict
+
+    with pytest.raises(TypeError):
+        @storage.ring(storage)
+        def vanilla_function():
+            pass
+
+
+@pytest.mark.asyncio
+@asyncio.coroutine
 def test_common(gen_storage):
     storage = yield from gen_storage
     base = [0]
