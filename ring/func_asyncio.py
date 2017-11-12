@@ -227,7 +227,7 @@ class AioredisImpl(fbase.StorageImplementation):
 
 
 def dict(
-        obj, key_prefix='', expire=None, coder=None, ignorable_keys=None,
+        obj, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
         interface=CacheInterface, storage_implementation=DictImpl):
 
     return fbase.factory(
@@ -241,7 +241,7 @@ async_dict = dict
 
 
 def aiomcache(
-        client, key_prefix, expire=0, coder=None, ignorable_keys=None,
+        client, key_prefix=None, expire=0, coder=None, ignorable_keys=None,
         interface=CacheInterface, storage_implementation=AiomcacheImpl,
         key_encoding='utf-8'):
     from ring._memcache import key_refactor
@@ -256,7 +256,7 @@ def aiomcache(
 
 
 def aioredis(
-        pool, key_prefix, expire, coder=None, ignorable_keys=None,
+        pool, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
         interface=CacheInterface, storage_implementation=AioredisImpl):
 
     return fbase.factory(

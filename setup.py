@@ -10,7 +10,7 @@ def get_version():
 
 
 tests_require = [
-    'pytest>=3.0.2', 'pytest-cov', 'mock', 'patch',
+    'pytest>=3.0.2', 'pytest-cov', 'pytest-lazy-fixture', 'mock', 'patch',
     'pymemcache',
     'redis', 'requests',
 ]

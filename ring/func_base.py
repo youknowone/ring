@@ -57,6 +57,8 @@ def suggest_key_prefix(c, key_prefix):
             key_prefix = '{0.__module__}.{{cls}}.{0.__name__}'.format(c.callable)
         else:
             key_prefix = '{0.__module__}.{0.__name__}'.format(c.callable)
+    else:
+        key_prefix = key_prefix.replace('{', '{{').replace('}', '}}')
     return key_prefix
 
 
