@@ -7,7 +7,7 @@ def test_readme_function():
     mc = memcache.Client(['127.0.0.1:11211'])
 
     # working for mc, expire in 60sec
-    @ring.func.memcache(mc, expire=60)
+    @ring.func.memcache(mc, time=60)
     def get_url(url):
         return requests.get(url).content
 

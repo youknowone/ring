@@ -3,7 +3,6 @@ import asyncio
 import inspect
 import functools
 import time
-from ring.wire import Wire
 from ring import func_base as fbase
 
 __all__ = ('aiomcache', 'aioredis', )
@@ -11,67 +10,71 @@ __all__ = ('aiomcache', 'aioredis', )
 inspect_iscoroutinefunction = getattr(inspect, 'iscoroutinefunction', lambda f: False)
 
 
+def _is_coroutine(f):
+    return hasattr(f, '_is_coroutine') or inspect_iscoroutinefunction(f)
+
+
 def wrapper_class(
-        _callable, storage, ckey,
+        f, storage, ckey,
         Interface, StorageImplementation,
         miss_value, expire_default,
         encode, decode):
 
-    if not _callable.is_coroutine:
+    if not _is_coroutine(f):
         raise TypeError(
             "The funciton for cache '{}' must be an async function.".format(
-                _callable.code.co_name))
+                f.__name__))
 
-    _encode = encode
-    _decode = decode
-
-    class Ring(Wire, Interface):
+    class Ring(fbase.WrapperBase, Interface):
 
         _ckey = ckey
         _storage = storage
         _storage_impl = StorageImplementation()
         _miss_value = miss_value
         _expire_default = expire_default
-        encode = staticmethod(_encode)
-        decode = staticmethod(_decode)
-
-        @functools.wraps(_callable.callable)
-        def __call__(self, *args, **kwargs):
-            args = self.reargs(args)
-            return self._get_or_update(args, kwargs)
+        _encode = staticmethod(encode)
+        _decode = staticmethod(decode)
 
         def __getattr__(self, name):
             try:
-                attr = self.__getattribute__(name)
-                return attr
-            except AttributeError:
+                return self.__getattribute__(name)
+            except:
                 pass
 
             interface_name = '_' + name
-            if hasattr(Interface, interface_name):
+            if hasattr(Interface, interface_name) or name in ['_key', '_execute']:
                 attr = getattr(self, interface_name)
                 if callable(attr):
-                    @functools.wraps(_callable.callable)
+                    @functools.wraps(f)
                     def impl_f(*args, **kwargs):
-                        args = self.reargs(args)
+                        args = self.reargs(args, padding=True)
                         return attr(args, kwargs)
                     setattr(self, name, impl_f)
 
             return self.__getattribute__(name)
 
+        @functools.wraps(f)
+        def __call__(self, *args, **kwargs):
+            args = self.reargs(args, padding=False)
+            return self._get_or_update(args, kwargs)
+
+        def _key(self, args, kwargs):
+            key = self._ckey.build_key(args, kwargs)
+            return key
+
         @asyncio.coroutine
-        def _p_execute(self, args, kwargs):
-            result = yield from _callable.callable(*args, **kwargs)
+        def _execute(self, args, kwargs):
+            result = yield from f(*args, **kwargs)
             return result
 
         @asyncio.coroutine
         def _p_get(self, key):
             value = yield from self._storage_impl.get_value(self._storage, key)
-            return self.decode(value)
+            return self._decode(value)
 
         @asyncio.coroutine
         def _p_set(self, key, value, expire=_expire_default):
-            encoded = self.encode(value)
+            encoded = self._encode(value)
             yield from self._storage_impl.set_value(self._storage, key, encoded, expire)
 
         @asyncio.coroutine
@@ -109,8 +112,8 @@ class CacheInterface(fbase.BaseInterface):
         try:
             result = yield from self._p_get(key)
         except fbase.NotFound:
-            result = yield from self._p_execute(args, kwargs)
-            yield from self._p_set(key, result, self._expire_default)
+            result = yield from self._execute(args, kwargs)
+            yield from self._p_set(key, result)
         return result
 
     @asyncio.coroutine
@@ -134,9 +137,11 @@ class DictImpl(fbase.StorageImplementation):
         try:
             expired_time, value = obj[key]
         except KeyError:
-            raise fbase.NotFound from KeyError
+            raise fbase.NotFound
+
         if expired_time is not None and expired_time < _now:
             raise fbase.NotFound
+
         return value
 
     @asyncio.coroutine
@@ -227,7 +232,7 @@ class AioredisImpl(fbase.StorageImplementation):
 
 
 def dict(
-        obj, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
+        obj, key_prefix='', expire=None, coder=None, ignorable_keys=None,
         interface=CacheInterface, storage_implementation=DictImpl):
 
     return fbase.factory(
@@ -241,7 +246,7 @@ async_dict = dict
 
 
 def aiomcache(
-        client, key_prefix=None, expire=0, coder=None, ignorable_keys=None,
+        client, key_prefix, time=0, coder=None, ignorable_keys=None,
         interface=CacheInterface, storage_implementation=AiomcacheImpl,
         key_encoding='utf-8'):
     from ring._memcache import key_refactor
@@ -249,14 +254,14 @@ def aiomcache(
     return fbase.factory(
         client, key_prefix=key_prefix, wrapper_class=wrapper_class,
         interface=interface, storage_implementation=storage_implementation,
-        miss_value=None, expire_default=expire, coder=coder,
+        miss_value=None, expire_default=time, coder=coder,
         ignorable_keys=ignorable_keys,
         key_encoding=key_encoding,
         key_refactor=key_refactor)
 
 
 def aioredis(
-        pool, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
+        pool, key_prefix, expire, coder=None, ignorable_keys=None,
         interface=CacheInterface, storage_implementation=AioredisImpl):
 
     return fbase.factory(

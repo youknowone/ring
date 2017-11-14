@@ -27,37 +27,42 @@ def unpack_coder(coder):
     return encode, decode
 
 
-def is_method(c):
-    if not c.first_argument:
+def is_method(f):
+    fw = CallableWrapper(f)
+    if not fw.first_argument:
         return False
-    return c.first_argument.varname == 'self'
+    return fw.first_argument.varname == 'self'
 
 
-def is_classmethod(c):
-    return isinstance(c.premitive, classmethod)
+def is_classmethod(f):
+    fw = CallableWrapper(f)
+    if not fw.first_argument:
+        return False
+    return fw.first_argument.varname == 'cls'
 
 
-def suggest_ignorable_keys(c, ignorable_keys):
+def suggest_ignorable_keys(f, ignorable_keys):
     if ignorable_keys is None:
-        _ignorable_keys = []
+        if is_classmethod(f):
+            _ignorable_keys = ['cls']
+        else:
+            _ignorable_keys = []
     else:
         _ignorable_keys = ignorable_keys
     return _ignorable_keys
 
 
-def suggest_key_prefix(c, key_prefix):
+def suggest_key_prefix(f, key_prefix):
     if key_prefix is None:
-        if is_method(c):
+        if is_method(f):
             key_prefix = \
                 '{0.__module__}.{{self.__class__.__name__}}.' \
-                '{0.__name__}'.format(c.callable)
-        elif is_classmethod(c):
-            # cls is already a str object somehow
-            key_prefix = '{0.__module__}.{{cls}}.{0.__name__}'.format(c.callable)
+                '{0.__name__}'.format(f)
+        elif is_classmethod(f):
+            # No guess supported for classmethod yet.
+            key_prefix = '{0.__module__}.{0.__name__}'.format(f)
         else:
-            key_prefix = '{0.__module__}.{0.__name__}'.format(c.callable)
-    else:
-        key_prefix = key_prefix.replace('{', '{{').replace('}', '}}')
+            key_prefix = '{0.__module__}.{0.__name__}'.format(f)
     return key_prefix
 
 
@@ -65,11 +70,8 @@ def coerce(v):
     if isinstance(v, (int, str, bool)):
         return v
 
-    if isinstance(v, (list, tuple)):
+    if isinstance(v, list):
         return str(v).replace(' ', '')
-
-    if isinstance(v, type):
-        return v.__name__
 
     if hasattr(v, '__ring_key__'):
         return v.__ring_key__()
@@ -110,19 +112,19 @@ def create_ckey(f, key_prefix, ignorable_keys, coerce=coerce, encoding=None, key
     return ckey
 
 
-function_type = type(bypass)
+class WrapperBase(object):
 
+    def __init__(self, preargs, anon_padding=False):
+        assert isinstance(preargs, tuple)
+        self.preargs = preargs
+        self.anon_padding = anon_padding
 
-class WiredProperty(object):
-
-    def __init__(self, func):
-        self.__func__ = func
-
-    def __get__(self, obj, type=None):
-        if obj is None:
-            return self.__func__(type)
-        else:
-            return self.__func__(obj)
+    def reargs(self, args, padding):
+        if self.preargs:
+            args = self.preargs + args
+        elif padding and self.anon_padding:
+            args = (None,) + args
+        return args
 
 
 def factory(
@@ -133,37 +135,28 @@ def factory(
     encode, decode = unpack_coder(coder)
 
     def _decorator(f):
-        _callable = CallableWrapper(f)
-        _ignorable_keys = suggest_ignorable_keys(_callable, ignorable_keys)
-        _key_prefix = suggest_key_prefix(_callable, key_prefix)
+        _ignorable_keys = suggest_ignorable_keys(f, ignorable_keys)
+        _key_prefix = suggest_key_prefix(f, key_prefix)
         ckey = create_ckey(
-            _callable, _key_prefix, _ignorable_keys, encoding=key_encoding, key_refactor=key_refactor)
+            f, _key_prefix, _ignorable_keys, encoding=key_encoding, key_refactor=key_refactor)
 
         _Wrapper = wrapper_class(
-            _callable, context, ckey,
+            f, context, ckey,
             interface, storage_implementation, miss_value, expire_default,
             encode, decode)
 
-        if is_method(_callable):
-            @WiredProperty
+        if is_method(f):
+            @property
             def _w(self):
-                wrapper_name = '__wrapper_' + _callable.code.co_name
+                wrapper_name = '__wrapper_' + f.__name__
                 wrapper = getattr(self, wrapper_name, None)
                 if wrapper is None:
                     _wrapper = _Wrapper((self,))
-                    wrapper = functools.wraps(_callable.callable)(_wrapper)
+                    wrapper = functools.wraps(f)(_wrapper)
                     setattr(self, wrapper_name, wrapper)
                 return wrapper
-        elif is_classmethod(_callable):
-            @WiredProperty
-            def _w(self):
-                wrapper_name = '__wrapper_' + _callable.code.co_name
-                wrapper = getattr(self, wrapper_name, None)
-                if wrapper is None:
-                    _wrapper = _Wrapper((self,))
-                    wrapper = functools.wraps(_callable.callable)(_wrapper)
-                    setattr(self, wrapper_name, wrapper)
-                return wrapper
+        elif is_classmethod(f):
+            _w = _Wrapper((), anon_padding=True)
         else:
             _w = _Wrapper(())
 
@@ -192,7 +185,6 @@ class StorageImplementation(object):
 
 
 class BaseInterface(object):
-
     def _key(self, args, kwargs):
         return self._ckey.build_key(args, kwargs)
 
@@ -213,7 +205,3 @@ class BaseInterface(object):
 
     def _touch(self, args, kwargs):
         raise NotImplementedError
-
-    def run(self, action, *args, **kwargs):
-        attr = getattr(self, action)
-        return attr(*args, **kwargs)
