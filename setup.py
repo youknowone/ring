@@ -3,22 +3,11 @@ from __future__ import with_statement
 from setuptools import setup
 import sys
 
-
-def get_version():
-    with open('ring/version.txt') as f:
-        return f.read().strip()
-
-
 tests_require = [
-    'pytest>=3.0.2', 'pytest-cov', 'pytest-lazy-fixture', 'mock', 'patch',
+    'pytest>=3.0.2', 'pytest-cov', 'mock', 'patch',
     'pymemcache',
     'redis', 'requests',
 ]
-docs_require = [
-    'sphinx',
-]
-
-dev_require = tests_require + docs_require
 
 try:
     import __pypy__  # noqa
@@ -62,7 +51,7 @@ def get_readme():
 
 setup(
     name='ring',
-    version=get_version(),
+    version='0.4.0',
     description='The ultimate cache with built-in memcache & redis + asyncio support.',
     long_description=get_readme(),
     author='Jeong YunWon',
@@ -73,13 +62,11 @@ setup(
     ),
     install_requires=[
         'prettyexc>=0.6.0',
-        'callable>=0.1.2',
+        'callable>=0.1.1',
     ],
     tests_require=tests_require + ['tox', 'tox-pyenv'],
     extras_require={
         'tests': tests_require,
-        'docs': docs_require,
-        'dev': dev_require,
     },
     classifiers=[
         'Intended Audience :: Developers',

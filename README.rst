@@ -1,15 +1,10 @@
-Ring
-~~~~
+Ring - The ultimate cache interface.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. image:: https://travis-ci.org/youknowone/ring.svg?branch=master
     :target: https://travis-ci.org/youknowone/ring
 
-Let's concentrate on code, not about storages.
-
-Ring shows a way to control cache in point of view of code - not about storages.
-Ring's decorator is convenient but also keeping fluency for general scenarios.
-
-:mod:`asyncio` support!
+asyncio support!
 
 Take an explicit but fully automated cache.
 Ring decorators convert your functions to cached version of them, with extra control methods.
@@ -92,26 +87,7 @@ Method cache
     # id is the cache key so...
     user2 = User(id=42)
     # still hitting the same cache
-    assert updated_data == user2.data()
-
-
-Installation
-------------
-
-PyPI is the recommended way.
-
-.. sourcecode:: shell
-
-    $ pip install ring
-
-To browse versions and tarballs, visit:
-    `<https://pypi.python.org/pypi/ring/>`_
-
-
-To use memcache or redis, don't forget to install related libraries.
-For example: python-memcached, python3-memcached, pylibmc, redis-py etc
-
-It may require to install and run related services too: memcached and redis.
+    assert user_data == user2.data()
 
 
 Contribution
@@ -121,32 +97,12 @@ First, install ring in editable mode. Use 'tests' extra to install tests require
 
 .. code:: sh
 
-    $ pip install -e '.[tests]'
+   $ pip install -e '.[tests]'
 
 
 Run pytest to check the test set is ready.
 
 .. code:: sh
 
-    $ pytest -vv
+   $ pytest -vv
 
-
-Note: Can't you install it because of compile errors?
-Don't forget to install and run memcached and redis locally.
-
-For macOS:
-
-.. code:: sh
-
-    $ brew install libmemcached memcached redis
-    $ brew service start memcached
-    $ brew service start redis
-
-
-For debian/ubuntu:
-
-.. code:: sh
-
-    $ apt install libmemcached-dev memcached redis-server
-    $ service memcached start
-    $ service redis start

@@ -4,49 +4,47 @@ import functools
 import re
 import hashlib
 from ring import func_base as fbase
-from ring.wire import Wire
 from ring.func_base import NotFound
+
 
 __all__ = ('memcache', 'redis_py', 'redis', 'arcus')
 
 
 def wrapper_class(
-        _callable, storage, ckey,
+        f, storage, ckey,
         Interface, Storage,
         miss_value, expire_default,
         encode, decode):
 
-    _encode = encode
-    _decode = decode
+    class Ring(fbase.WrapperBase, Interface):
 
-    class Ring(Wire, Interface):
         _ckey = ckey
         _expire_default = expire_default
 
         _storage = storage
         _miss_value = miss_value
         _storage_impl = Storage()
-        encode = staticmethod(_encode)
-        decode = staticmethod(_decode)
+        _encode = staticmethod(encode)
+        _decode = staticmethod(decode)
 
-        @functools.wraps(_callable.callable)
+        @functools.wraps(f)
         def __call__(self, *args, **kwargs):
-            args = self.reargs(args)
+            args = self.reargs(args, padding=False)
             return self._get_or_update(args, kwargs)
 
         def __getattr__(self, name):
             try:
                 return self.__getattribute__(name)
-            except AttributeError:
+            except:
                 pass
 
             interface_name = '_' + name
             if hasattr(Interface, interface_name):
                 attr = getattr(self, interface_name)
                 if callable(attr):
-                    @functools.wraps(_callable.callable)
+                    @functools.wraps(f)
                     def impl_f(*args, **kwargs):
-                        args = self.reargs(args)
+                        args = self.reargs(args, padding=True)
                         return attr(args, kwargs)
                     setattr(self, name, impl_f)
 
@@ -55,15 +53,15 @@ def wrapper_class(
         # primary primitive methods
 
         def _p_execute(self, args, kwargs):
-            result = _callable.callable(*args, **kwargs)
+            result = f(*args, **kwargs)
             return result
 
         def _p_get(self, key):
             value = self._storage_impl.get_value(self._storage, key)
-            return self.decode(value)
+            return self._decode(value)
 
         def _p_set(self, key, value, expire=expire_default):
-            encoded = self.encode(value)
+            encoded = self._encode(value)
             self._storage_impl.set_value(self._storage, key, encoded, expire)
 
         def _p_delete(self, key):
@@ -187,18 +185,18 @@ class RedisImplementation(fbase.StorageImplementation):
 
 
 def dict(
-        obj, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
+        obj, key_prefix='', expire=None, coder=None, ignorable_keys=None,
         interface=CacheInterface, storage_implementation=DictImpl):
 
     return fbase.factory(
-        obj, key_prefix=key_prefix, wrapper_class=wrapper_class,
+        obj, key_prefix=None, wrapper_class=wrapper_class,
         interface=interface, storage_implementation=storage_implementation,
         miss_value=None, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys)
 
 
 def memcache(
-        client, key_prefix=None, expire=0, coder=None, ignorable_keys=None,
+        client, key_prefix=None, time=0, coder=None, ignorable_keys=None,
         interface=CacheInterface, storage_implementation=MemcacheImpl):
     from ring._memcache import key_refactor
     miss_value = None
@@ -206,7 +204,7 @@ def memcache(
     return fbase.factory(
         client, key_prefix=key_prefix, wrapper_class=wrapper_class,
         interface=interface, storage_implementation=storage_implementation,
-        miss_value=miss_value, expire_default=expire, coder=coder,
+        miss_value=miss_value, expire_default=time, coder=coder,
         ignorable_keys=ignorable_keys,
         key_refactor=key_refactor)
 
@@ -227,7 +225,7 @@ redis = redis_py
 
 
 def arcus(
-        client, key_prefix=None, expire=0, coder=None, ignorable_keys=None,
+        client, key_prefix=None, time=0, coder=None, ignorable_keys=None,
         interface=CacheInterface):
 
     class Impl(fbase.Storage):
@@ -238,12 +236,12 @@ def arcus(
             return value
 
         def set_value(self, client, key, value):
-            client.set(key, value, expire)
+            client.set(key, value, time)
 
         def del_value(self, client, key):
             client.delete(key)
 
-        def touch_value(self, client, key, expire):
+        def touch_value(self, client, key, expire=time):
             client.touch(key, expire)
 
     rule = re.compile(r'[!-~]+')
@@ -262,6 +260,6 @@ def arcus(
     return fbase.factory(
         client, key_prefix=key_prefix, wrapper_class=wrapper_class,
         interface=interface, storage_implementation=Impl,
-        miss_value=None, expire_default=expire, coder=coder,
+        miss_value=None, expire_default=time, coder=coder,
         ignorable_keys=ignorable_keys,
         key_refactor=key_refactor)

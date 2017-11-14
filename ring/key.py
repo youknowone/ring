@@ -22,13 +22,14 @@ class Key(object):
 
     def __repr__(self):
         return u'<{}.{} provider={}>'.format(
-            type(self).__module__, type(self).__name__,
+            self.__class__.__module__, self.__class__.__name__,
             self.provider)
 
-    def build(self, args):  # pragma: no cover
+    def build(self, args):
         raise NotImplementedError
 
-    def ordered_provider_keys(self):  # pragma: no cover
+    @cached_property
+    def ordered_provider_keys(self):
         raise NotImplementedError
 
     @cached_property
@@ -53,15 +54,6 @@ class FormatKey(Key):
 
 
 class CallableWrapper(Callable):
-
-    def __init__(self, f):
-        self.premitive = f
-        if callable(f):
-            super(CallableWrapper, self).__init__(f)
-        elif hasattr(f, '__func__'):
-            super(CallableWrapper, self).__init__(f.__func__)
-        else:  # pragma: no cover
-            assert False
 
     @cached_property
     def identifier(self):
