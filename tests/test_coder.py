@@ -13,6 +13,27 @@ def test_coder_json():
     assert {'x': 1} == ring.coder.json.decode(b'{"x": 1}')
 
 
+def test_coder_pickle():
+    import memcache
+    import datetime
+
+    mc = memcache.Client(['127.0.0.1:11211'])
+
+    @ring.func.memcache(mc, coder='pickle')
+    def now():
+        return datetime.datetime.now()
+
+    dt_now = now()
+    direct_data = mc.get(now.key())
+    assert direct_data
+
+    encoded_data = ring.coder.pickle.encode(dt_now)
+    assert encoded_data == direct_data
+
+    decoded_data = ring.coder.pickle.decode(encoded_data)
+    assert decoded_data == dt_now
+
+
 def test_unexisting_coder():
     cache = {}
 
