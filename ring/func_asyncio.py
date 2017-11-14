@@ -19,7 +19,7 @@ def wrapper_class(
 
     if not _callable.is_coroutine:
         raise TypeError(
-            "The funciton for cache '{}' must be an async function.".format(
+            "The function for cache '{}' must be an async function.".format(
                 _callable.code.co_name))
 
     _encode = encode
