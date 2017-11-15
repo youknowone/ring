@@ -1,10 +1,10 @@
 
-import pickle as pickle_mod
-
 try:
     import ujson as json_mod
 except ImportError:
     import json as json_mod
+
+import pickle
 
 
 class JsonCoder(object):
@@ -22,12 +22,20 @@ class PickleCoder(object):
 
     @staticmethod
     def encode(data):
-        return pickle_mod.dumps(data)
+        return pickle.dumps(data)
 
     @staticmethod
     def decode(binary):
-        return pickle_mod.loads(binary)
+        return pickle.loads(binary)
 
 
-json = JsonCoder
-pickle = PickleCoder
+class Registry(object):
+
+    def register(self, coder_name, coder):
+        setattr(self, coder_name, coder)
+
+    def get(self, coder_name):
+        return getattr(self, coder_name, None)
+
+
+registry = Registry()
