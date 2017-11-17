@@ -1,17 +1,17 @@
 
 import ring
 import ring.coder
+import pickle
 
 import pytest
 
 
 def test_coder_pickle():
-    assert b'I1\n.' == ring.coder.pickle.encode(1)
-    assert 1 == ring.coder.pickle.decode(b'I1\n.')
+    assert pickle.dumps(1) == ring.coder.pickle.encode(1)
+    assert pickle.loads(pickle.dumps(1)) == ring.coder.pickle.decode(ring.coder.pickle.encode(1))
 
-    assert b"(dp0\nS'x'\np1\nI1\ns." == ring.coder.pickle.encode({'x': 1})
-    assert {'x': 1} == ring.coder.pickle.decode(b"(dp0\nS'x'\np1\nI1\ns.")
-
+    assert pickle.dumps({'x': 1}) == ring.coder.pickle.encode({'x': 1})
+    assert pickle.loads(pickle.dumps({'x': 1})) == ring.coder.pickle.decode(ring.coder.pickle.encode({'x': 1}))
 
 def test_unexisting_coder():
     cache = {}
