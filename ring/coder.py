@@ -17,3 +17,18 @@ class JsonCoder(object):
 
 
 json = JsonCoder
+
+
+class PickleCoder(object):
+
+    @staticmethod
+    def encode(data):
+        return piclke_mod.dumps(data, 0)
+
+    @staticmethod
+    def decode(binary):
+        return piclke_mod.loads(binary.decode('utf-8'))
+
+
+pickle = PickleCoder
+
