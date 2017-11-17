@@ -27,7 +27,7 @@ class PickleCoder(object):
 
     @staticmethod
     def encode(data):
-        return pickle_mod.dumps(data)
+        return pickle_mod.dumps(data, 0)
 
     @staticmethod
     def decode(binary):
