@@ -1,8 +1,12 @@
-
 try:
     import ujson as json_mod
 except ImportError:
     import json as json_mod
+
+try:
+    import pickle as pickle_mod
+except ImportError:
+    import cpickle as pickle_mod
 
 
 class JsonCoder(object):
@@ -23,12 +27,11 @@ class PickleCoder(object):
 
     @staticmethod
     def encode(data):
-        return piclke_mod.dumps(data, 0)
+        return pickle_mod.dumps(data, 0)
 
     @staticmethod
     def decode(binary):
-        return piclke_mod.loads(binary.decode('utf-8'))
+        return pickle_mod.loads(binary.decode('utf-8'))
 
 
 pickle = PickleCoder
-
