@@ -202,7 +202,10 @@ class AioredisImpl(fbase.StorageImplementation):
 
     @asyncio.coroutine
     def set_value(self, pool, key, value, expire):
-        yield from pool.execute('set', key, value, 'ex', expire)
+        if expire is None:
+            yield from pool.execute('set', key, value)
+        else:
+            yield from pool.execute('set', key, value, 'ex', expire)
 
     @asyncio.coroutine
     def del_value(self, pool, key):
