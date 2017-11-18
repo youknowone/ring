@@ -20,18 +20,24 @@ class JsonCoder(object):
         return json_mod.loads(binary.decode('utf-8'))
 
 
-json = JsonCoder
-
-
 class PickleCoder(object):
 
     @staticmethod
     def encode(data):
-        return pickle_mod.dumps(data, 0)
+        return pickle_mod.dumps(data)
 
     @staticmethod
     def decode(binary):
         return pickle_mod.loads(binary)
 
 
-pickle = PickleCoder
+class Registry(object):
+
+    def register(self, coder_name, coder):
+        setattr(self, coder_name, coder)
+
+    def get(self, coder_name):
+        return getattr(self, coder_name, None)
+
+
+registry = Registry()
