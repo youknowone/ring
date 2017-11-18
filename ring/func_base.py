@@ -9,8 +9,8 @@ def bypass(x):
 def unpack_coder(coder):
     if coder:
         if isinstance(coder, str):
-            import ring.coder
-            loaded_coder = getattr(ring.coder, coder, None)
+            from ring.coder import registry
+            loaded_coder = registry.get(coder)
             if loaded_coder is None:
                 raise TypeError(
                     "Argument 'coder' is an instance of 'str' but built-in "
