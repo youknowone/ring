@@ -4,6 +4,8 @@ try:
 except ImportError:
     import json as json_mod
 
+import pickle
+
 
 class JsonCoder(object):
 
@@ -16,4 +18,24 @@ class JsonCoder(object):
         return json_mod.loads(binary.decode('utf-8'))
 
 
-json = JsonCoder
+class PickleCoder(object):
+
+    @staticmethod
+    def encode(data):
+        return pickle.dumps(data)
+
+    @staticmethod
+    def decode(binary):
+        return pickle.loads(binary)
+
+
+class Registry(object):
+
+    def register(self, coder_name, coder):
+        setattr(self, coder_name, coder)
+
+    def get(self, coder_name):
+        return getattr(self, coder_name, None)
+
+
+registry = Registry()
