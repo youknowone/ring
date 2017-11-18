@@ -74,6 +74,7 @@ setup(
     install_requires=[
         'prettyexc>=0.6.0',
         'callable>=0.1.2',
+        'aioredis>=1.0.0',
     ],
     tests_require=tests_require + ['tox', 'tox-pyenv'],
     extras_require={
