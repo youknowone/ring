@@ -4,9 +4,9 @@ except ImportError:
     import json as json_mod
 
 try:
-    import pickle as pickle_mod
-except ImportError:
     import cpickle as pickle_mod
+except ImportError:
+    import pickle as pickle_mod
 
 
 class JsonCoder(object):
