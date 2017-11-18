@@ -31,7 +31,7 @@ class PickleCoder(object):
 
     @staticmethod
     def decode(binary):
-        return pickle_mod.loads(binary.decode('utf-8'))
+        return pickle_mod.loads(binary)
 
 
 pickle = PickleCoder
