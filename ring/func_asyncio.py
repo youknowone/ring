@@ -12,35 +12,40 @@ inspect_iscoroutinefunction = getattr(inspect, 'iscoroutinefunction', lambda f: 
 
 
 def wrapper_class(
-        _callable, storage, ckey,
+        c, storage, ckey,
         Interface, StorageImplementation,
         miss_value, expire_default,
         encode, decode):
 
-    if not _callable.is_coroutine:
+    if not c.is_coroutine:
         raise TypeError(
             "The function for cache '{}' must be an async function.".format(
-                _callable.code.co_name))
+                c.code.co_name))
 
     _encode = encode
     _decode = decode
 
     class Ring(Wire, Interface):
-
+        _callable = c
         _ckey = ckey
+        _expire_default = expire_default
+
         _storage = storage
         _storage_impl = StorageImplementation()
         _miss_value = miss_value
-        _expire_default = expire_default
+
         encode = staticmethod(_encode)
         decode = staticmethod(_decode)
 
         @functools.wraps(_callable.callable)
         def __call__(self, *args, **kwargs):
-            args = self.reargs(args)
-            return self._get_or_update(args, kwargs)
+            return self.run('get_or_update', *args, **kwargs)
 
         def __getattr__(self, name):
+            try:
+                return super(Ring, self).__getattr__(name)
+            except AttributeError:
+                pass
             try:
                 attr = self.__getattribute__(name)
                 return attr
@@ -51,17 +56,17 @@ def wrapper_class(
             if hasattr(Interface, interface_name):
                 attr = getattr(self, interface_name)
                 if callable(attr):
-                    @functools.wraps(_callable.callable)
+                    @functools.wraps(c.callable)
                     def impl_f(*args, **kwargs):
-                        args = self.reargs(args)
-                        return attr(args, kwargs)
+                        full_kwargs = self.merge_args(args, kwargs)
+                        return attr(**full_kwargs)
                     setattr(self, name, impl_f)
 
             return self.__getattribute__(name)
 
         @asyncio.coroutine
-        def _p_execute(self, args, kwargs):
-            result = yield from _callable.callable(*args, **kwargs)
+        def _p_execute(self, kwargs):
+            result = yield from self._callable.callable(*self.preargs, **kwargs)
             return result
 
         @asyncio.coroutine
@@ -88,8 +93,8 @@ def wrapper_class(
 class CacheInterface(fbase.BaseInterface):
 
     @asyncio.coroutine
-    def _get(self, args, kwargs):
-        key = self._key(args, kwargs)
+    def _get(self, **kwargs):
+        key = self._key(**kwargs)
         try:
             result = yield from self._p_get(key)
         except fbase.NotFound:
@@ -97,30 +102,30 @@ class CacheInterface(fbase.BaseInterface):
         return result
 
     @asyncio.coroutine
-    def _update(self, args, kwargs):
-        key = self._key(args, kwargs)
-        result = yield from self._execute(args, kwargs)
+    def _update(self, **kwargs):
+        key = self._key(**kwargs)
+        result = yield from self._p_execute(kwargs)
         yield from self._p_set(key, result, self._expire_default)
         return result
 
     @asyncio.coroutine
-    def _get_or_update(self, args, kwargs):
-        key = self._key(args, kwargs)
+    def _get_or_update(self, **kwargs):
+        key = self._key(**kwargs)
         try:
             result = yield from self._p_get(key)
         except fbase.NotFound:
-            result = yield from self._p_execute(args, kwargs)
+            result = yield from self._p_execute(kwargs)
             yield from self._p_set(key, result, self._expire_default)
         return result
 
     @asyncio.coroutine
-    def _delete(self, args, kwargs):
-        key = self._key(args, kwargs)
+    def _delete(self, **kwargs):
+        key = self._key(**kwargs)
         yield from self._p_delete(key)
 
     @asyncio.coroutine
-    def _touch(self, args, kwargs):
-        key = self._key(args, kwargs)
+    def _touch(self, **kwargs):
+        key = self._key(**kwargs)
         yield from self._p_touch(key)
 
 

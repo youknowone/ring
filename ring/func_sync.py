@@ -11,8 +11,8 @@ __all__ = ('memcache', 'redis_py', 'redis', 'arcus')
 
 
 def wrapper_class(
-        _callable, storage, ckey,
-        Interface, Storage,
+        c, storage, ckey,
+        Interface, StorageImplementation,
         miss_value, expire_default,
         encode, decode):
 
@@ -20,21 +20,26 @@ def wrapper_class(
     _decode = decode
 
     class Ring(Wire, Interface):
+        _callable = c
         _ckey = ckey
         _expire_default = expire_default
 
         _storage = storage
+        _storage_impl = StorageImplementation()
         _miss_value = miss_value
-        _storage_impl = Storage()
+
         encode = staticmethod(_encode)
         decode = staticmethod(_decode)
 
         @functools.wraps(_callable.callable)
         def __call__(self, *args, **kwargs):
-            args = self.reargs(args)
-            return self._get_or_update(args, kwargs)
+            return self.run('get_or_update', *args, **kwargs)
 
         def __getattr__(self, name):
+            try:
+                return super(Ring, self).__getattr__(name)
+            except AttributeError:
+                pass
             try:
                 return self.__getattribute__(name)
             except AttributeError:
@@ -44,18 +49,18 @@ def wrapper_class(
             if hasattr(Interface, interface_name):
                 attr = getattr(self, interface_name)
                 if callable(attr):
-                    @functools.wraps(_callable.callable)
+                    @functools.wraps(c.callable)
                     def impl_f(*args, **kwargs):
-                        args = self.reargs(args)
-                        return attr(args, kwargs)
+                        full_kwargs = self.merge_args(args, kwargs)
+                        return attr(**full_kwargs)
                     setattr(self, name, impl_f)
 
             return self.__getattribute__(name)
 
         # primary primitive methods
 
-        def _p_execute(self, args, kwargs):
-            result = _callable.callable(*args, **kwargs)
+        def _p_execute(self, kwargs):
+            result = c.callable(*self.preargs, **kwargs)
             return result
 
         def _p_get(self, key):
@@ -77,35 +82,35 @@ def wrapper_class(
 
 class CacheInterface(fbase.BaseInterface):
 
-    def _get(self, args, kwargs):
-        key = self._key(args, kwargs)
+    def _get(self, **kwargs):
+        key = self._key(**kwargs)
         try:
             result = self._p_get(key)
         except NotFound:
             result = self._miss_value
         return result
 
-    def _update(self, args, kwargs):
-        key = self._key(args, kwargs)
-        result = self._p_execute(args, kwargs)
+    def _update(self, **kwargs):
+        key = self._key(**kwargs)
+        result = self._p_execute(kwargs)
         self._p_set(key, result, self._expire_default)
         return result
 
-    def _get_or_update(self, args, kwargs):
-        key = self._key(args, kwargs)
+    def _get_or_update(self, **kwargs):
+        key = self._key(**kwargs)
         try:
             result = self._p_get(key)
         except NotFound:
-            result = self._p_execute(args, kwargs)
+            result = self._p_execute(kwargs)
             self._p_set(key, result, self._expire_default)
         return result
 
-    def _delete(self, args, kwargs):
-        key = self._key(args, kwargs)
+    def _delete(self, **kwargs):
+        key = self._key(**kwargs)
         self._p_delete(key)
 
-    def _touch(self, args, kwargs):
-        key = self._key(args, kwargs)
+    def _touch(self, **kwargs):
+        key = self._key(**kwargs)
         self._p_touch(key)
 
 

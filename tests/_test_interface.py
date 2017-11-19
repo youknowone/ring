@@ -8,13 +8,13 @@ from ring.func_asyncio import wrapper_class
 
 class DoubleCacheInterface(BaseInterface):
 
-    def _key2(self, args, kwargs):
-        return self._key(args, kwargs) + ':back'
+    def _key2(self, **kwargs):
+        return self._key(**kwargs) + ':back'
 
     @asyncio.coroutine
-    def _get(self, args, kwargs):
-        key1 = self._key(args, kwargs)
-        key2 = self._key2(args, kwargs)
+    def _get(self, **kwargs):
+        key1 = self._key(**kwargs)
+        key2 = self._key2(**kwargs)
 
         result = ...
         for key in [key1, key2]:
@@ -29,23 +29,23 @@ class DoubleCacheInterface(BaseInterface):
         return result
 
     @asyncio.coroutine
-    def _update(self, args, kwargs):
-        key = self._key(args, kwargs)
-        key2 = self._key2(args, kwargs)
-        result = yield from self._execute(args, kwargs)
+    def _update(self, **kwargs):
+        key = self._key(**kwargs)
+        key2 = self._key2(**kwargs)
+        result = yield from self._execute(**kwargs)
         yield from self._p_set(key, result)
         yield from self._p_set(key2, result, None)
         return result
 
     @asyncio.coroutine
-    def _get_or_update(self, args, kwargs):
-        key = self._key(args, kwargs)
-        key2 = self._key2(args, kwargs)
+    def _get_or_update(self, **kwargs):
+        key = self._key(**kwargs)
+        key2 = self._key2(**kwargs)
         try:
             result = yield from self._p_get(key)
         except NotFound:
             try:
-                result = yield from self._execute(args, kwargs)
+                result = yield from self._execute(**kwargs)
             except Exception as e:
                 try:
                     result = yield from self._p_get(key2)
@@ -60,16 +60,16 @@ class DoubleCacheInterface(BaseInterface):
         return result
 
     @asyncio.coroutine
-    def _delete(self, args, kwargs):
-        key = self._key(args, kwargs)
-        key2 = self._key2(args, kwargs)
+    def _delete(self, **kwargs):
+        key = self._key(**kwargs)
+        key2 = self._key2(**kwargs)
         yield from self._p_delete(key)
         yield from self._p_delete(key2)
 
     @asyncio.coroutine
-    def _touch(self, args, kwargs):
-        key = self._key(args, kwargs)
-        key2 = self._key(args, kwargs)
+    def _touch(self, **kwargs):
+        key = self._key(**kwargs)
+        key2 = self._key(**kwargs)
         yield from self._p_touch(key)
         yield from self._p_touch(key2)
 
