@@ -197,28 +197,22 @@ class AiomcacheImpl(fbase.StorageImplementation):
 class AioredisImpl(fbase.StorageImplementation):
     @asyncio.coroutine
     def get_value(self, pool, key):
-        try:
-            value = yield from pool.execute('get', key)
-        finally:
-            pass
+        value = yield from pool.get(key)
         if value is None:
             raise fbase.NotFound
         return value
 
     @asyncio.coroutine
     def set_value(self, pool, key, value, expire):
-        if expire is None:
-            yield from pool.execute('set', key, value)
-        else:
-            yield from pool.execute('set', key, value, 'ex', expire)
+        yield from pool.set(key, value, expire=expire)
 
     @asyncio.coroutine
     def del_value(self, pool, key):
-        yield from pool.execute('del', key)
+        yield from pool.delete(key)
 
     @asyncio.coroutine
     def touch_value(self, pool, key, expire):
-        pool.execute('expire', key, expire)
+        yield from pool.expire(key, expire)
 
 
 def dict(
