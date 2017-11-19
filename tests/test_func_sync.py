@@ -3,6 +3,7 @@ import ring
 import pymemcache.client
 import memcache
 import redis
+from diskcache import Cache
 
 import pytest
 
@@ -10,6 +11,7 @@ import pytest
 pymemcache_client = pymemcache.client.Client(('127.0.0.1', 11211))
 pythonmemcache_client = memcache.Client(["127.0.0.1:11211"])
 redis_py_client = redis.StrictRedis()
+
 
 try:
     import pylibmc
@@ -59,10 +61,22 @@ def redis_client(request):
     return client
 
 
+@pytest.fixture(scope='session', params=[
+    Cache('/tmp/ring-test')
+])
+def disk_cache(request):
+    client = request.param
+    client.ring = ring.func.disk
+    client.is_binary = False
+    client.has_touch = False
+    return client
+
+
 @pytest.fixture(params=[
     pytest.lazy_fixture('storage_dict'),
     pytest.lazy_fixture('memcache_client'),
     pytest.lazy_fixture('redis_client'),
+    pytest.lazy_fixture('disk_cache'),
 ])
 def storage(request):
     return request.param
@@ -254,6 +268,26 @@ def test_memcache(memcache_client):
     assert None is f.get(8, b=6)
     assert 10806 == int(f(8, b=6))
     assert 10806 == int(memcache_client.get(f.key(8, 6)))
+
+
+def test_disk(disk_cache):
+    base = [0]
+
+    @ring.func.disk(disk_cache, 'ring-test')
+    def f(a, b):
+        r = base[0] + a * 100 + b
+        sr = str(r)
+        if disk_cache.is_binary:
+            sr = sr.encode('utf-8')
+        return sr
+
+    f.delete(8, 6)
+    assert f.key(8, 6) == 'ring-test:8:6'
+
+    base[0] = 10000
+    assert None is f.get(8, b=6)
+    assert 10806 == int(f(8, b=6))
+    assert 10806 == int(disk_cache.get(f.key(8, 6)))
 
 
 def test_redis(redis_client):
