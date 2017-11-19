@@ -197,11 +197,7 @@ class AiomcacheImpl(fbase.StorageImplementation):
 class AioredisImpl(fbase.StorageImplementation):
     @asyncio.coroutine
     def get_value(self, pool, key):
-        client = yield from pool.acquire()
-        try:
-            value = yield from client.get(key)
-        finally:
-            pool.release(client)
+        value = yield from pool.get(key)
         if value is None:
             raise fbase.NotFound
         return value

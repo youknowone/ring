@@ -29,7 +29,7 @@ def aiomcache_client():
 @asyncio.coroutine
 def aioredis_pool():
     global _aioredis_pool
-    _aioredis_pool = yield from aioredis.create_pool(
+    _aioredis_pool = yield from aioredis.create_redis_pool(
         ('localhost', 6379), minsize=2, maxsize=2)
     _aioredis_pool.ring = ring.func.aioredis
     return _aioredis_pool
