@@ -224,7 +224,7 @@ def test_func_dict_expire():
     b'bytes',
     ['list', 'with', 'values'],
     {'dict': 'also', 'matters': '!'},
-    set(['set', 'should', 'be', 'ordered']),
+    {'set', 'should', 'be', 'ordered'},
 ])
 def test_ring_key(value):
     # test only with real cache backends. dict doesn't help this test
