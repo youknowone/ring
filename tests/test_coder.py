@@ -38,6 +38,8 @@ def test_coder_pickle():
     def now():
         return datetime.datetime.now()
 
+    now.delete()
+
     dt_now = now()
     direct_data = mc.get(now.key())
     assert direct_data
