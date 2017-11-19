@@ -2,7 +2,7 @@
 import sys
 import pytest
 
-print(sys.version_info)
+
 if sys.version_info >= (3, 3):
     from ._test_func_asyncio import *  # noqa
 
