@@ -155,6 +155,20 @@ class DictImpl(fbase.StorageImplementation):
         obj[key] = expired_time, value
 
 
+class DiskImpl(fbase.StorageImplementation):
+    def get_value(self, client, key):
+        value = client.get(key)
+        if value is None:
+            raise fbase.NotFound
+        return value
+
+    def set_value(self, client, key, value, expire):
+        client.set(key, value, expire)
+
+    def del_value(self, client, key):
+        client.delete(key)
+
+
 class MemcacheImpl(fbase.StorageImplementation):
     def get_value(self, client, key):
         value = client.get(key)
@@ -222,6 +236,17 @@ def redis_py(
 
     return fbase.factory(
         client, key_prefix=key_prefix, wrapper_class=wrapper_class,
+        interface=interface, storage_implementation=storage_implementation,
+        miss_value=None, expire_default=expire, coder=coder,
+        ignorable_keys=ignorable_keys)
+
+
+def disk(
+        obj, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
+        interface=CacheInterface, storage_implementation=DiskImpl):
+
+    return fbase.factory(
+        obj, key_prefix=key_prefix, wrapper_class=wrapper_class,
         interface=interface, storage_implementation=storage_implementation,
         miss_value=None, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys)
