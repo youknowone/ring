@@ -1,38 +1,34 @@
 
 import ring
-from ring.coder import JsonCoder, PickleCoder
 from ring.coder import registry
 
 import pytest
 
 
 def test_coder_registry():
+    error_coder = None, None
+    registry.register('_error', error_coder)
 
-    registry.register('json', JsonCoder)
-    registry.register('pickle', PickleCoder)
-
-    assert registry.get('json') == ring.coder.JsonCoder
-    assert registry.get('pickle') == ring.coder.PickleCoder
+    assert registry.get('_error') == (None, None)
 
 
 def test_coder_json():
 
-    registry.register('json', JsonCoder)
+    encode, decode = registry.get('json')
 
-    assert b'1' == registry.json.encode(1)
-    assert 1 == registry.json.decode(b'1')
+    assert b'1' == encode(1)
+    assert 1 == decode(b'1')
 
-    assert b'{"x": 1}' == registry.json.encode({'x': 1})
-    assert {'x': 1} == registry.json.decode(b'{"x": 1}')
+    assert b'{"x": 1}' == encode({'x': 1})
+    assert {'x': 1} == decode(b'{"x": 1}')
 
 
 def test_coder_pickle():
     import memcache
     import datetime
 
+    encode, decode = registry.get('pickle')
     mc = memcache.Client(['127.0.0.1:11211'])
-
-    registry.register('pickle', PickleCoder)
 
     @ring.func.memcache(mc, coder='pickle')
     def now():
@@ -44,10 +40,10 @@ def test_coder_pickle():
     direct_data = mc.get(now.key())
     assert direct_data
 
-    encoded_data = registry.pickle.encode(dt_now)
+    encoded_data = encode(dt_now)
     assert encoded_data == direct_data
 
-    decoded_data = registry.pickle.decode(encoded_data)
+    decoded_data = decode(encoded_data)
     assert decoded_data == dt_now
 
 

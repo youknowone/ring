@@ -1,29 +1,7 @@
+import functools
 from ring.key import CallableWrapper, CallableKey
-
-
-def bypass(x):
-    return x
-
-
-def unpack_coder(coder):
-    if coder:
-        if isinstance(coder, str):
-            from ring.coder import registry
-            loaded_coder = registry.get(coder)
-            if loaded_coder is None:
-                raise TypeError(
-                    "Argument 'coder' is an instance of 'str' but built-in "
-                    "coder '{}' does not exist".format(coder))
-            coder = loaded_coder
-
-        if isinstance(coder, tuple):
-            encode, decode = coder
-        else:
-            encode, decode = coder.encode, coder.decode
-    else:
-        encode, decode = bypass, bypass
-
-    return encode, decode
+from ring.wire import Wire
+from ring.coder import registry as coder_registry
 
 
 def is_method(c):
@@ -91,6 +69,39 @@ def coerce(v):
         "Add __ring_key__() or __str__().".format(v, cls))
 
 
+class RingBase(Wire):
+    # for now, RingBase is not well seperated from Wire
+
+    def merge_args(self, args, kwargs):
+        args = self._reargs(args)
+        full_kwargs = self._callable.kwargify(args, kwargs)
+        if self._preargs:
+            full_kwargs.pop(self._callable.arguments[0].varname)
+        return full_kwargs
+
+    def __getattr__(self, name):
+        try:
+            return super(RingBase, self).__getattr__(name)
+        except AttributeError:
+            pass
+        try:
+            return self.__getattribute__(name)
+        except AttributeError:
+            pass
+
+        interface_name = '_' + name
+        if hasattr(self._interface_class, interface_name):
+            attr = self.__getattribute__(interface_name)
+            if callable(attr):
+                @functools.wraps(self._callable.callable)
+                def impl_f(*args, **kwargs):
+                    full_kwargs = self.merge_args(args, kwargs)
+                    return attr(**full_kwargs)
+                setattr(self, name, impl_f)
+
+        return self.__getattribute__(name)
+
+
 def create_ckey(c, key_prefix, ignorable_keys, coerce=coerce, encoding=None, key_refactor=lambda x: x):
     assert isinstance(c, CallableWrapper)
     ckey = CallableKey(
@@ -112,15 +123,12 @@ def create_ckey(c, key_prefix, ignorable_keys, coerce=coerce, encoding=None, key
     return ckey
 
 
-function_type = type(bypass)
-
-
 def factory(
-        context, key_prefix, wrapper_class,
+        context, key_prefix, ring_factory,
         interface, storage_implementation, miss_value, expire_default, coder,
         ignorable_keys=None, key_encoding=None, key_refactor=lambda x: x):
 
-    encode, decode = unpack_coder(coder)
+    encode, decode = coder_registry.get(coder)
 
     def _decorator(f):
         _callable = CallableWrapper(f)
@@ -129,10 +137,10 @@ def factory(
         ckey = create_ckey(
             _callable, _key_prefix, _ignorable_keys, encoding=key_encoding, key_refactor=key_refactor)
 
-        return wrapper_class(
-            _callable, context, ckey,
+        return ring_factory(
+            _callable, context, ckey, RingBase,
             interface, storage_implementation, miss_value, expire_default,
-            encode, decode).for_callable()
+            encode, decode).for_callable(_callable)
 
     return _decorator
 
@@ -159,7 +167,7 @@ class StorageImplementation(object):
 class BaseInterface(object):
 
     def _key(self, **kwargs):
-        args = self.preargs
+        args = self._preargs
         return self._ckey.build_key(args, kwargs)
 
     def _execute(self, **kwargs):

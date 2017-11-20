@@ -3,7 +3,6 @@ import asyncio
 import inspect
 import functools
 import time
-from ring.wire import Wire
 from ring import func_base as fbase
 
 __all__ = ('aiomcache', 'aioredis', )
@@ -11,8 +10,8 @@ __all__ = ('aiomcache', 'aioredis', )
 inspect_iscoroutinefunction = getattr(inspect, 'iscoroutinefunction', lambda f: False)
 
 
-def wrapper_class(
-        c, storage, ckey,
+def ring_factory(
+        c, storage, ckey, RingBase,
         Interface, StorageImplementation,
         miss_value, expire_default,
         encode, decode):
@@ -25,10 +24,11 @@ def wrapper_class(
     _encode = encode
     _decode = decode
 
-    class Ring(Wire, Interface):
+    class Ring(RingBase, Interface):
         _callable = c
         _ckey = ckey
         _expire_default = expire_default
+        _interface_class = Interface
 
         _storage = storage
         _storage_impl = StorageImplementation()
@@ -41,32 +41,9 @@ def wrapper_class(
         def __call__(self, *args, **kwargs):
             return self.run('get_or_update', *args, **kwargs)
 
-        def __getattr__(self, name):
-            try:
-                return super(Ring, self).__getattr__(name)
-            except AttributeError:
-                pass
-            try:
-                attr = self.__getattribute__(name)
-                return attr
-            except AttributeError:
-                pass
-
-            interface_name = '_' + name
-            if hasattr(Interface, interface_name):
-                attr = getattr(self, interface_name)
-                if callable(attr):
-                    @functools.wraps(c.callable)
-                    def impl_f(*args, **kwargs):
-                        full_kwargs = self.merge_args(args, kwargs)
-                        return attr(**full_kwargs)
-                    setattr(self, name, impl_f)
-
-            return self.__getattribute__(name)
-
         @asyncio.coroutine
         def _p_execute(self, kwargs):
-            result = yield from self._callable.callable(*self.preargs, **kwargs)
+            result = yield from self._callable.callable(*self._preargs, **kwargs)
             return result
 
         @asyncio.coroutine
@@ -220,7 +197,7 @@ def dict(
         interface=CacheInterface, storage_implementation=DictImpl):
 
     return fbase.factory(
-        obj, key_prefix=key_prefix, wrapper_class=wrapper_class,
+        obj, key_prefix=key_prefix, ring_factory=ring_factory,
         interface=interface, storage_implementation=storage_implementation,
         miss_value=None, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys)
@@ -236,7 +213,7 @@ def aiomcache(
     from ring._memcache import key_refactor
 
     return fbase.factory(
-        client, key_prefix=key_prefix, wrapper_class=wrapper_class,
+        client, key_prefix=key_prefix, ring_factory=ring_factory,
         interface=interface, storage_implementation=storage_implementation,
         miss_value=None, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys,
@@ -249,7 +226,7 @@ def aioredis(
         interface=CacheInterface, storage_implementation=AioredisImpl):
 
     return fbase.factory(
-        pool, key_prefix=key_prefix, wrapper_class=wrapper_class,
+        pool, key_prefix=key_prefix, ring_factory=ring_factory,
         interface=interface, storage_implementation=storage_implementation,
         miss_value=None, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys)

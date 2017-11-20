@@ -12,16 +12,22 @@ class WiredProperty(object):
         else:
             return self.__func__(obj)
 
+    def _add_function(self, key):
+        def _w(f):
+            setattr(self, key, f)
+            self._dynamic_attrs[key] = f
+            return f
+        return _w
+
 
 class Wire(object):
 
     @classmethod
-    def for_callable(cls):
+    def for_callable(cls, c):
         from ring.func_base import is_method, is_classmethod
-        _callable = cls._callable
+        _callable = c
 
-        _shared_attrs = {}
-        _dynamic_attrs = {}
+        _shared_attrs = {'attrs': {}}
 
         if is_method(_callable) or is_classmethod(_callable):
             @WiredProperty
@@ -29,35 +35,38 @@ class Wire(object):
                 wrapper_name = '__wrapper_' + _callable.code.co_name
                 wrapper = getattr(self, wrapper_name, None)
                 if wrapper is None:
-                    _wrapper = cls((self,))
+                    _shared_attrs['preargs'] = (self,)
+                    _wrapper = cls(_callable, _shared_attrs)
                     wrapper = functools.wraps(_callable.callable)(_wrapper)
                     setattr(self, wrapper_name, wrapper)
                     _wrapper._shared_attrs = _shared_attrs
-                    _wrapper._dynamic_attrs = _dynamic_attrs
                 return wrapper
-        else:
-            _w = cls(())
 
+            _w._dynamic_attrs = _shared_attrs['attrs']
+        else:
+            _w = cls(_callable, _shared_attrs)
+
+        _w._callable = _callable
         _w._shared_attrs = _shared_attrs
-        _w._dynamic_attrs = _dynamic_attrs
 
         return _w
 
-    def __init__(self, preargs):
-        assert isinstance(preargs, tuple)
-        self.preargs = preargs
+    def __init__(self, callable, shared_attrs):
+        self._callable = callable
+        self._shared_attrs = shared_attrs
 
-    def reargs(self, args):
-        if self.preargs:
-            args = self.preargs + args
+    @property
+    def _preargs(self):
+        return self._shared_attrs.get('preargs', ())
+
+    @property
+    def _dynamic_attrs(self):
+        return self._shared_attrs.get('attrs', ())
+
+    def _reargs(self, args):
+        if self._preargs:
+            args = self._preargs + args
         return args
-
-    def merge_args(self, args, kwargs):
-        args = self.reargs(args)
-        full_kwargs = self._callable.kwargify(args, kwargs)
-        if self.preargs:
-            full_kwargs.pop(self._callable.arguments[0].varname)
-        return full_kwargs
 
     def __getattr__(self, name):
         try:
@@ -68,7 +77,7 @@ class Wire(object):
         attr = self._dynamic_attrs.get(name)
         if callable(attr):
             def impl_f(*args, **kwargs):
-                args = self.reargs(args)
+                args = self._reargs(args)
                 return attr(*args, **kwargs)
             setattr(self, name, impl_f)
 

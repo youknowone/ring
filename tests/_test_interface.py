@@ -3,7 +3,7 @@ import asyncio
 import pytest
 import ring.func_sync
 from ring.func_base import BaseInterface, NotFound, factory
-from ring.func_asyncio import wrapper_class
+from ring.func_asyncio import ring_factory
 
 
 class DoubleCacheInterface(BaseInterface):
@@ -80,7 +80,7 @@ def doublecache(
     from ring.func_asyncio import DictImpl
 
     return factory(
-        client, key_prefix=key_prefix, wrapper_class=wrapper_class,
+        client, key_prefix=key_prefix, ring_factory=ring_factory,
         interface=interface, storage_implementation=DictImpl,
         miss_value=None, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys)

@@ -4,14 +4,12 @@ import functools
 import re
 import hashlib
 from ring import func_base as fbase
-from ring.wire import Wire
-from ring.func_base import NotFound
 
 __all__ = ('memcache', 'redis_py', 'redis', 'arcus')
 
 
-def wrapper_class(
-        c, storage, ckey,
+def ring_factory(
+        c, storage_instance, ckey, RingBase,
         Interface, StorageImplementation,
         miss_value, expire_default,
         encode, decode):
@@ -19,12 +17,13 @@ def wrapper_class(
     _encode = encode
     _decode = decode
 
-    class Ring(Wire, Interface):
+    class Ring(RingBase, Interface):
         _callable = c
         _ckey = ckey
         _expire_default = expire_default
+        _interface_class = Interface
 
-        _storage = storage
+        _storage_instance = storage_instance
         _storage_impl = StorageImplementation()
         _miss_value = miss_value
 
@@ -35,47 +34,25 @@ def wrapper_class(
         def __call__(self, *args, **kwargs):
             return self.run('get_or_update', *args, **kwargs)
 
-        def __getattr__(self, name):
-            try:
-                return super(Ring, self).__getattr__(name)
-            except AttributeError:
-                pass
-            try:
-                return self.__getattribute__(name)
-            except AttributeError:
-                pass
-
-            interface_name = '_' + name
-            if hasattr(Interface, interface_name):
-                attr = getattr(self, interface_name)
-                if callable(attr):
-                    @functools.wraps(c.callable)
-                    def impl_f(*args, **kwargs):
-                        full_kwargs = self.merge_args(args, kwargs)
-                        return attr(**full_kwargs)
-                    setattr(self, name, impl_f)
-
-            return self.__getattribute__(name)
-
         # primary primitive methods
 
         def _p_execute(self, kwargs):
-            result = c.callable(*self.preargs, **kwargs)
+            result = c.callable(*self._preargs, **kwargs)
             return result
 
         def _p_get(self, key):
-            value = self._storage_impl.get_value(self._storage, key)
+            value = self._storage_impl.get_value(self._storage_instance, key)
             return self.decode(value)
 
         def _p_set(self, key, value, expire=expire_default):
             encoded = self.encode(value)
-            self._storage_impl.set_value(self._storage, key, encoded, expire)
+            self._storage_impl.set_value(self._storage_instance, key, encoded, expire)
 
         def _p_delete(self, key):
-            self._storage_impl.del_value(self._storage, key)
+            self._storage_impl.del_value(self._storage_instance, key)
 
         def _p_touch(self, key, expire=expire_default):
-            self._storage_impl.touch_value(self._storage, key, expire)
+            self._storage_impl.touch_value(self._storage_instance, key, expire)
 
     return Ring
 
@@ -86,7 +63,7 @@ class CacheInterface(fbase.BaseInterface):
         key = self._key(**kwargs)
         try:
             result = self._p_get(key)
-        except NotFound:
+        except fbase.NotFound:
             result = self._miss_value
         return result
 
@@ -100,7 +77,7 @@ class CacheInterface(fbase.BaseInterface):
         key = self._key(**kwargs)
         try:
             result = self._p_get(key)
-        except NotFound:
+        except fbase.NotFound:
             result = self._p_execute(kwargs)
             self._p_set(key, result, self._expire_default)
         return result
@@ -210,7 +187,7 @@ def dict(
         interface=CacheInterface, storage_implementation=DictImpl):
 
     return fbase.factory(
-        obj, key_prefix=key_prefix, wrapper_class=wrapper_class,
+        obj, key_prefix=key_prefix, ring_factory=ring_factory,
         interface=interface, storage_implementation=storage_implementation,
         miss_value=None, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys)
@@ -223,7 +200,7 @@ def memcache(
     miss_value = None
 
     return fbase.factory(
-        client, key_prefix=key_prefix, wrapper_class=wrapper_class,
+        client, key_prefix=key_prefix, ring_factory=ring_factory,
         interface=interface, storage_implementation=storage_implementation,
         miss_value=miss_value, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys,
@@ -235,7 +212,7 @@ def redis_py(
         interface=CacheInterface, storage_implementation=RedisImplementation):
 
     return fbase.factory(
-        client, key_prefix=key_prefix, wrapper_class=wrapper_class,
+        client, key_prefix=key_prefix, ring_factory=ring_factory,
         interface=interface, storage_implementation=storage_implementation,
         miss_value=None, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys)
@@ -246,7 +223,7 @@ def disk(
         interface=CacheInterface, storage_implementation=DiskImpl):
 
     return fbase.factory(
-        obj, key_prefix=key_prefix, wrapper_class=wrapper_class,
+        obj, key_prefix=key_prefix, ring_factory=ring_factory,
         interface=interface, storage_implementation=storage_implementation,
         miss_value=None, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys)
@@ -290,7 +267,7 @@ def arcus(
         return 'ring-sha1:' + hashed
 
     return fbase.factory(
-        client, key_prefix=key_prefix, wrapper_class=wrapper_class,
+        client, key_prefix=key_prefix, ring_factory=ring_factory,
         interface=interface, storage_implementation=Impl,
         miss_value=None, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys,
