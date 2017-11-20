@@ -2,7 +2,6 @@
 import ring
 import asyncio
 import aiomcache
-import aioredis
 
 import pytest
 
@@ -28,11 +27,19 @@ def aiomcache_client():
 @pytest.fixture()
 @asyncio.coroutine
 def aioredis_pool():
-    global _aioredis_pool
-    _aioredis_pool = yield from aioredis.create_pool(
-        ('localhost', 6379), minsize=2, maxsize=2)
-    _aioredis_pool.ring = ring.func.aioredis
-    return _aioredis_pool
+    import sys
+
+    if sys.version_info >= (3, 5):
+        import aioredis
+
+        global _aioredis_pool
+        _aioredis_pool = yield from aioredis.create_redis_pool(
+            ('localhost', 6379), minsize=2, maxsize=2)
+        _aioredis_pool.ring = ring.func.aioredis
+        return _aioredis_pool
+
+    else:
+        pytest.skip()
 
 
 @pytest.fixture(params=[
