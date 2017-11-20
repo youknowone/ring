@@ -1,13 +1,13 @@
 """Collection of cache decorators"""
 
-from ring.func_sync import dict, memcache, redis_py, redis, arcus
+from ring.func_sync import dict, memcache, redis_py, redis, arcus, disk
 
 try:
     import asyncio
 except ImportError:
     asyncio = False
 
-__all__ = ('dict', 'memcache', 'redis_py', 'redis', 'aiomcache', 'aioredis', 'arcus')
+__all__ = ('dict', 'memcache', 'redis_py', 'redis', 'aiomcache', 'aioredis', 'arcus', 'disk')
 
 
 if asyncio:
