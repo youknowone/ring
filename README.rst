@@ -139,8 +139,8 @@ For macOS:
 .. code:: sh
 
     $ brew install libmemcached memcached redis
-    $ brew service start memcached
-    $ brew service start redis
+    $ brew services start memcached
+    $ brew services start redis
 
 
 For debian/ubuntu:
