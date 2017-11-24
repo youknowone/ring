@@ -27,6 +27,19 @@ CoderTuple = namedtuple('Coder', ['encode', 'decode'])
 Coder.register(CoderTuple)
 
 
+def coderize(raw_coder):
+    if isinstance(raw_coder, Coder):
+        coder = raw_coder
+    else:
+        if isinstance(raw_coder, tuple):
+            coder = CoderTuple(*raw_coder)
+        elif hasattr(raw_coder, 'encode') and hasattr(raw_coder, 'decode'):
+            coder = CoderTuple(raw_coder.encode, raw_coder.decode)
+        else:
+            raise TypeError("The given coder is not compatibile to Coder")
+    return coder
+
+
 class Registry(object):
 
     __slots__ = ('coders', )
@@ -35,23 +48,11 @@ class Registry(object):
         self.coders = {}
 
     def register(self, coder_name, raw_coder):
-        if isinstance(raw_coder, Coder):
-            coder = raw_coder
-        else:
-            if isinstance(raw_coder, tuple):
-                coder = CoderTuple(*raw_coder)
-            elif hasattr(raw_coder, 'encode') and hasattr(raw_coder, 'decode'):
-                coder = CoderTuple(raw_coder.encode, raw_coder.decode)
-            else:
-                raise TypeError("The given coder is not compatibile to Coder or CoderTuple")
-
+        coder = coderize(raw_coder)
         self.coders[coder_name] = coder
 
     def get(self, coder_name):
         coder = self.coders.get(coder_name)
-        if not coder:
-            raise TypeError(
-                "'{}' is not a registered coder name.".format(coder_name))
         return coder
 
 

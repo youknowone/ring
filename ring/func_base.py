@@ -1,7 +1,7 @@
 import functools
 from ring.key import CallableWrapper, CallableKey
 from ring.wire import Wire
-from ring.coder import registry as coder_registry
+from ring.coder import registry as coder_registry, coderize
 
 
 def is_method(c):
@@ -128,7 +128,10 @@ def factory(
         interface, storage_implementation, miss_value, expire_default, coder,
         ignorable_keys=None, key_encoding=None, key_refactor=lambda x: x):
 
-    coder = coder_registry.get(coder)
+    raw_coder = coder
+    coder = coder_registry.get(raw_coder)
+    if not coder:
+        coder = coderize(raw_coder)
 
     def _decorator(f):
         _callable = CallableWrapper(f)

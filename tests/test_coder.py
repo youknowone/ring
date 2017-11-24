@@ -1,6 +1,7 @@
 
 import ring
-from ring.coder import Registry, Coder, registry as default_registry
+from ring.coder import (
+    Registry, Coder, JsonCoder, coderize, registry as default_registry)
 
 import pytest
 
@@ -73,6 +74,14 @@ def test_coder_pickle():
     assert decoded_data == dt_now
 
 
+def test_ring_bare_coder():
+    @ring.func.dict({}, coder=JsonCoder)
+    def f():
+        return 10
+
+    assert f() == 10
+
+
 def test_unexisting_coder():
     cache = {}
 
@@ -80,3 +89,11 @@ def test_unexisting_coder():
         @ring.func.dict(cache, coder='messed-up')
         def f():
             pass
+
+
+@pytest.mark.parametrize('raw_coder', [
+    JsonCoder,
+])
+def test_coderize(raw_coder):
+    assert raw_coder
+    assert isinstance(coderize(raw_coder), Coder)
