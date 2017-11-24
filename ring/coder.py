@@ -1,3 +1,5 @@
+import abc
+import six
 from collections import namedtuple
 try:
     import ujson as json_mod
@@ -10,7 +12,19 @@ except ImportError:
     import pickle as pickle_mod
 
 
-Coder = namedtuple('Coder', ['encode', 'decode'])
+@six.add_metaclass(abc.ABCMeta)
+class Coder(object):
+    @abc.abstractmethod
+    def encode(self):
+        pass
+
+    @abc.abstractmethod
+    def decode(self):
+        pass
+
+
+CoderTuple = namedtuple('Coder', ['encode', 'decode'])
+Coder.register(CoderTuple)
 
 
 class Registry(object):
@@ -22,10 +36,16 @@ class Registry(object):
 
     def register(self, coder_name, raw_coder):
         if isinstance(raw_coder, Coder):
-            pass
-        if not isinstance(raw_coder, tuple):
-            raw_coder = raw_coder.encode, raw_coder.decode
-        self.coders[coder_name] = Coder(raw_coder[0], raw_coder[1])
+            coder = raw_coder
+        else:
+            if isinstance(raw_coder, tuple):
+                coder = CoderTuple(*raw_coder)
+            elif hasattr(raw_coder, 'encode') and hasattr(raw_coder, 'decode'):
+                coder = CoderTuple(raw_coder.encode, raw_coder.decode)
+            else:
+                raise TypeError("The given coder is not compatibile to Coder or CoderTuple")
+
+        self.coders[coder_name] = coder
 
     def get(self, coder_name):
         coder = self.coders.get(coder_name)
@@ -42,7 +62,7 @@ def bypass(x):
     return x
 
 
-class JsonCoder(object):
+class JsonCoder(Coder):
 
     @staticmethod
     def encode(data):

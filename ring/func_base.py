@@ -128,7 +128,7 @@ def factory(
         interface, storage_implementation, miss_value, expire_default, coder,
         ignorable_keys=None, key_encoding=None, key_refactor=lambda x: x):
 
-    encode, decode = coder_registry.get(coder)
+    coder = coder_registry.get(coder)
 
     def _decorator(f):
         _callable = CallableWrapper(f)
@@ -140,7 +140,7 @@ def factory(
         return ring_factory(
             _callable, context, ckey, RingBase,
             interface, storage_implementation, miss_value, expire_default,
-            encode, decode).for_callable(_callable)
+            coder).for_callable(_callable)
 
     return _decorator
 

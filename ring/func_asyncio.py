@@ -13,16 +13,12 @@ inspect_iscoroutinefunction = getattr(inspect, 'iscoroutinefunction', lambda f: 
 def ring_factory(
         c, storage, ckey, RingBase,
         Interface, StorageImplementation,
-        miss_value, expire_default,
-        encode, decode):
+        miss_value, expire_default, coder):
 
     if not c.is_coroutine:
         raise TypeError(
             "The function for cache '{}' must be an async function.".format(
                 c.code.co_name))
-
-    _encode = encode
-    _decode = decode
 
     class Ring(RingBase, Interface):
         _callable = c
@@ -34,8 +30,8 @@ def ring_factory(
         _storage_impl = StorageImplementation()
         _miss_value = miss_value
 
-        encode = staticmethod(_encode)
-        decode = staticmethod(_decode)
+        encode = staticmethod(coder.encode)
+        decode = staticmethod(coder.decode)
 
         @functools.wraps(_callable.callable)
         def __call__(self, *args, **kwargs):

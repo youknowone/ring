@@ -11,11 +11,7 @@ __all__ = ('memcache', 'redis_py', 'redis', 'arcus')
 def ring_factory(
         c, storage_instance, ckey, RingBase,
         Interface, StorageImplementation,
-        miss_value, expire_default,
-        encode, decode):
-
-    _encode = encode
-    _decode = decode
+        miss_value, expire_default, coder):
 
     class Ring(RingBase, Interface):
         _callable = c
@@ -27,8 +23,8 @@ def ring_factory(
         _storage_impl = StorageImplementation()
         _miss_value = miss_value
 
-        encode = staticmethod(_encode)
-        decode = staticmethod(_decode)
+        encode = staticmethod(coder.encode)
+        decode = staticmethod(coder.decode)
 
         @functools.wraps(_callable.callable)
         def __call__(self, *args, **kwargs):
