@@ -111,7 +111,7 @@ def create_ckey(c, key_prefix, ignorable_keys, coerce=coerce, encoding=None, key
         full_kwargs = kwargs.copy()
         for i, prearg in enumerate(preargs):
             full_kwargs[c.positional_arguments[i].varname] = preargs[i]
-        coerced_kwargs = {k: coerce(v) for k, v in full_kwargs.items()}
+        coerced_kwargs = {k: coerce(v) for k, v in full_kwargs.items() if k not in ignorable_keys}
         key = ckey.build(coerced_kwargs)
         if encoding:
             key = key.encode(encoding)
