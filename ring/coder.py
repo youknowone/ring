@@ -31,12 +31,17 @@ def coderize(raw_coder):
     if isinstance(raw_coder, Coder):
         coder = raw_coder
     else:
+        if isinstance(raw_coder, str):  # py2 support
+            raise TypeError(
+                "The given coder is not a registered name in coder registry.")
         if isinstance(raw_coder, tuple):
             coder = CoderTuple(*raw_coder)
         elif hasattr(raw_coder, 'encode') and hasattr(raw_coder, 'decode'):
             coder = CoderTuple(raw_coder.encode, raw_coder.decode)
         else:
-            raise TypeError("The given coder is not compatibile to Coder")
+            raise TypeError(
+                "The given coder is not a coder compatibile object or "
+                "not a registered name in coder registry")
     return coder
 
 
