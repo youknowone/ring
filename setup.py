@@ -72,6 +72,9 @@ setup(
     packages=(
         'ring',
     ),
+    package_data={
+        'ring': ['version.txt'],
+    },
     install_requires=[
         'prettyexc>=0.6.0',
         'callable>=0.1.2',
