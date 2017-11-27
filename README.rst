@@ -114,6 +114,13 @@ For example: python-memcached, python3-memcached, pylibmc, redis-py etc
 It may require to install and run related services too: memcached and redis.
 
 
+Contributors
+------------
+
+See contributors list on:
+    `<https://github.com/youknowone/ring/graphs/contributors>`_
+
+
 Contribution
 ------------
 
