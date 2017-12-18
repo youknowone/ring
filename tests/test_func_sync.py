@@ -82,7 +82,7 @@ def storage(request):
     return request.param
 
 
-@pytest.fixture(params=['function', 'method', 'class1', 'class2', 'static1', 'static2'])
+@pytest.fixture(params=['function', 'method1', 'method2', 'class1', 'class2', 'static1', 'static2'])
 def function(request, storage):
     def resultify(r):
         if storage.is_binary:
@@ -121,12 +121,14 @@ def function(request, storage):
             def smethod(a, b):
                 return resultify(A.base[0] + a * 200 + b)
 
-        obj = A()
+        obj1 = A()
+        obj2 = A()
         f = {
-            'method': obj.method,
-            'class1': obj.cmethod,
+            'method1': obj1.method,
+            'method2': obj2.method,
+            'class1': obj1.cmethod,
             'class2': A.cmethod,
-            'static1': obj.smethod,
+            'static1': obj1.smethod,
             'static2': A.smethod,
         }[request.param]
         f.base = A.base

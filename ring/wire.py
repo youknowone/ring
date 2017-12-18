@@ -35,8 +35,8 @@ class Wire(object):
                 wrapper_name = '__wrapper_' + _callable.code.co_name
                 wrapper = getattr(self, wrapper_name, None)
                 if wrapper is None:
-                    _shared_attrs['preargs'] = (self,)
                     _wrapper = cls(_callable, _shared_attrs)
+                    _wrapper._preargs = (self,)
                     wrapper = functools.wraps(_callable.callable)(_wrapper)
                     setattr(self, wrapper_name, wrapper)
                     _wrapper._shared_attrs = _shared_attrs
@@ -45,6 +45,7 @@ class Wire(object):
             _w._dynamic_attrs = _shared_attrs['attrs']
         else:
             _w = cls(_callable, _shared_attrs)
+            _w._preargs = ()
 
         _w._callable = _callable
         _w._shared_attrs = _shared_attrs
@@ -54,10 +55,6 @@ class Wire(object):
     def __init__(self, callable, shared_attrs):
         self._callable = callable
         self._shared_attrs = shared_attrs
-
-    @property
-    def _preargs(self):
-        return self._shared_attrs.get('preargs', ())
 
     @property
     def _dynamic_attrs(self):

@@ -15,9 +15,12 @@ def test_wire():
 
     class A(object):
 
+        def __init__(self, v):
+            self.v = v
+
         @wrapper
         def f(self):
-            return 10
+            return self.v
 
         @f._add_function('call')
         def f_call(self):
@@ -27,7 +30,10 @@ def test_wire():
         def f_key(self):
             return 'key'
 
-    a = A()
-
+    a = A(10)
     assert a.f.call() == 10
     assert a.f.key() == 'key'
+
+    b = A(20)
+    assert a.f.call() == 10, (a.f, a.f.call())
+    assert b.f.call() == 20, (b.f, b.f.call())
