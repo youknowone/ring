@@ -93,10 +93,16 @@ class RingBase(Wire):
         if hasattr(self._interface_class, interface_name):
             attr = self.__getattribute__(interface_name)
             if callable(attr):
-                @functools.wraps(self._callable.callable)
+                function_args_count = getattr(attr, '_function_args_count', 0)
+
                 def impl_f(*args, **kwargs):
-                    full_kwargs = self.merge_args(args, kwargs)
-                    return attr(**full_kwargs)
+                    full_kwargs = self.merge_args(
+                        args[function_args_count:], kwargs)
+                    function_args = args[:function_args_count]
+                    return attr(*function_args, **full_kwargs)
+
+                if function_args_count == 0:
+                    functools.wraps(self._callable.callable)(impl_f)
                 setattr(self, name, impl_f)
 
         return self.__getattribute__(name)
@@ -177,6 +183,9 @@ class BaseInterface(object):
         return self._p_execute(kwargs)
 
     def _get(self, **kwargs):  # pragma: no cover
+        raise NotImplementedError
+
+    def _set(self, value, **kwargs):  # pragma: no cover
         raise NotImplementedError
 
     def _update(self, **kwargs):  # pragma: no cover

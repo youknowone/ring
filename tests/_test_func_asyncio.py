@@ -118,6 +118,10 @@ def test_common(gen_storage):
 
     yield from f.touch(1, 2)  # just a running test
 
+    yield from f.set(b'RANDOMVALUE', 1, 2)
+    rset = yield from f.get(1, 2)
+    assert rset == b'RANDOMVALUE'
+
     yield from f.delete(1, 2)  # finallize
 
 
