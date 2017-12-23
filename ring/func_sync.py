@@ -78,6 +78,11 @@ class CacheInterface(fbase.BaseInterface):
             self._p_set(key, result, self._expire_default)
         return result
 
+    def _set(self, value, **kwargs):
+        key = self._key(**kwargs)
+        self._p_set(key, value, self._expire_default)
+    _set._function_args_count = 1
+
     def _delete(self, **kwargs):
         key = self._key(**kwargs)
         self._p_delete(key)

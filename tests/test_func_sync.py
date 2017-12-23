@@ -180,6 +180,9 @@ def test_common(function, storage):
     if storage.has_touch:
         function.touch(1, 2)  # just a running test
 
+    function.set(b'RANDOMVALUE', 1, 2)
+    assert function.get(1, 2) == b'RANDOMVALUE'
+
     function.delete(1, 2)  # finallize
 
 

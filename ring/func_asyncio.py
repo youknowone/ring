@@ -92,6 +92,12 @@ class CacheInterface(fbase.BaseInterface):
         return result
 
     @asyncio.coroutine
+    def _set(self, value, **kwargs):
+        key = self._key(**kwargs)
+        yield from self._p_set(key, value, self._expire_default)
+    _set._function_args_count = 1
+
+    @asyncio.coroutine
     def _delete(self, **kwargs):
         key = self._key(**kwargs)
         yield from self._p_delete(key)
