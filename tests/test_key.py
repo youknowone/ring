@@ -75,3 +75,17 @@ def test_unexisting_ring_key():
     a = A()
     with pytest.raises(TypeError):
         a.f()
+
+
+@pytest.mark.parametrize('v', (None, Ellipsis))
+def test_singleton(v):
+
+    @ring.func.dict({})
+    def f(a, b=v):
+        return a, b
+
+    assert f(1) == (1, v)
+    assert f(2) == (2, v)
+    assert f(1, 1) == (1, 1)
+    assert f(1, 2) == (1, 2)
+    assert f(1) == (1, v)

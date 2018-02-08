@@ -42,6 +42,9 @@ def coerce(v):
     if isinstance(v, (int, str, bool)):
         return v
 
+    if v is None or v is Ellipsis:
+        return v
+
     if isinstance(v, (list, tuple)):
         return str(v).replace(' ', '')
 
