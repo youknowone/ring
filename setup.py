@@ -9,6 +9,10 @@ def get_version():
         return f.read().strip()
 
 
+install_requires = [
+    'prettyexc>=0.6.0',
+    'callable>=0.1.2',
+]
 tests_require = [
     'pytest>=3.0.2', 'pytest-cov', 'pytest-lazy-fixture', 'mock', 'patch',
     'pymemcache',
@@ -29,6 +33,9 @@ except ImportError:
     ])
 
 if sys.version_info[0] == 2:
+    install_requires.extend([
+        'functools32==3.2.3-2',
+    ])
     tests_require.extend([
         'python-memcached',
     ])
@@ -75,10 +82,7 @@ setup(
     package_data={
         'ring': ['version.txt'],
     },
-    install_requires=[
-        'prettyexc>=0.6.0',
-        'callable>=0.1.2',
-    ],
+    install_requires=install_requires,
     tests_require=tests_require + ['tox', 'tox-pyenv'],
     extras_require={
         'tests': tests_require,

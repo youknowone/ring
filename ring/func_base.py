@@ -1,4 +1,8 @@
 import functools
+try:
+    from functools import lru_cache
+except ImportError:  # for py2
+    from functools32 import lru_cache
 from ring.key import CallableWrapper, CallableKey
 from ring.wire import Wire
 from ring.coder import registry as coder_registry, coderize
@@ -38,30 +42,61 @@ def suggest_key_prefix(c, key_prefix):
     return key_prefix
 
 
-def coerce(v):
-    if isinstance(v, (int, str, bool)):
-        return v
+def _coerce_bypass(v):
+    return v
 
-    if v is None or v is Ellipsis:
-        return v
 
-    if isinstance(v, (list, tuple)):
-        return str(v).replace(' ', '')
+def _coerce_list_and_tuple(v):
+    return str(v).replace(' ', '')
 
-    if isinstance(v, type):
-        return v.__name__
 
-    if hasattr(v, '__ring_key__'):
-        return v.__ring_key__()
+def _coerce_type(v):
+    return v.__name__
 
-    if isinstance(v, dict):
-        return ','.join(['{},{}'.format(k, v[k]) for k in sorted(v.keys())])
 
-    if isinstance(v, (set, frozenset)):
-        return ','.join(sorted(v))
+def _coerce_dict(v):
+    return ','.join(['{},{}'.format(k, v[k]) for k in sorted(v.keys())])
+
+
+def _coerce_set(v):
+    return ','.join(sorted(v))
+
+
+def _coerce_ring_key(v):
+    return v.__ring_key__()
+
+
+@lru_cache(maxsize=128)
+def coerce_function(t):
+    if hasattr(t, '__ring_key__'):
+        return _coerce_ring_key
+
+    if issubclass(t, (int, str, bool, type(None), type(Ellipsis))):
+        return _coerce_bypass
+
+    if issubclass(t, (list, tuple)):
+        return _coerce_list_and_tuple
+
+    if t == type:
+        return _coerce_type
+
+    if issubclass(t, dict):
+        return _coerce_dict
+
+    if issubclass(t, (set, frozenset)):
+        return _coerce_set
 
     # NOTE: general sequence processing is good -
     # but NEVER add a general iterator processing. it will cause user bug.
+
+
+def coerce(v):
+    type_coerce = coerce_function(type(v))
+    if type_coerce:
+        return type_coerce(v)
+
+    if hasattr(v, '__ring_key__'):
+        return v.__ring_key__()
 
     cls = v.__class__
     if cls.__str__ != object.__str__:
