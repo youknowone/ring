@@ -2,12 +2,13 @@ language: python
 cache: pip
 sudo: false
 python:
+  - "pypy2.7-5.9.0"
+  - "pypy3.5-5.9.0"
   - "2.7"
-  - "3.4"
-  - "3.5"
   - "3.6"
+  - "3.5"
+  - "3.4"
   - "nightly"
-  - "pypy"
 services:
   - memcached
   - redis-server
@@ -23,5 +24,4 @@ after_success:
   - bash <(curl -s https://codecov.io/bash)
 matrix:
   allow_failures:
-    - python:
-      - nightly
+    - python: "nightly"
