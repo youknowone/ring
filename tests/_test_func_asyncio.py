@@ -117,6 +117,7 @@ def test_common(gen_storage):
     assert r3 == ((yield from f.update(1, 2)))  # immediate update
 
     yield from f.touch(1, 2)  # just a running test
+    yield from f.touch(0, 0)  # illegal access
 
     yield from f.set(b'RANDOMVALUE', 1, 2)
     rset = yield from f.get(1, 2)

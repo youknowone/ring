@@ -15,11 +15,11 @@ except ImportError:
 @six.add_metaclass(abc.ABCMeta)
 class Coder(object):
     @abc.abstractmethod
-    def encode(self):
+    def encode(self):  # pragma: no cover
         pass
 
     @abc.abstractmethod
-    def decode(self):
+    def decode(self):  # pragma: no cover
         pass
 
 

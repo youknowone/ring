@@ -1,4 +1,4 @@
-
+import sys
 import ring
 import pymemcache.client
 import memcache
@@ -36,9 +36,9 @@ def storage_dict():
 
 @pytest.fixture(scope='session', ids=['python-memcached', 'pymemcache', 'pylibmc'], params=[
     # client, binary, has_touch
-    (pythonmemcache_client, False, False),
+    (pythonmemcache_client, False, sys.version_info[0] == 2),
     (pymemcache_client, True, True),
-    (pylibmc_client, True, False),  # actually has_touch but not in travis
+    (pylibmc_client, True, None),  # actually has_touch but not in travis
 ])
 def memcache_client(request):
     client, is_binary, has_touch = request.param
@@ -179,6 +179,10 @@ def test_common(function, storage):
 
     if storage.has_touch:
         function.touch(1, 2)  # just a running test
+        function.touch(0, 0)  # illegal touch
+    elif storage.has_touch is not None:  # None means unknown
+        with pytest.raises((AttributeError, NotImplementedError)):
+            function.touch(1, 2)
 
     function.set(b'RANDOMVALUE', 1, 2)
     assert function.get(1, 2) == b'RANDOMVALUE'

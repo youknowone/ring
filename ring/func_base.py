@@ -1,4 +1,6 @@
+import abc
 import functools
+import six
 try:
     from functools import lru_cache
 except ImportError:  # for py2
@@ -196,14 +198,18 @@ class NotFound(Exception):
     pass
 
 
+@six.add_metaclass(abc.ABCMeta)
 class StorageImplementation(object):
 
+    @abc.abstractmethod
     def get_value(self, obj, key):  # pragma: no cover
         raise NotImplementedError
 
+    @abc.abstractmethod
     def set_value(self, obj, key, value, expire):  # pragma: no cover
         raise NotImplementedError
 
+    @abc.abstractmethod
     def del_value(self, obj, key):  # pragma: no cover
         raise NotImplementedError
 
@@ -211,6 +217,7 @@ class StorageImplementation(object):
         raise NotImplementedError
 
 
+@six.add_metaclass(abc.ABCMeta)
 class BaseInterface(object):
 
     def _key(self, **kwargs):

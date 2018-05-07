@@ -97,3 +97,8 @@ def test_unexisting_coder():
 def test_coderize(raw_coder):
     assert raw_coder
     assert isinstance(coderize(raw_coder), Coder)
+
+
+def test_invalid_coderize():
+    with pytest.raises(TypeError):
+        coderize(1)
