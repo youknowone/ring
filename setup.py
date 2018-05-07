@@ -17,7 +17,8 @@ tests_require = [
     'pytest>=3.0.2', 'pytest-cov', 'pytest-lazy-fixture', 'mock', 'patch',
     'pymemcache',
     'redis', 'requests',
-    'diskcache'
+    'diskcache',
+    'django',
 ]
 docs_require = [
     'sphinx',
