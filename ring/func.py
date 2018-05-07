@@ -1,6 +1,7 @@
 """Collection of cache decorators"""
 
 from ring.func_sync import dict, memcache, redis_py, redis, disk
+from ring.django import django, django_default
 
 try:
     import asyncio
@@ -16,4 +17,5 @@ else:
 
 __all__ = (
     'dict', 'memcache', 'redis_py', 'redis', 'disk',
-    'aiodict', 'aiomcache', 'aioredis')
+    'aiodict', 'aiomcache', 'aioredis',
+    'django', 'django_default')
