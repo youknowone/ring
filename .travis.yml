@@ -2,26 +2,28 @@ language: python
 cache: pip
 sudo: false
 python:
-  - "pypy2.7-5.9.0"
-  - "pypy3.5-5.9.0"
-  - "2.7"
-  - "3.6"
-  - "3.5"
-  - "3.4"
-  - "nightly"
+- pypy2.7-5.9.0
+- pypy3.5-5.9.0
+- '2.7'
+- '3.6'
+- '3.5'
+- '3.4'
+- nightly
 services:
-  - memcached
-  - redis-server
-# command to install dependencies
+- memcached
+- redis-server
 install:
-  - "pip install --upgrade pip"
-  - "pip install flake8 pytest-cov '.[tests]'"
-# command to run tests
+- pip install --upgrade pip
+- pip install flake8 pytest-cov '.[tests]'
 script:
-  - "flake8 --ignore=E501,E999 ring tests setup.py"
-  - "py.test --cov=ring -vv tests/"
+- flake8 --ignore=E501,E999 ring tests setup.py
+- py.test --cov=ring -vv tests/
 after_success:
-  - bash <(curl -s https://codecov.io/bash)
+- bash <(curl -s https://codecov.io/bash)
 matrix:
   allow_failures:
-    - python: "nightly"
+  - python: nightly
+notifications:
+  slack:
+    rooms:
+      secure: OzONLO9u8Xc+ExLlD0J7t64yWLvaiov3dszvth9K2SKF9wyKM+Xx/CTra3cTu4NypQ5dBSreVqn/g7uszahaaperOdJaH1uiACWkqZlrEm4tPabkSrqDnBJwZ0J66LwwAsn6rLvRtIla12Z2g5ZUkqMU7j1uDb/okbrTH3HLVTxHWQXg9DTetrJVlRWsCodcpuVCh63SBpCd7EBxoWse9/fiT6940isHq3UBfSjfpRXqj9cqXEZdjcCIQIekAc6bPTVcJ1oPz1CjcqHbMvZLvZ8OQCoGA5CFuSp7T4grXjTz244eLpI6DDO5NnneWfknE69vV0lhWvSxwyP9xak8mB676CV5l98bJxDP2WTv+5/UJJqwfagBxHzltHiYLnkV0uqXIVgB/Yr9etUnqfk4y4sFoiNanR2Owgza4gYflGaaaNCpZSm5bgVVeiUvGjX0A9qwLNIf68Xt9IXtNhL4IKwioBtSGkG9ghGAsdkqQZQaVfvgDDKT8J/fVQuS+MdL7lDp0YiaIlb/ld11j/aoLW8wTN7dwxgwqXiVXsIUJPXkTUuMvD29BT3r5HWc66MAFSOv2oiDci8PySe/FUPq+QKjg3jXi/Skft1uHbYsuoGMHQG/zvuwtI7h1tBkJM0KfooFC+MH/sDe/PllIj5UFSH1x43fE2Se/IfUeOOYp8A=

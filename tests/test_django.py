@@ -29,3 +29,5 @@ def test_django():
     assert f.get(10) == 1000
     caches['default'].delete(raw_key)
     assert f(10) == 500
+    f.delete(10)
+    assert caches['default'].get(raw_key) is None
