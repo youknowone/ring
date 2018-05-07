@@ -4,7 +4,7 @@ import timeit
 import time
 
 
-@ring.func.dict({})
+@ring.dict({})
 def get_url(url):
     """very slow function
     """

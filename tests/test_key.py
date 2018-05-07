@@ -52,7 +52,7 @@ def test_classmethod_key():
 
     class A(object):
 
-        @ring.func.dict(cache)
+        @ring.dict(cache)
         @classmethod
         def f(cls):
             return 10
@@ -68,7 +68,7 @@ def test_unexisting_ring_key():
     cache = {}
 
     class A(object):
-        @ring.func.dict(cache)
+        @ring.dict(cache)
         def f(self):
             return 0
 
@@ -80,7 +80,7 @@ def test_unexisting_ring_key():
 @pytest.mark.parametrize('v', (None, Ellipsis))
 def test_singleton(v):
 
-    @ring.func.dict({})
+    @ring.dict({})
     def f(a, b=v):
         return a, b
 

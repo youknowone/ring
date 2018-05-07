@@ -57,7 +57,7 @@ def test_coder_pickle():
     coder = default_registry.get('pickle')
     mc = memcache.Client(['127.0.0.1:11211'])
 
-    @ring.func.memcache(mc, coder='pickle')
+    @ring.memcache(mc, coder='pickle')
     def now():
         return datetime.datetime.now()
 
@@ -75,7 +75,7 @@ def test_coder_pickle():
 
 
 def test_ring_bare_coder():
-    @ring.func.dict({}, coder=JsonCoder)
+    @ring.dict({}, coder=JsonCoder)
     def f():
         return 10
 
@@ -86,7 +86,7 @@ def test_unexisting_coder():
     cache = {}
 
     with pytest.raises(TypeError):
-        @ring.func.dict(cache, coder='messed-up')
+        @ring.dict(cache, coder='messed-up')
         def f():
             pass
 

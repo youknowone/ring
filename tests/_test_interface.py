@@ -140,7 +140,7 @@ def test_coder_func():
 
     storage = {}
 
-    @ring.func.dict(storage)
+    @ring.dict(storage)
     def f(a):
         return a
 
@@ -172,7 +172,7 @@ def test_coder_method():
         def __ring_key__(self):
             return 'User{self.user_id}'.format(self=self)
 
-        @ring.func.dict(storage)
+        @ring.dict(storage)
         def data(self):
             return self._data.copy()
 

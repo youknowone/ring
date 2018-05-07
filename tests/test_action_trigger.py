@@ -22,7 +22,7 @@ def test_action_dict():
         def __ring_key__(self):
             return 'User{self.user_id}'.format(self=self)
 
-        @ring.func.dict(cache)
+        @ring.dict(cache)
         def data(self):
             return self._data.copy()
 

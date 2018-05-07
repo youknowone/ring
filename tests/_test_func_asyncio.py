@@ -12,7 +12,7 @@ from tests.test_func_sync import StorageDict
 @asyncio.coroutine
 def storage_dict():
     storage = StorageDict()
-    storage.ring = ring.func_asyncio.async_dict
+    storage.ring = ring.aiodict
     return storage
 
 
@@ -147,7 +147,7 @@ def test_complicated_key(gen_storage):
 def test_func_dict():
     cache = {}
 
-    @ring.func_asyncio.async_dict(cache)
+    @ring.aiodict(cache)
     @asyncio.coroutine
     def f1(a, b):
         return a * 100 + b
@@ -157,7 +157,7 @@ def test_func_dict():
 
     cache = {}
 
-    @ring.func_asyncio.async_dict(cache, expire=1)
+    @ring.aiodict(cache, expire=1)
     @asyncio.coroutine
     def f2(a, b):
         return a * 100 + b
@@ -175,12 +175,12 @@ def test_func_method(storage_dict):
         def __ring_key__(self):
             return 'A'
 
-        @ring.func_asyncio.async_dict(storage)
+        @ring.aiodict(storage)
         @asyncio.coroutine
         def method(self, a, b):
             return base + a * 100 + b
 
-        @ring.func_asyncio.async_dict(storage)
+        @ring.aiodict(storage)
         @classmethod
         @asyncio.coroutine
         def cmethod(cls, a, b):

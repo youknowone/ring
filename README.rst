@@ -27,7 +27,7 @@ Function cache
     mc = memcache.Client(['127.0.0.1:11211'])
 
     # working for mc, expire in 60sec
-    @ring.func.memcache(mc, time=60)
+    @ring.memcache(mc, time=60)
     def get_url(url):
         return requests.get(url).content
 
@@ -68,12 +68,12 @@ Method cache
 
         # working for rc, no expiration
         # using json coder for non-bytes cache data
-        @ring.func.redis(rc, coder='json')
+        @ring.redis(rc, coder='json')
         def data(self):
             return self.copy()
 
         # parameters are also ok!
-        @ring.func.redis(rc, coder='json')
+        @ring.redis(rc, coder='json')
         def child(self, child_id):
             return {'user_id': self['id'], 'child_id': child_id}
 
@@ -111,7 +111,8 @@ To browse versions and tarballs, visit:
 To use memcache or redis, don't forget to install related libraries.
 For example: python-memcached, python3-memcached, pylibmc, redis-py etc
 
-It may require to install and run related services too: memcached and redis.
+It may require to install and run related services on your system too.
+Look for `memcached` and `redis` for your system.
 
 
 Contributors
@@ -138,8 +139,9 @@ Run pytest to check the test set is ready.
     $ pytest -vv
 
 
-Note: Can't you install it because of compile errors?
+Note: Can't you install `ring[tests]` because of compile errors?
 Don't forget to install and run memcached and redis locally.
+Test codes are using memcached & redis to ensure ring is correctly working.
 
 For macOS:
 

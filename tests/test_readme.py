@@ -7,7 +7,7 @@ def test_readme_function():
     mc = memcache.Client(['127.0.0.1:11211'])
 
     # working for mc, expire in 60sec
-    @ring.func.memcache(mc, expire=60)
+    @ring.memcache(mc, expire=60)
     def get_url(url):
         return requests.get(url).content
 
@@ -42,12 +42,12 @@ def test_readme_method():
 
         # working for rc, no expiration
         # using json coder to cache and load
-        @ring.func.redis(rc, coder='json')
+        @ring.redis(rc, coder='json')
         def data(self):
             return self.copy()
 
         # parameters are also ok!
-        @ring.func.redis(rc, coder='json')
+        @ring.redis(rc, coder='json')
         def child(self, child_id):
             return {'user_id': self['id'], 'child_id': child_id}
 

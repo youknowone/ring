@@ -20,11 +20,11 @@ def test_workflow():
         def __ring_key__(self):
             return 'User{self.user_id}'.format(self=self)
 
-        @ring.func.dict(cache)
+        @ring.dict(cache)
         def data(self):
             return self._data.copy()
 
-        @ring.func.dict(cache)
+        @ring.dict(cache)
         def child(self, n):
             return {'child_id': self.user_id * 10000 + n}
 

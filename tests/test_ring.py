@@ -10,7 +10,7 @@ class A():
     def __ring_key__(self):
         return str(self.v)
 
-    @ring.func.dict({})
+    @ring.dict({})
     def x(self):
         return self.v
 

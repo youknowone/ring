@@ -28,7 +28,7 @@ def test_memcache_key(client):
     if client is None:
         pytest.skip()
 
-    @ring.func.memcache(client, 'ring-test')
+    @ring.memcache(client, 'ring-test')
     def f(a, b):
         r = a + b
         if isinstance(r, str):

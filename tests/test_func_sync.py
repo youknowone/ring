@@ -28,7 +28,7 @@ class StorageDict(dict):
 @pytest.fixture
 def storage_dict():
     storage = StorageDict()
-    storage.ring = ring.func.dict
+    storage.ring = ring.dict
     storage.is_binary = False
     storage.has_touch = True
     return storage
@@ -46,7 +46,7 @@ def memcache_client(request):
         pytest.skip()
     client.is_binary = is_binary
     client.has_touch = has_touch
-    client.ring = ring.func.memcache
+    client.ring = ring.memcache
     return client
 
 
@@ -55,7 +55,7 @@ def memcache_client(request):
 ])
 def redis_client(request):
     client = request.param
-    client.ring = ring.func.redis
+    client.ring = ring.redis
     client.is_binary = True
     client.has_touch = True
     return client
@@ -66,7 +66,7 @@ def redis_client(request):
 ])
 def disk_cache(request):
     client = request.param
-    client.ring = ring.func.disk
+    client.ring = ring.disk
     client.is_binary = False
     client.has_touch = False
     return client
@@ -191,7 +191,7 @@ def test_func_dict():
 
     base = [0]
 
-    @ring.func.dict(cache, key_prefix='')
+    @ring.dict(cache, key_prefix='')
     def f(a, b):
         return base[0] + a * 100 + b
 
@@ -223,7 +223,7 @@ def test_func_dict():
 def test_func_dict_expire():
     cache = {}
 
-    @ring.func.dict(cache, expire=1)
+    @ring.dict(cache, expire=1)
     def f(a, b):
         return a * 100 + b
 
@@ -247,7 +247,7 @@ def test_func_dict_expire():
 ])
 def test_ring_key(value):
     # test only with real cache backends. dict doesn't help this test
-    @ring.func.memcache(pythonmemcache_client, expire=1)
+    @ring.memcache(pythonmemcache_client, expire=1)
     def simple(key):
         return key
 
@@ -258,7 +258,7 @@ def test_ring_key(value):
 def test_memcache(memcache_client):
     base = [0]
 
-    @ring.func.memcache(memcache_client, 'ring-test')
+    @ring.memcache(memcache_client, 'ring-test')
     def f(a, b):
         r = base[0] + a * 100 + b
         sr = str(r)
@@ -278,7 +278,7 @@ def test_memcache(memcache_client):
 def test_disk(disk_cache):
     base = [0]
 
-    @ring.func.disk(disk_cache, 'ring-test')
+    @ring.disk(disk_cache, 'ring-test')
     def f(a, b):
         r = base[0] + a * 100 + b
         sr = str(r)
@@ -298,7 +298,7 @@ def test_disk(disk_cache):
 def test_redis(redis_client):
     base = [0]
 
-    @ring.func.redis(redis_client, 'ring-test', 5)
+    @ring.redis(redis_client, 'ring-test', 5)
     def f(a, b):
         r = base[0] + a * 100 + b
         return str(r).encode('utf-8')

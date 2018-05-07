@@ -3,7 +3,7 @@ import ring
 
 
 def test_basic_ignorable_key():
-    @ring.func.dict({}, ignorable_keys=['ignorable'])
+    @ring.dict({}, ignorable_keys=['ignorable'])
     def f(n, ignorable):
         return n + ignorable
 

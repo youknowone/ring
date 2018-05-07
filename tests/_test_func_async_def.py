@@ -1,5 +1,6 @@
 
 import pytest
+import ring
 
 
 @pytest.mark.asyncio
@@ -14,7 +15,6 @@ async def test_async_def_vanilla_function(storage_dict):
 
 @pytest.mark.asyncio
 async def test_async_def_func_method():
-    import ring.func_asyncio
     cache = {}
 
     async def async_func(n):
@@ -24,12 +24,12 @@ async def test_async_def_func_method():
         def __str__(self):
             return 'A'
 
-        @ring.func_asyncio.async_dict(cache)
+        @ring.aiodict(cache)
         async def method(self, a, b):
             x = await async_func(100)
             return base + a * x + b
 
-        @ring.func_asyncio.async_dict(cache)
+        @ring.aiodict(cache)
         @classmethod
         async def cmethod(cls, a, b):
             x = await async_func(200)

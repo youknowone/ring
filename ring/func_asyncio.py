@@ -205,7 +205,7 @@ def dict(
         ignorable_keys=ignorable_keys)
 
 
-async_dict = dict
+aiodict = dict
 
 
 def aiomcache(
