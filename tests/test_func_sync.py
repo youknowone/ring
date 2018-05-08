@@ -3,7 +3,7 @@ import ring
 import pymemcache.client
 import memcache
 import redis
-from diskcache import Cache
+import diskcache
 
 import pytest
 
@@ -62,7 +62,7 @@ def redis_client(request):
 
 
 @pytest.fixture(scope='session', params=[
-    Cache('/tmp/ring-test')
+    diskcache.Cache('/tmp/ring-test')
 ])
 def disk_cache(request):
     client = request.param

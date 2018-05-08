@@ -197,7 +197,22 @@ class AioredisImpl(fbase.StorageImplementation):
 def dict(
         obj, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
         interface=CacheInterface, storage_implementation=DictImpl):
+    """Basic Python :class:`dict` based cache.
 
+    This backend is not designed for real products, but useful to use by
+    keeping below in mind:
+    - `functools.lrucache` is the standard library for the most of local cache.
+    - Expired objects will never be removed from the dict. If the function has
+      unlimited input combinations, never use dict.
+    - It is designed to "simulate" cache backends, not to provide an actual
+      cache backend. If a caching function is a fast job, this backend even
+      can drop the performance.
+
+    Still it doesn't mean you can't use this backend for products. Take
+    advantage of it when your demends fit.
+
+    :param dict obj: Cache storage.
+    """
     return fbase.factory(
         obj, key_prefix=key_prefix, ring_factory=ring_factory,
         interface=interface, storage_implementation=storage_implementation,
@@ -212,6 +227,23 @@ def aiomcache(
         client, key_prefix=None, expire=0, coder=None, ignorable_keys=None,
         interface=CacheInterface, storage_implementation=AiomcacheImpl,
         key_encoding='utf-8'):
+    """Memcached interface for :mod:`asyncio`.
+
+    Expected client packege is:
+    - https://pypi.org/project/aiomcache/
+
+    aiomcache expect `Memcached` client or dev package is installed on your
+    machine. If you are new to Memcached, check how to install it and the python
+    package on your platform.
+
+    For non-asyncio version, see :func:`ring.func_sync.memcache`.
+
+    .. _Memcache: http://memcached.org/
+
+    :param aiomcache.Client client: aiomcache client object.
+    :param object key_refactor: The default key refactor may hash the cashe key when
+        it doesn't meet memcached key restriction.
+    """
     from ring._memcache import key_refactor
 
     return fbase.factory(
@@ -226,7 +258,23 @@ def aiomcache(
 def aioredis(
         pool, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
         interface=CacheInterface, storage_implementation=AioredisImpl):
+    """Redis interface for :mod:`asyncio`.
 
+    Expected client packege is:
+    - https://pypi.org/project/aioredis/
+
+    aioredis expect `Redis` client or dev package is installed on your
+    machine. If you are new to Memcached, check how to install it and the python
+    package on your platform.
+
+    Note that aioredis>=1.0.0 only supported.
+
+    For non-asyncio version, see :func:`ring.func_sync.redis`.
+
+    .. _Redis: http://redis.io/
+
+    :param object client: aioredis client or pool object.
+    """
     return fbase.factory(
         pool, key_prefix=key_prefix, ring_factory=ring_factory,
         interface=interface, storage_implementation=storage_implementation,

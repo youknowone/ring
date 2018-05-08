@@ -3,17 +3,19 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Ring - An universal cache interface
-===================================
+Ring - Function-oriented cache interface
+========================================
 
-Ring provides function-oriented cache interface for various backends.
+*Ring* provides function-oriented cache interface for various backends.
 
 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
-   quick.rst
+   quickstart.rst
+   backends.rst
+   contribution.rst
 
 .. include:: ../README.rst
 

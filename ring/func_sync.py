@@ -1,4 +1,6 @@
-"""Collection of cache decorators"""
+""":mod:`ring.func_sync`
+
+"""
 import time
 import functools
 import re
@@ -186,7 +188,25 @@ class RedisImplementation(fbase.StorageImplementation):
 def dict(
         obj, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
         interface=CacheInterface, storage_implementation=DictImpl):
+    """Basic Python :class:`dict` based cache.
 
+    This backend is not designed for real products, but useful to use by
+    keeping below in mind:
+
+    - `functools.lrucache` is the standard library for the most of local cache.
+    - Expired objects will never be removed from the dict. If the function has
+      unlimited input combinations, never use dict.
+    - It is designed to "simulate" cache backends, not to provide an actual
+      cache backend. If a caching function is a fast job, this backend even
+      can drop the performance.
+
+    Still it doesn't mean you can't use this backend for products. Take
+    advantage of it when your demends fit.
+
+    For asyncio version, see :func:`ring.func_asyncio.dict`.
+
+    :param dict obj: Cache storage. Any :class:`dict` compatible object.
+    """
     return fbase.factory(
         obj, key_prefix=key_prefix, ring_factory=ring_factory,
         interface=interface, storage_implementation=storage_implementation,
@@ -197,6 +217,37 @@ def dict(
 def memcache(
         client, key_prefix=None, expire=0, coder=None, ignorable_keys=None,
         interface=CacheInterface, storage_implementation=MemcacheImpl):
+    """Common Memcached_ interface.
+
+    This backend is common interface for various memcached client libraries below:
+
+    - https://pypi.org/project/python-memcached/
+    - https://pypi.org/project/python3-memcached/
+    - https://pypi.org/project/pylibmc/
+    - https://pypi.org/project/pymemcache/
+
+    Most of them expect `Memcached` client or dev package is installed on your
+    machine. If you are new to Memcached, check how to install it and the python
+    package on your platform.
+
+    The expected types for input and output are always :class:`bytes` for `None`
+    coder, but you may use different types by client libraries. Ring doesn't
+    guarantee current/future behavior except for :class:`bytes`.
+
+    Examples of expected client for each memcached packages:
+
+    - pymemcache: ``pymemcache.client.Client(('127.0.0.1', 11211))``
+    - python-memcached or python3-memcached: ``memcache.Client(["127.0.0.1:11211"])``
+    - pylibmc: ``pylibmc.Client(['127.0.0.1'])``
+
+    For asyncio version, see :func:`ring.func_asyncio.aiomcache`
+
+    .. _Memcached: http://memcached.org/
+
+    :param object client: Memcached client object. See above for details.
+    :param object key_refactor: The default key refactor may hash the cashe key when
+        it doesn't meet memcached key restriction.
+    """
     from ring._memcache import key_refactor
     miss_value = None
 
@@ -211,7 +262,24 @@ def memcache(
 def redis_py(
         client, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
         interface=CacheInterface, storage_implementation=RedisImplementation):
+    """Redis_ interface.
 
+    This backend depends on:
+
+    - https://pypi.org/project/redis/
+
+    The packege expect Redis client or dev package is installed on your machine.
+    If you are new to Redis, check how to install Redis and the python package
+    on your platform.
+
+    Note that `redis.StrictRedis` is expected, not the legacy `redis.Redis`.
+
+    For asyncio version, see :func:`ring.func_asyncio.aioredis`.
+
+    .. _Redis: http://redis.io/
+
+    :param redis.StrictRedis client: Redis client object.
+    """
     return fbase.factory(
         client, key_prefix=key_prefix, ring_factory=ring_factory,
         interface=interface, storage_implementation=storage_implementation,
@@ -222,7 +290,12 @@ def redis_py(
 def disk(
         obj, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
         interface=CacheInterface, storage_implementation=DiskImpl):
+    """diskcache_ interface
 
+    .. _diskcache: https://pypi.org/project/diskcache/
+
+    :param diskcache.Cache obj: diskcache Cache object.
+    """
     return fbase.factory(
         obj, key_prefix=key_prefix, ring_factory=ring_factory,
         interface=interface, storage_implementation=storage_implementation,
