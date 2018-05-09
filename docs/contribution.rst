@@ -1,15 +1,17 @@
 Contribution
 ~~~~~~~~~~~~
 
-macOS
------
+Tips
+====
 
-Install pyenv_ and pyenv-virtualenv_.
+pyenv_ and pyenv-virtualenv_ will save your time, especially when experiencing
+compatibility problems between version:wns.
 
 .. _pyenv: https://github.com/pyenv/pyenv#installation
 .. _pyenv-virtualenv: https://github.com/pyenv/pyenv-virtualenv
 
-also install python 3.6.3 via pyenv.
+macOS
+-----
 
 .. code:: sh
 
@@ -17,5 +19,3 @@ also install python 3.6.3 via pyenv.
     $ brew install memcached libmemcached redis
     $ pip install -e '.[tests]'
     $ pytest -vv
-
-That's it!

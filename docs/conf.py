@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+
 def get_version():
     with open('../ring/version.txt') as f:
         return f.read().strip()
@@ -38,6 +39,7 @@ def get_version():
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinx.ext.autosummary',
     'sphinx.ext.intersphinx',
     'sphinx.ext.githubpages']
 
@@ -123,7 +125,7 @@ html_sidebars = {
 # -- Options for HTMLHelp output ------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'Ringdoc'
+htmlhelp_basename = 'ringdoc'
 
 
 # -- Options for LaTeX output ---------------------------------------------
@@ -150,7 +152,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'Ring.tex', 'Ring Documentation',
+    (master_doc, 'ring.tex', 'Ring Documentation',
      'Jeong YunWon', 'manual'),
 ]
 
@@ -177,7 +179,7 @@ texinfo_documents = [
 ]
 
 
-
-
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'https://docs.python.org/': None}
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/3', None),
+}

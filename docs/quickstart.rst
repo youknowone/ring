@@ -14,7 +14,20 @@ To browse versions and tarballs, visit:
     `<https://pypi.python.org/pypi/ring/>`_
 
 
-Though *Ring* includes built-in supports for many backends, they are not a part
-of ring installaion. :func:`ring.dict` doesn't require any dependency. Let's
-start with it. For more backends, see :ref:`backends`.
+Though **Ring** includes built-in supports for many backends, they are not
+included in ring installaion due to next issues:
+
+  #. Ring supports many backends but users don't use all of them.
+  #. Backends packages not only cost storages and time, but also require some
+     non-Python packages to be installed, which cannot be automated by pip.
+  #. Installing some them is not easy on some platforms.
+
+Check each backend what you use and manually add related packages to `setup.py`
+or `requirements.txt`.
+
+If you are new to **Ring** and cache, :func:`ring.func_sync.dict` doesn't
+require any dependency. Let's start with it. Moving from dict to another
+backend is easy.
+
+For more backends, see :doc:`factory`.
 

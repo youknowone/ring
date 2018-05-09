@@ -1,0 +1,2 @@
+.. automodule:: ring.coder
+    :members:

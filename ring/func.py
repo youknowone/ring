@@ -1,7 +1,10 @@
-"""Collection of cache decorators"""
+""":mod:`ring.func` --- Factory functions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Ring object factory functions are aggregated in this module.
+"""
 
 from ring.func_sync import dict, memcache, redis_py, redis, disk
-from ring.django import django, django_default
 
 try:
     import asyncio
@@ -17,5 +20,4 @@ else:
 
 __all__ = (
     'dict', 'memcache', 'redis_py', 'redis', 'disk',
-    'aiodict', 'aiomcache', 'aioredis',
-    'django', 'django_default')
+    'aiodict', 'aiomcache', 'aioredis')

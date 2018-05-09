@@ -1,11 +1,14 @@
-"""Collection of cache decorators"""
+""":mod:`ring.func_asyncio`
+
+Collection of asyncio factory functions.
+"""
 import asyncio
 import inspect
 import functools
 import time
 from ring import func_base as fbase
 
-__all__ = ('aiomcache', 'aioredis', )
+__all__ = ('dict', 'aiodict', 'aiomcache', 'aioredis', )
 
 inspect_iscoroutinefunction = getattr(inspect, 'iscoroutinefunction', lambda f: False)
 
@@ -236,13 +239,13 @@ def aiomcache(
     machine. If you are new to Memcached, check how to install it and the python
     package on your platform.
 
-    For non-asyncio version, see :func:`ring.func_sync.memcache`.
-
     .. _Memcache: http://memcached.org/
 
     :param aiomcache.Client client: aiomcache client object.
     :param object key_refactor: The default key refactor may hash the cashe key when
         it doesn't meet memcached key restriction.
+
+    :see: :func:`ring.func_sync.memcache` for non-asyncio version.
     """
     from ring._memcache import key_refactor
 
@@ -269,11 +272,11 @@ def aioredis(
 
     Note that aioredis>=1.0.0 only supported.
 
-    For non-asyncio version, see :func:`ring.func_sync.redis`.
-
     .. _Redis: http://redis.io/
 
     :param object client: aioredis client or pool object.
+
+    :see: :func:`ring.func_sync.redis` for non-asyncio version.
     """
     return fbase.factory(
         pool, key_prefix=key_prefix, ring_factory=ring_factory,

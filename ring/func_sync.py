@@ -1,5 +1,6 @@
 """:mod:`ring.func_sync`
 
+Collection of factory functions.
 """
 import time
 import functools
@@ -7,7 +8,7 @@ import re
 import hashlib
 from ring import func_base as fbase
 
-__all__ = ('memcache', 'redis_py', 'redis', 'arcus')
+__all__ = ('dict', 'memcache', 'redis_py', 'redis', 'disk', 'arcus')
 
 
 def ring_factory(
@@ -203,9 +204,9 @@ def dict(
     Still it doesn't mean you can't use this backend for products. Take
     advantage of it when your demends fit.
 
-    For asyncio version, see :func:`ring.func_asyncio.dict`.
-
     :param dict obj: Cache storage. Any :class:`dict` compatible object.
+
+    :see: :func:`ring.func_asyncio.dict` for :mod:`asyncio` version.
     """
     return fbase.factory(
         obj, key_prefix=key_prefix, ring_factory=ring_factory,
@@ -240,13 +241,13 @@ def memcache(
     - python-memcached or python3-memcached: ``memcache.Client(["127.0.0.1:11211"])``
     - pylibmc: ``pylibmc.Client(['127.0.0.1'])``
 
-    For asyncio version, see :func:`ring.func_asyncio.aiomcache`
-
     .. _Memcached: http://memcached.org/
 
     :param object client: Memcached client object. See above for details.
     :param object key_refactor: The default key refactor may hash the cashe key when
         it doesn't meet memcached key restriction.
+
+    :see: :func:`ring.func_asyncio.aiomcache` for :mod:`asyncio` version.
     """
     from ring._memcache import key_refactor
     miss_value = None
@@ -264,27 +265,29 @@ def redis_py(
         interface=CacheInterface, storage_implementation=RedisImplementation):
     """Redis_ interface.
 
-    This backend depends on:
+    This backend depends on `redis package <https://pypi.org/project/redis/>`_.
 
-    - https://pypi.org/project/redis/
-
-    The packege expect Redis client or dev package is installed on your machine.
+    The `redis` packege expect Redis client or dev package is installed on your machine.
     If you are new to Redis, check how to install Redis and the python package
     on your platform.
 
-    Note that `redis.StrictRedis` is expected, not the legacy `redis.Redis`.
-
-    For asyncio version, see :func:`ring.func_asyncio.aioredis`.
-
-    .. _Redis: http://redis.io/
+    Note that :class:`redis.StrictRedis` is expected, which is different to :class:`redis.Redis`.
 
     :param redis.StrictRedis client: Redis client object.
+
+    :see: :func:`ring.func_asyncio.aioredis` for :mod:`asyncio` version.
+    :see: Redis_ for Redis documendation.
+
+    .. _Redis: http://redis.io/
     """
     return fbase.factory(
         client, key_prefix=key_prefix, ring_factory=ring_factory,
         interface=interface, storage_implementation=storage_implementation,
         miss_value=None, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys)
+
+
+redis = redis_py  #: Alias for redis_py for now.
 
 
 def disk(
@@ -301,10 +304,6 @@ def disk(
         interface=interface, storage_implementation=storage_implementation,
         miss_value=None, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys)
-
-
-# de facto standard of redis
-redis = redis_py
 
 
 def arcus(

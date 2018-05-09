@@ -6,7 +6,7 @@
 Ring - Function-oriented cache interface
 ========================================
 
-*Ring* provides function-oriented cache interface for various backends.
+**Ring** provides function-oriented cache interface for various backends.
 
 
 .. toctree::
@@ -14,11 +14,21 @@ Ring - Function-oriented cache interface
    :caption: Contents:
 
    quickstart.rst
-   backends.rst
+   factory.rst
+   coder.rst
    contribution.rst
 
-.. include:: ../README.rst
 
+References
+----------
+
+.. toctree::
+   :maxdepth: 2
+
+   ring
+
+
+.. include:: ../README.rst
 
 Indices and tables
 ==================
