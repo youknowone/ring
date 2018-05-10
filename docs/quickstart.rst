@@ -1,6 +1,11 @@
 Quickstart
 ~~~~~~~~~~
 
+To start, remember the philosophy of **Ring** is human-friendly high-level
+interface *with* transparent and concrete low-level access. You probably
+access most of the level of **Ring** you want.
+
+
 Installation
 ------------
 
@@ -29,5 +34,29 @@ If you are new to **Ring** and cache, :func:`ring.func_sync.dict` doesn't
 require any dependency. Let's start with it. Moving from dict to another
 backend is easy.
 
+
+First example
+-------------
+
+
+Choosing backend
+----------------
+
 For more backends, see :doc:`factory`.
 
+
+Complex data
+------------
+
+For more data coding, see :doc:`coder`.
+
+
+Low-level access
+----------------
+
+
+Further documents
+-----------------
+
+:see: :doc:`why`.
+:see: :doc:`ring`.
