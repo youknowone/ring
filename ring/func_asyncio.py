@@ -212,7 +212,7 @@ def dict(
       can drop the performance.
 
     Still it doesn't mean you can't use this backend for products. Take
-    advantage of it when your demends fit.
+    advantage of it when your demands fit.
 
     :param dict obj: Cache storage.
     """
@@ -232,7 +232,7 @@ def aiomcache(
         key_encoding='utf-8'):
     """Memcached interface for :mod:`asyncio`.
 
-    Expected client packege is:
+    Expected client package is:
     - https://pypi.org/project/aiomcache/
 
     aiomcache expect `Memcached` client or dev package is installed on your
@@ -242,7 +242,7 @@ def aiomcache(
     .. _Memcache: http://memcached.org/
 
     :param aiomcache.Client client: aiomcache client object.
-    :param object key_refactor: The default key refactor may hash the cashe key when
+    :param object key_refactor: The default key refactor may hash the cache key when
         it doesn't meet memcached key restriction.
 
     :see: :func:`ring.func_sync.memcache` for non-asyncio version.
@@ -263,7 +263,7 @@ def aioredis(
         interface=CacheInterface, storage_implementation=AioredisImpl):
     """Redis interface for :mod:`asyncio`.
 
-    Expected client packege is:
+    Expected client package is:
     - https://pypi.org/project/aioredis/
 
     aioredis expect `Redis` client or dev package is installed on your

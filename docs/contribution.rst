@@ -5,7 +5,7 @@ Tips
 ====
 
 pyenv_ and pyenv-virtualenv_ will save your time, especially when experiencing
-compatibility problems between version:wns.
+compatibility problems between versions.
 
 .. _pyenv: https://github.com/pyenv/pyenv#installation
 .. _pyenv-virtualenv: https://github.com/pyenv/pyenv-virtualenv
