@@ -4,10 +4,10 @@ Ring
 .. image:: https://travis-ci.org/youknowone/ring.svg?branch=master
     :target: https://travis-ci.org/youknowone/ring
 
-Let's concentrate on code, not about storages.
+Let's concentrate on code, not on storages.
 
 Ring shows a way to control cache in point of view of code - not about storages.
-Ring's decorator is convenient but also keeping fluency for general scenarios.
+Ring's decorator is convenient but also keeps fluency for general scenarios.
 
 :mod:`asyncio` support!
 
@@ -108,7 +108,7 @@ To browse versions and tarballs, visit:
     `<https://pypi.python.org/pypi/ring/>`_
 
 
-To use memcache or redis, don't forget to install related libraries.
+To use memcached or redis, don't forget to install related libraries.
 For example: python-memcached, python3-memcached, pylibmc, redis-py etc
 
 It may require to install and run related services on your system too.
@@ -139,7 +139,7 @@ Run pytest to check the test set is ready.
     $ pytest -vv
 
 
-Note: Can't you install `ring[tests]` because of compile errors?
+Note: Can't install `ring[tests]` because of compile errors?
 Don't forget to install and run memcached and redis locally.
 Test codes are using memcached & redis to ensure ring is correctly working.
 

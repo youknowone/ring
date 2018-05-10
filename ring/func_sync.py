@@ -202,7 +202,7 @@ def dict(
       can drop the performance.
 
     Still it doesn't mean you can't use this backend for products. Take
-    advantage of it when your demends fit.
+    advantage of it when your demands fit.
 
     :param dict obj: Cache storage. Any :class:`dict` compatible object.
 
@@ -244,7 +244,7 @@ def memcache(
     .. _Memcached: http://memcached.org/
 
     :param object client: Memcached client object. See above for details.
-    :param object key_refactor: The default key refactor may hash the cashe key when
+    :param object key_refactor: The default key refactor may hash the cache key when
         it doesn't meet memcached key restriction.
 
     :see: :func:`ring.func_asyncio.aiomcache` for :mod:`asyncio` version.
@@ -267,7 +267,7 @@ def redis_py(
 
     This backend depends on `redis package <https://pypi.org/project/redis/>`_.
 
-    The `redis` packege expect Redis client or dev package is installed on your machine.
+    The `redis` package expect Redis client or dev package is installed on your machine.
     If you are new to Redis, check how to install Redis and the python package
     on your platform.
 
