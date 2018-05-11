@@ -64,7 +64,7 @@ it for most of cases.
 
 In real world, lots of functions are not pure function - but still need to be
 cached. Since this also is one of the common problems, there are solutions too.
-Let's see Django's view cache which help to reuse web page for specific
+Let's see Django's view cache which helps to reuse web page for specific
 seconds.
 
 .. code-block:: python
@@ -73,7 +73,7 @@ seconds.
     def cached_view(request):
         ...
 
-It means the view is cached and the cached data is valid during 15 minutes. In
+It means the view is cached and the cached data is valid for 15 minutes. In
 this case, ``actual_function()`` is inside of the Django. The actual function
 will generate HTTP response based on the ``cached_view``. It is good enough
 when cache invalidation is not a real-time requirement.
@@ -104,7 +104,7 @@ You can control them in consistent level with **Ring**.
 Hidden backend
 ++++++++++++++
 
-You might find another glitch. Their backends are consealed. Memory is ok.
+You might find another glitch. Their backends are concealed. Memory is ok.
 There is less reasons to uncover data from it. For services, the common cache
 backends are storages and database. Working high-level APIs are good. But we
 need to access the storages out of the original product, or even out of the
@@ -121,7 +121,7 @@ Data encoding
 +++++++++++++
 
 Another issue is python-specific. Python objects are full of Python meta data
-which are not simple sequence of bytes. Then how we easily handle them through
+which are not simple sequence of bytes. Then how do we easily handle them through
 cache? The common answer is standard library :mod:`pickle`. Most of python
 objects can be dumped to and loaded from binary with it. This feature is
 beloved for long time across history of pickle. `python-memcached`_ is a great
@@ -187,7 +187,7 @@ Extra operations are supported as below:
 
 
 **Ring** provides common auto-cache approach by default but not only that.
-Extra controllers provides full funtions for cache policy and storages.
+Extra controllers provide full functions for cache policy and storages.
 
 :see: :doc:`control` for details.
 
