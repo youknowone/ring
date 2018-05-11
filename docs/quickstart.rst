@@ -2,8 +2,8 @@ Quickstart
 ~~~~~~~~~~
 
 To start, remember the philosophy of **Ring** is human-friendly high-level
-interface *with* transparent and concrete low-level access. You probably
-access most of the level of **Ring** you want.
+interface *with* transparent and concrete low-level access. You probably be
+able to access most of the level of **Ring** you want.
 
 
 Installation
@@ -30,7 +30,7 @@ included in ring installation due to the following issues:
 Check each backend you use and manually add related packages to `setup.py`
 or `requirements.txt`.
 
-If you are new to **Ring** and cache, :func:`ring.func_sync.dict` doesn't
+If you are new to **Ring** and cache, :func:`ring.dict` doesn't
 require any dependency. Let's start with it. Moving from dict to another
 backend is easy.
 
@@ -59,4 +59,4 @@ Further documents
 -----------------
 
 :see: :doc:`why`.
-:see: :doc:`ring`.
+:see: :doc:`ring` the full reference of **Ring**

@@ -22,6 +22,7 @@ tests_require = [
 ]
 docs_require = [
     'sphinx',
+    'django',
 ]
 
 dev_require = tests_require + docs_require

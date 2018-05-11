@@ -25,22 +25,27 @@ Quickstart
 See :doc:`quickstart` to learn basic concept of **Ring** with examples. Using
 it in your code can be done in a single minute.
 
+
+Documents
+---------
+
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: Guidelines:
 
    quickstart.rst
    why.rst
    factory.rst
    coder.rst
+
+.. toctree::
+   :maxdepth: 1
+
    contribution.rst
-
-
-References
-----------
 
 .. toctree::
    :maxdepth: 2
+   :caption: Reference:
 
    ring
 

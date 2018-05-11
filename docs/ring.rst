@@ -10,5 +10,3 @@
 
 .. automodule:: ring
     :members:
-
-    .. automodule:: ring.coder
