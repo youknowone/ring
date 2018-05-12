@@ -3,7 +3,7 @@
 """
 from __future__ import absolute_import
 import functools
-from django.core.cache import caches
+from django.core import cache
 from ring import func_base as fbase
 from ring.func_sync import ring_factory, CacheInterface
 
@@ -14,7 +14,7 @@ __all__ = ('django', 'django_default')
 def promote_backend(backend):
     """Get string name to django cache backend."""
     if isinstance(backend, (str, bytes)):
-        backend = caches[backend]
+        backend = cache.caches[backend]
     return backend
 
 
@@ -37,6 +37,9 @@ def django(
         interface=CacheInterface, storage_implementation=DjangoImpl):
     """Django cache interface based on low-level cache api.
 
+    :param Union[str, object] backend: Django's cache config key for
+           :data:`django.core.cache.caches` or Django cache object.
+
     :see: :data:`ring.django.django_default` shortcut for common `default` configuration.
     :see: `Django's cache framework: Setting up the cache`_ to configure django cache.
     :see: `Django's cache framework: The low-level cache API`_ for the backend.
@@ -52,4 +55,6 @@ def django(
         ignorable_keys=ignorable_keys)
 
 
-django_default = functools.partial(django, 'default')
+#: Shortcut for common `default` configuration.
+#: :see: :data:`ring.django.django` for generic form.
+django_default = functools.partial(django, cache.cache)

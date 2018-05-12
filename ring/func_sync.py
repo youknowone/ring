@@ -206,7 +206,7 @@ def dict(
 
     :param dict obj: Cache storage. Any :class:`dict` compatible object.
 
-    :see: :func:`ring.func_asyncio.dict` for :mod:`asyncio` version.
+    :see: :func:`ring.aiodict` for :mod:`asyncio` version.
     """
     return fbase.factory(
         obj, key_prefix=key_prefix, ring_factory=ring_factory,
@@ -247,7 +247,8 @@ def memcache(
     :param object key_refactor: The default key refactor may hash the cache key when
         it doesn't meet memcached key restriction.
 
-    :see: :func:`ring.func_asyncio.aiomcache` for :mod:`asyncio` version.
+    :note: `touch` feature availability depends on memcached library.
+    :see: :func:`ring.aiomcache` for :mod:`asyncio` version.
     """
     from ring._memcache import key_refactor
     miss_value = None
@@ -275,7 +276,7 @@ def redis_py(
 
     :param redis.StrictRedis client: Redis client object.
 
-    :see: :func:`ring.func_asyncio.aioredis` for :mod:`asyncio` version.
+    :see: :func:`ring.aioredis` for :mod:`asyncio` version.
     :see: Redis_ for Redis documendation.
 
     .. _Redis: http://redis.io/

@@ -1,5 +1,10 @@
 import abc
 import functools
+""":mod:`ring.func_base` --- The toolkit of :mod:`ring.func`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This module is a collection of common ring tools.
+"""
 import six
 from ring._compat import lru_cache
 from ring.callable import Callable
@@ -7,14 +12,29 @@ from ring.key import CallableKey
 from ring.wire import Wire
 from ring.coder import registry as coder_registry, coderize
 
+__all__ = (
+    'is_method', 'is_classmethod', 'RingBase', 'factory', 'NotFound',
+    'StorageImplementation', 'BaseInterface')
+
 
 def is_method(c):
+    """Test given argument is a method or not.
+
+    :param ring.callable.Callable c: A callable object.
+
+    :note: The test is not based on python state but based on parameter name
+           `self`. The test result might be wrong.
+    """
     if not c.first_parameter:
         return False
     return c.first_parameter.name == 'self'
 
 
 def is_classmethod(c):
+    """Test given argument is a classmethod or not.
+
+    :param ring.callable.Callable c: A callable object.
+    """
     return isinstance(c.premitive, classmethod)
 
 
@@ -87,10 +107,11 @@ def coerce_function(t):
         return _coerce_set
 
     # NOTE: general sequence processing is good -
-    # but NEVER add a general iterator processing. it will cause user bug.
+    # but NEVER add a general iterator processing. it will cause user bugs.
 
 
 def coerce(v):
+    """Transform the given value to cache-friendly string data."""
     type_coerce = coerce_function(type(v))
     if type_coerce:
         return type_coerce(v)
@@ -193,7 +214,12 @@ def factory(
 
 
 class NotFound(Exception):
-    pass
+    """Internal exception for cache miss.
+
+    Ring internally use this exception to indicate cache miss. Though common
+    convention of cache miss is :data:`None` for many implementations,
+    :mod:`ring.coder` allows :data:`None` to be proper cached value in **Ring**.
+    """
 
 
 @six.add_metaclass(abc.ABCMeta)

@@ -40,6 +40,7 @@ class Callable(inspect.Signature):
         return getattr(self.callable, '__annotations__', None) or {}
 
     def kwargify(self, args, kwargs):
+        """Create a merged kwargs-like object with given args and kwargs."""
         merged = OrderedDict()
 
         _params = self.parameters_values

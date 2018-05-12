@@ -3,10 +3,11 @@ Factory functions
 
 In this document, you will learn:
 
-  #. About :class:`ring.func_base.Ring` factory.
-  #. About built-in factories.
+  #. About pre-defined factories included in **Ring**.
   #. About storage backends.
   #. About django extension.
+  #. About :class:`ring.func_base.Ring` factory.
+
 
 Built-in factory functions and backends
 ---------------------------------------

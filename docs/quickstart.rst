@@ -38,17 +38,54 @@ backend is easy.
 First example
 -------------
 
+Let's start from simple example: function cache with bytes data.
+
+.. code:: python
+
+    import ring
+    import requests
+
+    # save in a dict, expire in 60 seconds.
+    @ring.dict({}, time=60)
+    def get_url(url):
+        return requests.get(url).content
+
+    # default access - it is cached
+    data = get_url('http://example.com')
+
+This flow is what you see in common *smart* cache decorators.
+
+
+The core feature of **Ring** is explicit controllers.
+
+.. code:: python
+
+    # delete the cache
+    get_url.delete('http://example.com')
+    # get cached data or None
+    data_or_none = get_url.get('http://example.com')
+
+    # get internal cache key
+    key = get_url.key('http://example.com')
+    # and access directly to the backend
+    encoded_data = get_url.storage.get(key)
+    cached_data = get_url.decode(encoded_data)
+
+
+(TBD)
+
+:see: :doc:`why` if this document doesn't explain what **Ring** does.
 
 Choosing backend
 ----------------
 
-For more backends, see :doc:`factory`.
+:see: :doc:`factory` about more backends.
 
 
 Complex data
 ------------
 
-For more data coding, see :doc:`coder`.
+:see: :doc:`coder` about more backends.
 
 
 Low-level access

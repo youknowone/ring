@@ -82,9 +82,10 @@ when cache invalidation is not a real-time requirement.
 Manual invalidation
 +++++++++++++++++++
 
-Unfortunately, websites are often real-time. Suppose it was list of customer service articles.
-New articles must be shown up in short time. This is how `Django`_ handle it
-with `per-view cache`_.
+Unfortunately, websites are often real-time. Suppose it was list of customer
+service articles. New articles must be shown up in short time. This is how
+`Django`_ handle it with `per-view cache
+<https://docs.djangoproject.com/en/2.0/topics/cache/#the-per-view-cache>`_.
 
 .. code-block:: python
 
@@ -92,8 +93,9 @@ with `per-view cache`_.
     key = get_cache_key(request)
     cache.delete(key)  # invalidate
 
-``get_cache_key`` and ``cache`` are global names from Django framework to
-control cache. We started from a neat per-view cache decorator - but now it
+:func:`get_cache_key <django.utils.cache.get_cache_key>` and
+:data:`cache <django.core.cache.cache>` are global names from Django framework
+to control cache. We started from a neat per-view cache decorator - but now it
 turns into a storage approach which we demonstrated at first section.
 
 You can control them in consistent level with **Ring**.
@@ -221,7 +223,7 @@ Function parameters are also supported in expected manner:
 .. _transparency:
 
 Ring approaches backend transparent way
---------------------------------------
+---------------------------------------
 
 High-level interface providers like **Ring** cannot expose full features of
 the backends. Various storages have vary features by their design. **Ring**
@@ -271,3 +273,6 @@ with `pylibmc`. Of course for other backends too.
 Ring comes with configurable commands and storage actions
 ---------------------------------------------------------
 
+
+.. _python-memcached: https://pypi.org/project/python-memcached/
+.. _Django: https://www.djangoproject.com/

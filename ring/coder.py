@@ -7,9 +7,9 @@ stored cache data.
 Built-in coders
 ---------------
 
-- :func:`ring.coder.bypass`: By-pass coder
+- :data:`ring.coder.bypass_coder`: By-pass coder
 - :class:`ring.coder.JsonCoder`: JSON coder
-- Pickle coder
+- :data:`ring.coder.pickle_coder`: Pickle coder
 
 Create a new coder
 ------------------
@@ -119,8 +119,20 @@ class Registry(object):
 
 
 def bypass(x):
-    """Default coder which does nothing."""
     return x
+
+
+#: Default coder.
+#:
+#: encode and decode functions bypass the given parameter.
+bypass_coder = bypass, bypass
+
+
+#: Pickle coder.
+#:
+#: encode is :func:`pickle.dumps` and decode is :func:`pickle.loads`.
+#: :mod:`cpickle` will be automatically loaded for CPython2.
+pickle_coder = pickle_mod.dumps, pickle_mod.loads
 
 
 class JsonCoder(Coder):
@@ -146,6 +158,6 @@ class JsonCoder(Coder):
 #:
 #: :see: :class:`ring.coder.Registry` for the class definition.
 registry = Registry()
-registry.register(None, (bypass, bypass))
+registry.register(None, bypass_coder)
 registry.register('json', JsonCoder())
-registry.register('pickle', (pickle_mod.dumps, pickle_mod.loads))
+registry.register('pickle', pickle_coder)

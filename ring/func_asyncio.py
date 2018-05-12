@@ -215,6 +215,8 @@ def dict(
     advantage of it when your demands fit.
 
     :param dict obj: Cache storage.
+
+    :see: :func:`ring.dict` for non-asyncio version.
     """
     return fbase.factory(
         obj, key_prefix=key_prefix, ring_factory=ring_factory,
@@ -245,7 +247,7 @@ def aiomcache(
     :param object key_refactor: The default key refactor may hash the cache key when
         it doesn't meet memcached key restriction.
 
-    :see: :func:`ring.func_sync.memcache` for non-asyncio version.
+    :see: :func:`ring.memcache` for non-asyncio version.
     """
     from ring._memcache import key_refactor
 
@@ -276,7 +278,7 @@ def aioredis(
 
     :param object client: aioredis client or pool object.
 
-    :see: :func:`ring.func_sync.redis` for non-asyncio version.
+    :see: :func:`ring.redis` for non-asyncio version.
     """
     return fbase.factory(
         pool, key_prefix=key_prefix, ring_factory=ring_factory,
