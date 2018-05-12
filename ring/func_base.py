@@ -11,9 +11,9 @@ from ring.coder import registry as coder_registry, coderize
 
 
 def is_method(c):
-    if not c.first_argument:
+    if not c.first_parameter:
         return False
-    return c.first_argument.varname == 'self'
+    return c.first_parameter.name == 'self'
 
 
 def is_classmethod(c):
@@ -116,7 +116,7 @@ class RingBase(Wire):
         args = self._reargs(args)
         full_kwargs = self._callable.kwargify(args, kwargs)
         if self._preargs:
-            full_kwargs.pop(self._callable.arguments[0].varname)
+            full_kwargs.pop(self._callable.first_parameter.name)
         return full_kwargs
 
     def __getattr__(self, name):
@@ -156,7 +156,7 @@ def create_ckey(c, key_prefix, ignorable_keys, coerce=coerce, encoding=None, key
     def build_key(preargs, kwargs):
         full_kwargs = kwargs.copy()
         for i, prearg in enumerate(preargs):
-            full_kwargs[c.positional_arguments[i].varname] = preargs[i]
+            full_kwargs[c.parameters_values[i].name] = preargs[i]
         coerced_kwargs = {k: coerce(v) for k, v in full_kwargs.items() if k not in ignorable_keys}
         key = ckey.build(coerced_kwargs)
         if encoding:

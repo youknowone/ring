@@ -11,7 +11,7 @@ def get_version():
 
 install_requires = [
     'prettyexc>=0.6.0',
-    'callable>=0.1.2',
+    'callable>=0.2.0',
 ]
 tests_require = [
     'pytest>=3.0.2', 'pytest-cov', 'pytest-lazy-fixture', 'mock', 'patch',

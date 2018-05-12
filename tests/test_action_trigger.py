@@ -38,9 +38,12 @@ def test_action_dict():
     updated_data = u1.data.run(action="update")
     assert updated_data == data
 
-    key = u1.data.run('key', name='User 1')
+    key = u1.data.run('key')
     direct_data = cache[key][1]
     assert data == direct_data
+
+    with pytest.raises(TypeError):
+        ey = u1.data.run('key', name='User 1')  # too many args
 
     with pytest.raises(AttributeError):
         u1.data.run('fjeiso', name='')

@@ -69,10 +69,10 @@ class CallableWrapper(Callable):
             self=self)
 
     @cached_property
-    def first_argument(self):
-        if not self.arguments:
+    def first_parameter(self):
+        if not self.parameters:
             return None
-        return self.arguments[0]
+        return self.parameters_values[0]
 
 
 class CallableKey(Key):
@@ -95,11 +95,11 @@ class CallableKey(Key):
 
     @cached_property
     def ordered_provider_keys(self):
-        keys = [arg.varname for arg in self.provider.arguments]
+        keys = [arg.name for arg in self.provider.parameters_values]
         for key in self.ignorable_keys:
             if key not in keys:
                 raise KeyError(
-                    "'{}' is not an argument name but in 'ignorable_keys'"
+                    "'{}' is not an parameter name but in 'ignorable_keys'"
                     .format(key))
             keys.remove(key)
         return keys
