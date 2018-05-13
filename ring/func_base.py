@@ -1,11 +1,9 @@
 import abc
 import functools
 import six
-try:
-    from functools import lru_cache
-except ImportError:  # for py2
-    from functools32 import lru_cache
-from ring.key import CallableWrapper, CallableKey
+from ring._compat import lru_cache
+from ring.callable import Callable
+from ring.key import CallableKey
 from ring.wire import Wire
 from ring.coder import registry as coder_registry, coderize
 
@@ -149,7 +147,7 @@ class RingBase(Wire):
 
 
 def create_ckey(c, key_prefix, ignorable_keys, coerce=coerce, encoding=None, key_refactor=lambda x: x):
-    assert isinstance(c, CallableWrapper)
+    assert isinstance(c, Callable)
     ckey = CallableKey(
         c, format_prefix=key_prefix, ignorable_keys=ignorable_keys)
 
@@ -180,7 +178,7 @@ def factory(
         coder = coderize(raw_coder)
 
     def _decorator(f):
-        _callable = CallableWrapper(f)
+        _callable = Callable(f)
         _ignorable_keys = suggest_ignorable_keys(_callable, ignorable_keys)
         _key_prefix = suggest_key_prefix(_callable, key_prefix)
         ckey = create_ckey(

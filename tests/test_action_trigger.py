@@ -43,7 +43,7 @@ def test_action_dict():
     assert data == direct_data
 
     with pytest.raises(TypeError):
-        ey = u1.data.run('key', name='User 1')  # too many args
+        key = u1.data.run('key', name='User 1')  # too many args
 
     with pytest.raises(AttributeError):
         u1.data.run('fjeiso', name='')
