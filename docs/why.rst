@@ -82,9 +82,10 @@ when cache invalidation is not a real-time requirement.
 Manual invalidation
 +++++++++++++++++++
 
-Unfortunately, websites are often real-time. Suppose it was list of customer service articles.
-New articles must be shown up in short time. This is how `Django`_ handle it
-with `per-view cache`_.
+Unfortunately, websites are often real-time. Suppose it was list of customer
+service articles. New articles must be shown up in short time. This is how
+`Django`_ handle it with `per-view cache
+<https://docs.djangoproject.com/en/2.0/topics/cache/#the-per-view-cache>`_.
 
 .. code-block:: python
 
@@ -92,13 +93,28 @@ with `per-view cache`_.
     key = get_cache_key(request)
     cache.delete(key)  # invalidate
 
-``get_cache_key`` and ``cache`` are global names from Django framework to
-control cache. We started from a neat per-view cache decorator - but now it
+:func:`get_cache_key <django.utils.cache.get_cache_key>` and
+:data:`cache <django.core.cache.cache>` are global names from Django framework
+to control cache. We started from a neat per-view cache decorator - but now it
 turns into a storage approach which we demonstrated at first section.
 
 You can control them in consistent level with **Ring**.
 
 :see: :ref:`lifecycle` section for details.
+
+
+Fixed strategy
+++++++++++++++
+
+Sometimes we need more complicated strategy than normal. Suppose we have very
+heavy and critical layer. We don't want to lose cache. It must be updated in
+every 60 seconds, but without losing the cached version even if it wasn't
+updated - or even during it is being updated. With common solutions, we needed
+to drop the provided feature but to implement a new one.
+
+You can replace semantics of **Ring** commands and storage behaviors.
+
+:see: :ref:`strategy` section for details.
 
 
 Hidden backend
@@ -206,12 +222,57 @@ Function parameters are also supported in expected manner:
 
 .. _transparency:
 
-Ring approches backend transparent way
---------------------------------------
+Ring approaches backend transparent way
+---------------------------------------
 
+High-level interface providers like **Ring** cannot expose full features of
+the backends. Various storages have vary features by their design. **Ring**
+covers common features but do not covers others. :class:`ring.func_base.Ring`
+objects serves data extracters instead.
+
+.. code-block:: python
+
+    client = memcache.Client(...)
+
+    @ring.memcache(client)
+    def f(a):
+        ...
+
+    cache_key = f.key(10)  # cache key for 10
+    encoded_data = client.get(cache_key)  # get from memcache client
+    actual_data = f.decode(encoded_data)  # decode
 
 
 .. _datacoding:
 
 Ring provides configurable data-coding layer
 --------------------------------------------
+
+`python-memcached` supports :mod:`pickle` by default but `pylibmc` doesn't.
+By adding ``coder='pickle'``, next code will be cached through pickle even
+with `pylibmc`. Of course for other backends too.
+
+
+.. code-block:: python
+
+    client = pylibmc.Client(...)
+
+    @ring.memcache(client, coder='pickle')
+    def f(a):
+        ...
+
+
+:see: :doc:`coder` for more informations.
+
+:note: Looks verbose? :func:`functools.partial` is your friend. Try
+       ``my_cache = functools.partial(ring.memcache, client, coder='pickle')``.
+
+
+.. _strategy:
+
+Ring comes with configurable commands and storage actions
+---------------------------------------------------------
+
+
+.. _python-memcached: https://pypi.org/project/python-memcached/
+.. _Django: https://www.djangoproject.com/

@@ -136,8 +136,9 @@ def function(request, storage):
 
 
 def test_common(function, storage):
-    # `function` is a callable with argument `a` and `b`
+    # `function` is a callable with parameter `a` and `b`
     # test function is correct
+    assert function.storage is storage
     assert function.key(a=0, b=0)  # f takes a, b
     assert function.base[0] is not None  # f has attr base for test
     assert function.execute(a=1, b=2) != function.execute(a=1, b=3)  # f is not singular

@@ -1,6 +1,6 @@
 
 from ring.wire import Wire
-from ring.key import CallableWrapper
+from ring.key import Callable
 
 
 def test_wire():
@@ -9,7 +9,7 @@ def test_wire():
         pass
 
     def wrapper(f):
-        c = CallableWrapper(f)
+        c = Callable(f)
         w = TestWire.for_callable(c)
         return w
 

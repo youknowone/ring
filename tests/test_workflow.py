@@ -59,8 +59,8 @@ def test_workflow():
 
     # parametrized calling!
     assert {'child_id': 420007} == u1.child(7)
-    assert {'child_id': 420007} == u1.child(n=7)  # support keyword argument too
+    assert {'child_id': 420007} == u1.child(n=7)  # support keyword parameter too
     assert u1.child.key(7) == u1.child.key(n=7)  # generated cache keys are also same
 
-    # but distinguished from other arguments
+    # but distinguished from other parameters
     assert u1.child.key(1) != u1.child.key(2)

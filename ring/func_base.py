@@ -1,22 +1,40 @@
 import abc
 import functools
+""":mod:`ring.func_base` --- The toolkit of :mod:`ring.func`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This module is a collection of common ring tools.
+"""
 import six
-try:
-    from functools import lru_cache
-except ImportError:  # for py2
-    from functools32 import lru_cache
-from ring.key import CallableWrapper, CallableKey
+from ring._compat import lru_cache
+from ring.callable import Callable
+from ring.key import CallableKey
 from ring.wire import Wire
 from ring.coder import registry as coder_registry, coderize
 
+__all__ = (
+    'is_method', 'is_classmethod', 'RingBase', 'factory', 'NotFound',
+    'StorageImplementation', 'BaseInterface')
+
 
 def is_method(c):
-    if not c.first_argument:
+    """Test given argument is a method or not.
+
+    :param ring.callable.Callable c: A callable object.
+
+    :note: The test is not based on python state but based on parameter name
+           `self`. The test result might be wrong.
+    """
+    if not c.first_parameter:
         return False
-    return c.first_argument.varname == 'self'
+    return c.first_parameter.name == 'self'
 
 
 def is_classmethod(c):
+    """Test given argument is a classmethod or not.
+
+    :param ring.callable.Callable c: A callable object.
+    """
     return isinstance(c.premitive, classmethod)
 
 
@@ -89,10 +107,11 @@ def coerce_function(t):
         return _coerce_set
 
     # NOTE: general sequence processing is good -
-    # but NEVER add a general iterator processing. it will cause user bug.
+    # but NEVER add a general iterator processing. it will cause user bugs.
 
 
 def coerce(v):
+    """Transform the given value to cache-friendly string data."""
     type_coerce = coerce_function(type(v))
     if type_coerce:
         return type_coerce(v)
@@ -116,7 +135,7 @@ class RingBase(Wire):
         args = self._reargs(args)
         full_kwargs = self._callable.kwargify(args, kwargs)
         if self._preargs:
-            full_kwargs.pop(self._callable.arguments[0].varname)
+            full_kwargs.pop(self._callable.first_parameter.name)
         return full_kwargs
 
     def __getattr__(self, name):
@@ -149,14 +168,14 @@ class RingBase(Wire):
 
 
 def create_ckey(c, key_prefix, ignorable_keys, coerce=coerce, encoding=None, key_refactor=lambda x: x):
-    assert isinstance(c, CallableWrapper)
+    assert isinstance(c, Callable)
     ckey = CallableKey(
         c, format_prefix=key_prefix, ignorable_keys=ignorable_keys)
 
     def build_key(preargs, kwargs):
         full_kwargs = kwargs.copy()
         for i, prearg in enumerate(preargs):
-            full_kwargs[c.positional_arguments[i].varname] = preargs[i]
+            full_kwargs[c.parameters_values[i].name] = preargs[i]
         coerced_kwargs = {k: coerce(v) for k, v in full_kwargs.items() if k not in ignorable_keys}
         key = ckey.build(coerced_kwargs)
         if encoding:
@@ -180,7 +199,7 @@ def factory(
         coder = coderize(raw_coder)
 
     def _decorator(f):
-        _callable = CallableWrapper(f)
+        _callable = Callable(f)
         _ignorable_keys = suggest_ignorable_keys(_callable, ignorable_keys)
         _key_prefix = suggest_key_prefix(_callable, key_prefix)
         ckey = create_ckey(
@@ -195,7 +214,12 @@ def factory(
 
 
 class NotFound(Exception):
-    pass
+    """Internal exception for cache miss.
+
+    Ring internally use this exception to indicate cache miss. Though common
+    convention of cache miss is :data:`None` for many implementations,
+    :mod:`ring.coder` allows :data:`None` to be proper cached value in **Ring**.
+    """
 
 
 @six.add_metaclass(abc.ABCMeta)

@@ -2,16 +2,8 @@
 from __future__ import absolute_import
 
 import re
-from callable import Callable
-from ring.util import cached_property
-
-
-try:
-    unicode()
-    py3 = False
-except NameError:
-    unicode = str
-    py3 = True
+from ring._util import cached_property
+from ring.callable import Callable
 
 
 class Key(object):
@@ -52,37 +44,14 @@ class FormatKey(Key):
         return keys
 
 
-class CallableWrapper(Callable):
-
-    def __init__(self, f):
-        self.premitive = f
-        if callable(f):
-            super(CallableWrapper, self).__init__(f)
-        elif hasattr(f, '__func__'):
-            super(CallableWrapper, self).__init__(f.__func__)
-        else:  # pragma: no cover
-            assert False
-
-    @cached_property
-    def identifier(self):
-        return '{self.callable.__module__}.{self.callable.__name__}'.format(
-            self=self)
-
-    @cached_property
-    def first_argument(self):
-        if not self.arguments:
-            return None
-        return self.arguments[0]
-
-
 class CallableKey(Key):
 
     def __init__(
             self, provider, indirect_marker='*', format_prefix=None,
             ignorable_keys=[], verbose=False):
 
-        if not isinstance(provider, CallableWrapper):
-            provider = CallableWrapper(provider)
+        if not isinstance(provider, Callable):
+            provider = Callable(provider)
         super(CallableKey, self).__init__(provider, indirect_marker)
         self.ignorable_keys = ignorable_keys
         if format_prefix is None:
@@ -95,11 +64,11 @@ class CallableKey(Key):
 
     @cached_property
     def ordered_provider_keys(self):
-        keys = [arg.varname for arg in self.provider.arguments]
+        keys = [arg.name for arg in self.provider.parameters_values]
         for key in self.ignorable_keys:
             if key not in keys:
                 raise KeyError(
-                    "'{}' is not an argument name but in 'ignorable_keys'"
+                    "'{}' is not an parameter name but in 'ignorable_keys'"
                     .format(key))
             keys.remove(key)
         return keys

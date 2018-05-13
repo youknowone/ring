@@ -22,7 +22,7 @@ def ring_factory(
         _expire_default = expire_default
         _interface_class = Interface
 
-        _storage_instance = storage_instance
+        storage = storage_instance
         _storage_impl = StorageImplementation()
         _miss_value = miss_value
 
@@ -40,18 +40,18 @@ def ring_factory(
             return result
 
         def _p_get(self, key):
-            value = self._storage_impl.get_value(self._storage_instance, key)
+            value = self._storage_impl.get_value(self.storage, key)
             return self.decode(value)
 
         def _p_set(self, key, value, expire=expire_default):
             encoded = self.encode(value)
-            self._storage_impl.set_value(self._storage_instance, key, encoded, expire)
+            self._storage_impl.set_value(self.storage, key, encoded, expire)
 
         def _p_delete(self, key):
-            self._storage_impl.del_value(self._storage_instance, key)
+            self._storage_impl.del_value(self.storage, key)
 
         def _p_touch(self, key, expire=expire_default):
-            self._storage_impl.touch_value(self._storage_instance, key, expire)
+            self._storage_impl.touch_value(self.storage, key, expire)
 
     return Ring
 
@@ -206,7 +206,7 @@ def dict(
 
     :param dict obj: Cache storage. Any :class:`dict` compatible object.
 
-    :see: :func:`ring.func_asyncio.dict` for :mod:`asyncio` version.
+    :see: :func:`ring.aiodict` for :mod:`asyncio` version.
     """
     return fbase.factory(
         obj, key_prefix=key_prefix, ring_factory=ring_factory,
@@ -247,7 +247,8 @@ def memcache(
     :param object key_refactor: The default key refactor may hash the cache key when
         it doesn't meet memcached key restriction.
 
-    :see: :func:`ring.func_asyncio.aiomcache` for :mod:`asyncio` version.
+    :note: `touch` feature availability depends on memcached library.
+    :see: :func:`ring.aiomcache` for :mod:`asyncio` version.
     """
     from ring._memcache import key_refactor
     miss_value = None
@@ -275,7 +276,7 @@ def redis_py(
 
     :param redis.StrictRedis client: Redis client object.
 
-    :see: :func:`ring.func_asyncio.aioredis` for :mod:`asyncio` version.
+    :see: :func:`ring.aioredis` for :mod:`asyncio` version.
     :see: Redis_ for Redis documendation.
 
     .. _Redis: http://redis.io/

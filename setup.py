@@ -11,7 +11,6 @@ def get_version():
 
 install_requires = [
     'prettyexc>=0.6.0',
-    'callable>=0.1.2',
 ]
 tests_require = [
     'pytest>=3.0.2', 'pytest-cov', 'pytest-lazy-fixture', 'mock', 'patch',
@@ -36,6 +35,7 @@ except ImportError:
 
 if sys.version_info[0] == 2:
     install_requires.extend([
+        'inspect2==0.1.0',
         'functools32==3.2.3-2',
     ])
     tests_require.extend([
