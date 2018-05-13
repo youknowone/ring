@@ -14,7 +14,7 @@ inspect_iscoroutinefunction = getattr(inspect, 'iscoroutinefunction', lambda f: 
 
 
 def ring_factory(
-        c, storage, ckey, RingBase,
+        c, storage_instance, ckey, RingBase,
         Interface, StorageImplementation,
         miss_value, expire_default, coder):
 
@@ -29,7 +29,7 @@ def ring_factory(
         _expire_default = expire_default
         _interface_class = Interface
 
-        _storage = storage
+        storage = storage_instance
         _storage_impl = StorageImplementation()
         _miss_value = miss_value
 
@@ -47,21 +47,21 @@ def ring_factory(
 
         @asyncio.coroutine
         def _p_get(self, key):
-            value = yield from self._storage_impl.get_value(self._storage, key)
+            value = yield from self._storage_impl.get_value(self.storage, key)
             return self.decode(value)
 
         @asyncio.coroutine
         def _p_set(self, key, value, expire=_expire_default):
             encoded = self.encode(value)
-            yield from self._storage_impl.set_value(self._storage, key, encoded, expire)
+            yield from self._storage_impl.set_value(self.storage, key, encoded, expire)
 
         @asyncio.coroutine
         def _p_delete(self, key):
-            yield from self._storage_impl.del_value(self._storage, key)
+            yield from self._storage_impl.del_value(self.storage, key)
 
         @asyncio.coroutine
         def _p_touch(self, key, expire=expire_default):
-            yield from self._storage_impl.touch_value(self._storage, key, expire)
+            yield from self._storage_impl.touch_value(self.storage, key, expire)
 
     return Ring
 

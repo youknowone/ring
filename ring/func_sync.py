@@ -22,7 +22,7 @@ def ring_factory(
         _expire_default = expire_default
         _interface_class = Interface
 
-        _storage_instance = storage_instance
+        storage = storage_instance
         _storage_impl = StorageImplementation()
         _miss_value = miss_value
 
@@ -40,18 +40,18 @@ def ring_factory(
             return result
 
         def _p_get(self, key):
-            value = self._storage_impl.get_value(self._storage_instance, key)
+            value = self._storage_impl.get_value(self.storage, key)
             return self.decode(value)
 
         def _p_set(self, key, value, expire=expire_default):
             encoded = self.encode(value)
-            self._storage_impl.set_value(self._storage_instance, key, encoded, expire)
+            self._storage_impl.set_value(self.storage, key, encoded, expire)
 
         def _p_delete(self, key):
-            self._storage_impl.del_value(self._storage_instance, key)
+            self._storage_impl.del_value(self.storage, key)
 
         def _p_touch(self, key, expire=expire_default):
-            self._storage_impl.touch_value(self._storage_instance, key, expire)
+            self._storage_impl.touch_value(self.storage, key, expire)
 
     return Ring
 
