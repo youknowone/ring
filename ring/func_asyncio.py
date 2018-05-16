@@ -202,7 +202,7 @@ def dict(
         interface=CacheInterface, storage_implementation=DictImpl):
     """Basic Python :class:`dict` based cache.
 
-    This backend is not designed for real products, but useful to use by
+    This backend is not designed for real products, but useful by
     keeping below in mind:
     - `functools.lrucache` is the standard library for the most of local cache.
     - Expired objects will never be removed from the dict. If the function has
@@ -211,7 +211,7 @@ def dict(
       cache backend. If a caching function is a fast job, this backend even
       can drop the performance.
 
-    Still it doesn't mean you can't use this backend for products. Take
+    Still, it doesn't mean you can't use this backend for products. Take
     advantage of it when your demands fit.
 
     :param dict obj: Cache storage.

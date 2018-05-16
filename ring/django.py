@@ -35,7 +35,7 @@ class DjangoImpl(fbase.StorageImplementation):
 def django(
         backend, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
         interface=CacheInterface, storage_implementation=DjangoImpl):
-    """Django cache interface based on low-level cache api.
+    """Django cache interface based on low-level cache API.
 
     :param Union[str, object] backend: Django's cache config key for
            :data:`django.core.cache.caches` or Django cache object.

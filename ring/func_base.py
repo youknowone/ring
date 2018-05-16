@@ -214,11 +214,12 @@ def factory(
 
 
 class NotFound(Exception):
-    """Internal exception for cache miss.
+    """Internal exception for a cache miss.
 
-    Ring internally use this exception to indicate cache miss. Though common
+    Ring internally use this exception to indicate a cache miss. Though common
     convention of cache miss is :data:`None` for many implementations,
-    :mod:`ring.coder` allows :data:`None` to be proper cached value in **Ring**.
+    :mod:`ring.coder` allows :data:`None` to be proper cached value in
+    **Ring**.
     """
 
 

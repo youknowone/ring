@@ -191,7 +191,7 @@ def dict(
         interface=CacheInterface, storage_implementation=DictImpl):
     """Basic Python :class:`dict` based cache.
 
-    This backend is not designed for real products, but useful to use by
+    This backend is not designed for real products, but useful by
     keeping below in mind:
 
     - `functools.lrucache` is the standard library for the most of local cache.
@@ -201,7 +201,7 @@ def dict(
       cache backend. If a caching function is a fast job, this backend even
       can drop the performance.
 
-    Still it doesn't mean you can't use this backend for products. Take
+    Still, it doesn't mean you can't use this backend for products. Take
     advantage of it when your demands fit.
 
     :param dict obj: Cache storage. Any :class:`dict` compatible object.
@@ -220,7 +220,8 @@ def memcache(
         interface=CacheInterface, storage_implementation=MemcacheImpl):
     """Common Memcached_ interface.
 
-    This backend is common interface for various memcached client libraries below:
+    This backend is common interface for various memcached client libraries
+    below:
 
     - https://pypi.org/project/python-memcached/
     - https://pypi.org/project/python3-memcached/
@@ -228,24 +229,26 @@ def memcache(
     - https://pypi.org/project/pymemcache/
 
     Most of them expect `Memcached` client or dev package is installed on your
-    machine. If you are new to Memcached, check how to install it and the python
-    package on your platform.
+    machine. If you are new to Memcached, check how to install it and the
+    python package on your platform.
 
-    The expected types for input and output are always :class:`bytes` for `None`
-    coder, but you may use different types by client libraries. Ring doesn't
-    guarantee current/future behavior except for :class:`bytes`.
+    The expected types for input and output are always :class:`bytes` for
+    `None` coder, but you may use different types depending on client
+    libraries. Ring doesn't guarantee current/future behavior except for
+    :class:`bytes`.
 
     Examples of expected client for each memcached packages:
 
     - pymemcache: ``pymemcache.client.Client(('127.0.0.1', 11211))``
-    - python-memcached or python3-memcached: ``memcache.Client(["127.0.0.1:11211"])``
+    - python-memcached or python3-memcached:
+      ``memcache.Client(["127.0.0.1:11211"])``
     - pylibmc: ``pylibmc.Client(['127.0.0.1'])``
 
     .. _Memcached: http://memcached.org/
 
     :param object client: Memcached client object. See above for details.
-    :param object key_refactor: The default key refactor may hash the cache key when
-        it doesn't meet memcached key restriction.
+    :param object key_refactor: The default key refactor may hash the cache
+        key when it doesn't meet memcached key restriction.
 
     :note: `touch` feature availability depends on memcached library.
     :see: :func:`ring.aiomcache` for :mod:`asyncio` version.
@@ -268,16 +271,17 @@ def redis_py(
 
     This backend depends on `redis package <https://pypi.org/project/redis/>`_.
 
-    The `redis` package expect Redis client or dev package is installed on your machine.
-    If you are new to Redis, check how to install Redis and the python package
-    on your platform.
+    The `redis` package expects Redis client or dev package is installed on
+    your machine. If you are new to Redis, check how to install Redis and the
+    Python package on your platform.
 
-    Note that :class:`redis.StrictRedis` is expected, which is different to :class:`redis.Redis`.
+    Note that :class:`redis.StrictRedis` is expected, which is different to
+    :class:`redis.Redis`.
 
     :param redis.StrictRedis client: Redis client object.
 
     :see: :func:`ring.aioredis` for :mod:`asyncio` version.
-    :see: Redis_ for Redis documendation.
+    :see: Redis_ for Redis documentation.
 
     .. _Redis: http://redis.io/
     """

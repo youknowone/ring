@@ -5,7 +5,7 @@ In this document, you will learn:
 
   #. About pre-defined factories included in **Ring**.
   #. About storage backends.
-  #. About django extension.
+  #. About Django extension.
   #. About :class:`ring.func_base.Ring` factory.
 
 
@@ -13,21 +13,21 @@ Built-in factory functions and backends
 ---------------------------------------
 
 **Factory function** means the end user interface of **Ring**, which usually
-look like ``@ring.dict``, ``@ring.memcache``, ``@ring.django``, etc.
+looks like ``@ring.dict``, ``@ring.memcache``, ``@ring.django``, etc.
 
-Technically the factory functions are not associated to each backends as
+Technically the factory functions are not associated with each backend as
 bijection, but the built-in functions are mostly matching to the backends.
 So practically each factory function part of this document is including
 backend descriptions.
 
-**Ring** has built-in supports for common cache storages:
+**Ring** includes support for common cache storages:
 
 .. autosummary::
     ring.dict
     ring.memcache
     ring.redis
     ring.disk
-    ring.dict
+    ring.aiodict
     ring.aiomcache
     ring.aioredis
 
@@ -40,7 +40,7 @@ Django extension
 
 Creating a new factory function is also quick & easy.
 
-Though **Django** is not a storage, but it has its own low-level cache api.
+Though **Django** is not a storage, it has its own low-level cache API.
 **Ring** has a factory function for Django as a cache backend:
 
 .. autosummary::

@@ -9,14 +9,14 @@ In this document, you will learn:
   #. How to create a custom coder.
 
 
-Concept of coder
-----------------
+The concept of coder
+--------------------
 
-Though the most basic data type in **Ring** is :class:`bytes` which is mostly
-common between various storages, modern services handle more complicated data
+Though the most basic data type in **Ring** is :class:`bytes` which is very
+common among various storages, modern services handle more complicated data
 types.
 
-**Ring** factory has coder layer - which provides customizable interface to
+**Ring** factory has coder layer - which provides a customizable interface to
 encode before saving and to decode after loading. For example, let's say our
 function `f` returns :class:`float` type but we only have :class:`bytes`
 storage. This is a demonstration without Ring.
@@ -41,12 +41,12 @@ storage. This is a demonstration without Ring.
 You see `encoding` and `decoding` steps. The pair of them is called `coder`
 in **Ring**.
 
-Coder is one of configurable layers in **Ring**.
+Coder is one of the configurable layers in **Ring**.
 
 Built-in coders
 ---------------
 
-:see: :mod:`ring.coder`
+:see: :mod:`ring.coder` for details.
 
 Common tips
 -----------
