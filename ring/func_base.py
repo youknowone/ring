@@ -1,10 +1,10 @@
-import abc
-import functools
 """:mod:`ring.func_base` --- The toolkit of :mod:`ring.func`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+============================================================
 
 This module is a collection of common ring tools.
 """
+import abc
+import functools
 import six
 from ring._compat import lru_cache
 from ring.callable import Callable

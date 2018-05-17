@@ -1,5 +1,5 @@
 """:mod:`ring.coder` --- Auto encode/decode layer
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+=================================================
 
 Coder is a configurable layer that provides ways to encode raw data and decode
 stored cache data.

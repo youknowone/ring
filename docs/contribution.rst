@@ -1,8 +1,8 @@
 Contribution
-~~~~~~~~~~~~
+============
 
 Tips
-====
+----
 
 pyenv_ and pyenv-virtualenv_ will save your time, especially when experiencing
 compatibility problems between versions.
@@ -11,7 +11,7 @@ compatibility problems between versions.
 .. _pyenv-virtualenv: https://github.com/pyenv/pyenv-virtualenv
 
 macOS
------
+~~~~~
 
 .. code:: sh
 

@@ -1,5 +1,5 @@
 Factory functions
-~~~~~~~~~~~~~~~~~
+=================
 
 In this document, you will learn:
 

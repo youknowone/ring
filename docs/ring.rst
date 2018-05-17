@@ -1,5 +1,5 @@
 :mod:`ring`
-~~~~~~~~~~~
+===========
 
 .. toctree::
    :maxdepth: 2

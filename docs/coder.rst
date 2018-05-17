@@ -1,5 +1,5 @@
 Save and load rich data
-~~~~~~~~~~~~~~~~~~~~~~~
+=======================
 
 In this document, you will learn:
 

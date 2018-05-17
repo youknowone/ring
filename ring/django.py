@@ -1,5 +1,5 @@
 """:mod:`ring.django` --- Django support
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+========================================
 """
 from __future__ import absolute_import
 import functools

@@ -17,7 +17,7 @@ Common problems of cache
 
 
 Straightforward approach as storage
-+++++++++++++++++++++++++++++++++++
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Traditionally we considered cache as a storage. In that sense, calling useful
 ``actual_function()`` with an argument for cached result of
@@ -40,7 +40,7 @@ operations.
 
 
 Decorated cache function
-++++++++++++++++++++++++
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 Lots of cache libraries working with immutable functions share similar
 solution. Here is a :func:`functools.lru_cache` example:
@@ -76,11 +76,11 @@ seconds.
 It means the view is cached and the cached data is valid for 15 minutes. In
 this case, ``actual_function()`` is inside of the Django. The actual function
 will generate HTTP response based on the ``cached_view``. It is good enough
-when cache invalidation is not a real-time requirement.
+when cache expiration is not a real-time requirement.
 
 
-Manual invalidation
-+++++++++++++++++++
+Manual expiration
+~~~~~~~~~~~~~~~~~
 
 Unfortunately, websites are often real-time. Suppose it was list of customer
 service articles. New articles must be shown up in short time. This is how
@@ -91,7 +91,7 @@ service articles. New articles must be shown up in short time. This is how
 
     request = Request(...)  # fake request to create key
     key = get_cache_key(request)
-    cache.delete(key)  # invalidate
+    cache.delete(key)  # expire
 
 :func:`get_cache_key <django.utils.cache.get_cache_key>` and
 :data:`cache <django.core.cache.cache>` are global names from Django framework
@@ -104,7 +104,7 @@ You can control them in consistent level with **Ring**.
 
 
 Fixed strategy
-++++++++++++++
+~~~~~~~~~~~~~~
 
 Sometimes we need more complicated strategy than normal. Suppose we have very
 heavy and critical layer. We don't want to lose cache. It must be updated in
@@ -118,7 +118,7 @@ You can replace semantics of **Ring** commands and storage behaviors.
 
 
 Hidden backend
-++++++++++++++
+~~~~~~~~~~~~~~
 
 You might find another glitch. Their backends are concealed. Memory is ok.
 There is less reasons to uncover data from it. For services, the common cache
@@ -134,7 +134,7 @@ straightforward and smooth.
 
 
 Data encoding
-+++++++++++++
+~~~~~~~~~~~~~
 
 Another issue is python-specific. Python objects are full of Python meta data
 which are not simple sequence of bytes. Then how do we easily handle them through
@@ -197,7 +197,7 @@ Extra operations are supported as below:
 .. code-block:: python
 
     cached_function.update()  # force update
-    cached_function.delete()  # invalidate
+    cached_function.delete()  # expire
     cached_function.execute()  # this will not generate cache
     cached_function.get()  # get value only when cache exists
 

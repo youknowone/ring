@@ -1,5 +1,5 @@
 Quickstart
-~~~~~~~~~~
+==========
 
 To start, remember the philosophy of **Ring** is human-friendly high-level
 interface *with* transparent and concrete low-level access. You probably be
@@ -72,9 +72,10 @@ The core feature of **Ring** is explicit controllers.
     cached_data = get_url.decode(encoded_data)
 
 
-(TBD)
+Ring will have full control for any layer of caching.
 
 :see: :doc:`why` if this document doesn't explain what **Ring** does.
+:see: 
 
 Choosing backend
 ----------------
