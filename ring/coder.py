@@ -1,5 +1,5 @@
 """:mod:`ring.coder` --- Auto encode/decode layer
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+=================================================
 
 Coder is a configurable layer that provides ways to encode raw data and decode
 stored cache data.
@@ -44,7 +44,7 @@ except ImportError:
 class Coder(object):
     """Abstract coder interface.
 
-    See :func:`coderize` to create a Coder-compatible object in easy way.
+    See :func:`coderize` to create a Coder-compatible object in an easy way.
     See :class:`CoderTuple` to create a Coder-compatible object with functions.
     """
 
@@ -139,7 +139,7 @@ class JsonCoder(Coder):
     """JSON Coder.
 
     When :mod:`ujson` package is installed, `ujson` is automatically selected;
-    Otherwise :mod:`json` will be used.
+    Otherwise, :mod:`json` will be used.
     """
 
     @staticmethod

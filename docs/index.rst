@@ -15,7 +15,7 @@ Why Ring?
 Cache is a popular concept widely spread on broad range of computer science.
 But cache interface for human is not well developed yet. In these day, we
 still experience common inconvinience. **Ring** is one of the solution for
-human. Its approach is close integration with programming language. See
+humans. Its approach is close integration with programming language. See
 :doc:`why` for details.
 
 
@@ -36,6 +36,7 @@ Documents
    quickstart.rst
    why.rst
    factory.rst
+   control.rst
    coder.rst
 
 .. toctree::
@@ -49,8 +50,6 @@ Documents
 
    ring
 
-
-.. include:: ../README.rst
 
 Indices and tables
 ==================

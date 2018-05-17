@@ -1,5 +1,5 @@
 Ring
-~~~~
+====
 
 .. image:: https://travis-ci.org/youknowone/ring.svg?branch=master
     :target: https://travis-ci.org/youknowone/ring
@@ -9,10 +9,18 @@ Let's concentrate on code, not on storages.
 Ring shows a way to control cache in point of view of code - not about storages.
 Ring's decorator is convenient but also keeps fluency for general scenarios.
 
-:mod:`asyncio` support!
+asyncio support!
 
-Take an explicit but fully automated cache.
-Ring decorators convert your functions to cached version of them, with extra control methods.
+Take advantage of perfectly explicit and fully automated cache interface.
+Ring decorators convert your functions to cached version of them, with extra
+control methods.
+
+
+Documentation
+-------------
+
+Full documentation with examples and references:
+`<http://ring-cache.readthedocs.io/>`_
 
 
 Function cache
@@ -109,7 +117,7 @@ To browse versions and tarballs, visit:
 
 
 To use memcached or redis, don't forget to install related libraries.
-For example: python-memcached, python3-memcached, pylibmc, redis-py etc
+For example: python-memcached, python3-memcached, pylibmc, redis-py, Django etc
 
 It may require to install and run related services on your system too.
 Look for `memcached` and `redis` for your system.
@@ -121,41 +129,3 @@ Contributors
 See contributors list on:
     `<https://github.com/youknowone/ring/graphs/contributors>`_
 
-
-Contribution
-------------
-
-First, install ring in editable mode. Use 'tests' extra to install tests requirements.
-
-.. code:: sh
-
-    $ pip install -e '.[tests]'
-
-
-Run pytest to check the test set is ready.
-
-.. code:: sh
-
-    $ pytest -vv
-
-
-Note: Can't install `ring[tests]` because of compile errors?
-Don't forget to install and run memcached and redis locally.
-Test codes are using memcached & redis to ensure ring is correctly working.
-
-For macOS:
-
-.. code:: sh
-
-    $ brew install libmemcached memcached redis
-    $ brew services start memcached
-    $ brew services start redis
-
-
-For debian/ubuntu:
-
-.. code:: sh
-
-    $ apt install libmemcached-dev memcached redis-server
-    $ service memcached start
-    $ service redis start

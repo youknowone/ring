@@ -1,5 +1,5 @@
 """:mod:`ring.func` --- Factory functions
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+=========================================
 
 Ring object factory functions are aggregated in this module.
 """
