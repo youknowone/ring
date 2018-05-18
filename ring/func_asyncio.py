@@ -244,8 +244,8 @@ def aiomcache(
     .. _Memcache: http://memcached.org/
 
     :param aiomcache.Client client: aiomcache client object.
-    :param object key_refactor: The default key refactor may hash the cache key when
-        it doesn't meet memcached key restriction.
+    :param object key_refactor: The default key refactor may hash the cache key
+        when it doesn't meet memcached key restriction.
 
     :see: :func:`ring.memcache` for non-asyncio version.
     """
