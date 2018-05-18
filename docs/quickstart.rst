@@ -78,12 +78,52 @@ Ring will have full control for any layer of caching.
 :see: :doc:`why` if this document doesn't explain what **Ring** does.
 
 
-method, classmethod, staticmethod, property
--------------------------------------------
+method, classmethod, staticmethod
+---------------------------------
 
 **Ring** is adaptable for any kind of methods for Python class.
 
-(TBD)
+.. code-block:: python
+
+    import ring
+    import requests
+
+    class Page(object):
+
+        base_content = '<html></html>'
+
+        def __init__(self, url):
+            self.url = url
+
+        def __ring_key__(self):
+            return 'page:' + self.url
+
+        @ring.dict({})
+        def content(self):
+            return requests.get(self.url).content
+
+        @ring.dict({})
+        @classmethod
+        def class_content(cls):
+            return cls.base_content
+
+        @ring.dict({})
+        @staticmethod
+        def example_dot_com():
+            return requests.get('http://example.com').content
+
+
+    Page.example_dot_com()  # as expected
+    assert Page.key().endswith('.example_dot_com')  # key with function-name
+
+    Page.class_content()  # as expected
+    # key with function-name + class name
+    assert Page.class_content.key().endswith('.Page.class_content:Page')
+
+    p = Page('http://example.com')
+    p.content()  # as expected
+    # key with class name + function name + __ring_key__
+    assert p.content.key().endswith('Page.content:page:http://example.com/')
 
 
 Choosing backend
@@ -134,6 +174,7 @@ Try and compare what's changed from :func:`ring.dict` version.
 There are many more included factories for various backends.
 
 :see: :doc:`factory` about more factories and backends.
+:see: :doc:`extend` to create your own factory.
 
 .. _Homebrew: https://brew.sh/
 .. _pymemcache: https://pypi.org/project/pymemcache/
@@ -143,20 +184,94 @@ There are many more included factories for various backends.
 ~~~~~~~~~~~~~~~~~~~~~~
 
 **Ring** supports :mod:`asyncio` with a few factories which also are included.
+They follow similar convention but requiring `await` for IO jobs.
 
+.. code-block:: python
+
+    import ring
+
+    @ring.aiodict({})
+    async def f():
+        ...
+
+    result = await f()  # using `await` for __call__
+    cached_result = await f.get()  # using `await` for get()
+    key = f.key()  # NOT using `await` for key()
+
+
+:note: Non-IO sub-functions doesn't require `await`.
 :note: the sync version factories are not compatible with :mod:`asyncio`.
 
 :see: :doc:`factory` and search for `asyncio` to find fit factories.
 
 
-Complex data
-------------
+Structured or complex data
+--------------------------
+
+The modern software handles structured data rather than chunks of bytes.
+Because the popular cache storages only support raw bytes or string, data
+needs to be encoded and decoded. The `coder` parameter in Ring factories
+decides the kind of coding.
+
+.. code-block:: python
+
+    import ring
+    import json
+    import pymemcache
+
+    client = pymemcache.Client(('127.0.0.1', 11211))
+
+    @ring.memcache(client, time=60, coder='json')
+    def f():
+        return {'key': 'data', 'number': 42}
+
+
+    f()  # create cache data
+    loaded = f.get()
+    assert isinstance(loaded, dict)
+    assert loaded == {'key': 'data', 'number': 42}
+    raw_data = f.storage.get(f.key())
+    assert isinstance(raw_data, bytes)  # `str` for py2
+    assert raw_data == json.dumps({'key': 'data', 'number': 42})
+
 
 :see: :doc:`coder` about more backends.
+:see: :doc:`extend` to create and register your own coders.
+
+
+Factory parameters
+------------------
+
+Ring factories share common parameters to control Ring objects' behavior.
+
+- key_prefix
+- coder
+- ignorable_keys
+- inferface
+- storage_implementation
+
+:see: :doc:`factory` for details.
 
 
 Low-level access
 ----------------
+
+Do you wonder how your data is encoded? Which key is referring your code? You
+don't need to be suffered by looking inside of **Ring**.
+
+.. code-block:: python
+
+    import ring
+
+    @ring.dict({})
+    def f():
+        ...
+
+    key = f.key()  # retrieving the key
+    raw_data = f.storage.get(key)  # getting raw data from storage
+
+
+:see: :doc:`control` for more attributes.
 
 
 Further documents

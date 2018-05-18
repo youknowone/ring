@@ -37,7 +37,7 @@ def django(
         interface=CacheInterface, storage_implementation=DjangoImpl):
     """Django cache interface based on low-level cache API.
 
-    :param Union[str, object] backend: Django's cache config key for
+    :param Union[str,object] backend: Django's cache config key for
            :data:`django.core.cache.caches` or Django cache object.
 
     :see: :data:`ring.django.django_default` shortcut for common `default` configuration.
