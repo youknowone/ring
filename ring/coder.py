@@ -3,28 +3,6 @@
 
 Coder is a configurable layer that provides ways to encode raw data and decode
 stored cache data.
-
-Built-in coders
----------------
-
-- :data:`ring.coder.bypass_coder`: By-pass coder
-- :class:`ring.coder.JsonCoder`: JSON coder
-- :data:`ring.coder.pickle_coder`: Pickle coder
-
-Create a new coder
-------------------
-
-Users can register new custom coders with aliases.
-
-Coder types:
-
-  - :class:`ring.coder.Coder`
-  - :class:`ring.coder.CoderTuple`
-
-Registry:
-
-  - :data:`ring.coder.registry`
-  - :class:`ring.coder.Registry`
 """
 import abc
 import six
@@ -59,7 +37,8 @@ class Coder(object):
         pass
 
 
-CoderTuple = namedtuple('Coder', ['encode', 'decode'])  #: Coder-compatible tuple with encode and decode functions
+#: Coder-compatible tuple with encode and decode functions
+CoderTuple = namedtuple('Coder', ['encode', 'decode'])
 Coder.register(CoderTuple)
 
 

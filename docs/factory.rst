@@ -79,6 +79,39 @@ Common factory parameters
 :see: :func:`ring.func_asyncio.factory` for :mod:`asyncio` factory definition.
 
 
+Creating factory shortcuts
+--------------------------
+
+Usually each project has common patterns of programming including common cache
+pattern. Repeatedly passing common arguments must be boring. Python already
+has an answer - use :func:`functools.partial` to create shortcuts.
+
+.. code-block:: python
+
+    import functools
+    import ring
+    import pymemcache
+
+    client = pymemcache.Client(('127.0.0.1', 11211))
+
+    # Verbose calling
+    @ring.memcache(client, coder='pickle', cache_interface=DoubleCacheInterface)
+    def f1():
+        ...
+
+    # Shortcut
+    mem_ring = functools.partial(
+        ring.memcache, client, coder='pickle',
+        cache_interface=DoubleCacheInterface)
+
+    @mem_ring()
+    def f2():
+        ...
+
+
+The decorators of `f1` and `f2` work same.
+
+
 Custom factory
 --------------
 

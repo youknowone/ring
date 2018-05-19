@@ -1,6 +1,5 @@
 """:mod:`ring.func_asyncio`
-
-Collection of asyncio factory functions.
+is a collection of :mod:`asyncio` factory functions.
 """
 import asyncio
 import inspect
@@ -10,7 +9,8 @@ from ring import func_base as fbase
 
 __all__ = ('dict', 'aiodict', 'aiomcache', 'aioredis', )
 
-inspect_iscoroutinefunction = getattr(inspect, 'iscoroutinefunction', lambda f: False)
+inspect_iscoroutinefunction = getattr(
+    inspect, 'iscoroutinefunction', lambda f: False)
 
 
 def ring_factory(
@@ -204,6 +204,7 @@ def dict(
 
     This backend is not designed for real products, but useful by
     keeping below in mind:
+
     - `functools.lrucache` is the standard library for the most of local cache.
     - Expired objects will never be removed from the dict. If the function has
       unlimited input combinations, never use dict.
@@ -225,6 +226,7 @@ def dict(
         ignorable_keys=ignorable_keys)
 
 
+#: alias of `dict`
 aiodict = dict
 
 
@@ -232,22 +234,23 @@ def aiomcache(
         client, key_prefix=None, expire=0, coder=None, ignorable_keys=None,
         interface=CacheInterface, storage_implementation=AiomcacheImpl,
         key_encoding='utf-8'):
-    """Memcached interface for :mod:`asyncio`.
+    """Memcached_ interface for :mod:`asyncio`.
 
     Expected client package is:
+
     - https://pypi.org/project/aiomcache/
 
     aiomcache expect `Memcached` client or dev package is installed on your
     machine. If you are new to Memcached, check how to install it and the python
     package on your platform.
 
-    .. _Memcache: http://memcached.org/
-
     :param aiomcache.Client client: aiomcache client object.
     :param object key_refactor: The default key refactor may hash the cache key
         when it doesn't meet memcached key restriction.
 
     :see: :func:`ring.memcache` for non-asyncio version.
+
+    .. _Memcache: http://memcached.org/
     """
     from ring._memcache import key_refactor
 

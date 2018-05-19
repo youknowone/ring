@@ -1,3 +1,55 @@
 Extend Ring to meet your own needs
 ==================================
 
+Creating new coders
+-------------------
+
+Users can register new custom coders with aliases. Once a coder is registered
+to global registry, passing its alias to `coder` parameter of each factory
+is identical to passing the coder object to `coder` parameter.
+
+:note: `coder` parameter of factories only take actual
+       :class:`ring.coder.Coder` objects. On the other hands,
+       :meth:`ring.coder.Registry.register` take raw materials of
+       :class:`ring.coder.Coder` or :class:`ring.coder.CoderTuple`. See
+       :func:`ring.coder.coderize` for details.
+
+:see: :meth:`ring.coder.Registry.register`
+
+
+Creating new factory functions
+------------------------------
+
+To create a new factory, basic understanding of factory bases is required.
+Let's see one by one with examples.
+
+Before starting, reading next materials would enhance comprehension.
+
+.. autosummary::
+    ring.func_sync.factory
+    ring.func_asyncio.factory
+
+
+Creating simple shortcuts
++++++++++++++++++++++++++
+
+:see: :doc:`factory` for creating shortcuts of existing factories.
+
+
+New storage implementations
++++++++++++++++++++++++++++
+
+:note: experimental
+
+The most important component is the ``storage_implementation`` parameter,
+which is expected to inherit :class:`ring.func_base.StorageImplementation`.
+The abstract class defines common basic operations of storage.
+
+(TBD)
+
+
+New sub-function semantics
+++++++++++++++++++++++++++
+
+:note: experimental
+

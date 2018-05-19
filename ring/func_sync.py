@@ -1,6 +1,5 @@
 """:mod:`ring.func_sync`
-
-Collection of factory functions.
+is a collection of factory functions.
 """
 import time
 import functools

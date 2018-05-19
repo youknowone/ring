@@ -1,14 +1,6 @@
 Save and load rich data
 =======================
 
-In this document, you will learn:
-
-  #. What `coder` is. What it does.
-  #. About built-in coders.
-  #. Common tips to use.
-  #. How to create a custom coder.
-
-
 The concept of coder
 --------------------
 
@@ -43,15 +35,35 @@ in **Ring**.
 
 Coder is one of the configurable layers in **Ring**.
 
-Built-in coders
----------------
+
+Pre-registered coders
+---------------------
+
+**Ring** is distributed with a few pre-registered coders which are common in
+modern Python world.
+
+.. autosummary::
+
+    ring.coder.bypass_coder
+    ring.coder.JsonCoder
+    ring.coder.pickle_coder
 
 :see: :mod:`ring.coder` for details.
 
-Common tips
------------
 
 Create a new coder
 ------------------
 
 Users can register new custom coders with aliases.
+
+Related coder types:
+
+  - :class:`ring.coder.Coder`
+  - :class:`ring.coder.CoderTuple`
+
+Registry:
+
+  - :data:`ring.coder.registry`
+  - :class:`ring.coder.Registry`
+
+:see: :doc:`extend`

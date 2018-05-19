@@ -4,7 +4,7 @@ Attributes of Ring object
 A Ring-decorated function is a Ring object. Ring objects have common attributes
 which give elaborate controlling. Note that `object` in `Ring object` doesn't
 mean Python object. They are a collection of Ring-interface-injected stuff
-which share interface described in this document.
+which shares interface described in this document.
 
 Though it is up to factory functions :func:`ring.func_sync.ring_factory`
 and :func:`ring.func_asyncio.ring_factory`, they share following features.
@@ -125,7 +125,7 @@ section is written to describe what **Ring** and its users expect for each
 function, not to define what these functions actually do.
 
 To change behavior, inherit :class:`ring.sync.CacheInterface` or
-:class:`ring.asyncio.CacheInterface` then passes it to ``cache_interface``
+:class:`ring.asyncio.CacheInterface` then passes it to the ``cache_interface``
 parameter of **Ring** factories.
 
 

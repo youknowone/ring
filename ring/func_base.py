@@ -1,7 +1,6 @@
-""":mod:`ring.func_base` --- The toolkit of :mod:`ring.func`
-============================================================
+""":mod:`ring.func_base` --- The building blocks of :mod:`ring.func`
+====================================================================
 
-This module is a collection of common ring tools.
 """
 import abc
 import functools
