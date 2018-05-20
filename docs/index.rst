@@ -39,6 +39,7 @@ Documents
    control.rst
    coder.rst
    extend.rst
+   future.rst
 
 .. toctree::
    :maxdepth: 1

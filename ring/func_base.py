@@ -202,7 +202,8 @@ def factory(
         _ignorable_keys = suggest_ignorable_keys(_callable, ignorable_keys)
         _key_prefix = suggest_key_prefix(_callable, key_prefix)
         ckey = create_ckey(
-            _callable, _key_prefix, _ignorable_keys, encoding=key_encoding, key_refactor=key_refactor)
+            _callable, _key_prefix, _ignorable_keys,
+            encoding=key_encoding, key_refactor=key_refactor)
 
         return ring_factory(
             _callable, context, ckey, RingBase,

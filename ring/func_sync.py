@@ -268,7 +268,7 @@ def redis_py(
         interface=CacheInterface, storage_implementation=RedisImplementation):
     """Redis_ interface.
 
-    This backend depends on `redis package <https://pypi.org/project/redis/>`_.
+    This backend depends on `redis-py`_.
 
     The `redis` package expects Redis client or dev package is installed on
     your machine. If you are new to Redis, check how to install Redis and the
@@ -283,6 +283,7 @@ def redis_py(
     :see: Redis_ for Redis documentation.
 
     .. _Redis: http://redis.io/
+    .. _redis-py: https://pypi.org/project/redis/
     """
     return fbase.factory(
         client, key_prefix=key_prefix, ring_factory=ring_factory,
