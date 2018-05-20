@@ -49,6 +49,7 @@ class Wire(object):
         _w.cwrapper = cwrapper
         _w._shared_attrs = _shared_attrs
 
+        functools.wraps(cwrapper.callable)(_w)
         return _w
 
     def __init__(self, cwrapper, shared_attrs):

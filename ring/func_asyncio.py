@@ -1,6 +1,7 @@
 """:mod:`ring.func_asyncio`
 is a collection of :mod:`asyncio` factory functions.
 """
+from typing import Optional, Any
 import asyncio
 import inspect
 import time
@@ -12,7 +13,7 @@ inspect_iscoroutinefunction = getattr(
     inspect, 'iscoroutinefunction', lambda f: False)
 
 
-def ring_class_factory(cwrapper):
+def ring_class_factory(cwrapper) -> type:
 
     if not cwrapper.is_coroutine:
         raise TypeError(
@@ -72,6 +73,10 @@ class CacheInterface(fbase.BaseInterface):
         except fbase.NotFound:
             result = self.ring.miss_value
         return result
+    get.__annotations_override__ = {
+        'return':
+            lambda a: Optional[a['return']] if 'return' in a else Optional[Any],
+    }
 
     @asyncio.coroutine
     def update(self, **kwargs):
@@ -91,20 +96,29 @@ class CacheInterface(fbase.BaseInterface):
         return result
 
     @asyncio.coroutine
-    def set(self, value, **kwargs):
+    def set(self, _value, **kwargs):
         key = self.key(**kwargs)
-        yield from self.ring.storage_set(key, value)
+        yield from self.ring.storage_set(key, _value)
     set._function_args_count = 1
+    set.__annotations_override__ = {
+        'return': None,
+    }
 
     @asyncio.coroutine
     def delete(self, **kwargs):
         key = self.key(**kwargs)
         yield from self.ring.storage_delete(key)
+    delete.__annotations_override__ = {
+        'return': None,
+    }
 
     @asyncio.coroutine
     def touch(self, **kwargs):
         key = self.key(**kwargs)
         yield from self.ring.storage_touch(key)
+    touch.__annotations_override__ = {
+        'return': None,
+    }
 
 
 class DictImpl(fbase.StorageImplementation):

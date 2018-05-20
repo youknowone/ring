@@ -29,29 +29,13 @@ dev_require = tests_require + docs_require
 try:
     import __pypy__  # noqa
 except ImportError:
+    # CPython-only
     tests_require.extend([
         'pylibmc',
     ])
 
-if sys.version_info[0] == 2:
-    install_requires.extend([
-        'inspect2==0.1.0',
-        'functools32==3.2.3-2',
-    ])
-    tests_require.extend([
-        'python-memcached',
-    ])
-else:
-    tests_require.extend([
-        'python3-memcached',
-    ])
-
-if (3, 3) <= sys.version_info[:2] <= (3, 4):
-    tests_require.extend([
-        'asyncio',
-    ])
-
-if sys.version_info >= (3, 3):
+# new feature support
+if (3, 3) <= sys.version_info:
     if sys.version_info < (3, 5):
         tests_require.append('pytest-asyncio==0.5.0')
     else:
@@ -60,6 +44,32 @@ if sys.version_info >= (3, 3):
         'aiomcache',
         'aioredis>=1.0.0',
     ])
+
+if sys.version_info[0] == 2:
+    tests_require.extend([
+        'python-memcached',
+    ])
+else:
+    tests_require.extend([
+        'python3-memcached',
+    ])
+
+# backports - py2
+if sys.version_info[0] == 2:
+    install_requires.extend([
+        'inspect2==0.1.0',
+        'functools32==3.2.3-2',
+    ])
+
+# backports - py34
+if sys.version_info[:2] <= (3, 4):
+    install_requires.extend([
+        'typing',
+    ])
+    if (3, 3) <= sys.version_info[:2]:
+        install_requires.extend([
+            'asyncio',
+        ])
 
 
 def get_readme():
