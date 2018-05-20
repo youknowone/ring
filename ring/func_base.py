@@ -4,8 +4,9 @@
 """
 import abc
 import functools
-import six
+import types
 
+import six
 from ._compat import lru_cache, qualname
 from .callable import Callable
 from .key import CallableKey
@@ -228,20 +229,23 @@ def factory(
                             return attr(*function_args, **full_kwargs)
 
                         c = self.cwrapper.callable
-                        if function_args_count == 0:
-                            functools.wraps(c)(impl_f)
+                        functools.wraps(c)(impl_f)
                         impl_f.__name__ = '.'.join((c.__name__, name))
                         if six.PY34:
                             impl_f.__qualname__ = '.'.join(
                                 (c.__qualname__, name))
-                        else:
-                            # mock __qualname__ for py2
-                            if hasattr(impl_f, 'im_class'):
-                                impl_f.__qualname__ = '.'.join(
-                                    (impl_f.im_class.__name__,
-                                     impl_f.__name__))
+
+                        annotations = getattr(
+                            impl_f, '__annotations__', {})
+                        annotations_override = getattr(
+                            attr, '__annotations_override__', {})
+                        for field, override in annotations_override.items():
+                            if isinstance(override, types.FunctionType):
+                                new_annotation = override(annotations)
                             else:
-                                impl_f.__qualname__ = impl_f.__name__
+                                new_annotation = override
+                            annotations[field] = new_annotation
+
                         setattr(self, name, impl_f)
 
                 return self.__getattribute__(name)
@@ -251,7 +255,6 @@ def factory(
                 return attr(*args, **kwargs)
 
         wire = RingWire.for_callable(cwrapper)
-
         return wire
 
     return _decorator
@@ -298,6 +301,9 @@ class BaseInterface(object):
     def key(self, **kwargs):
         args = self.ring.wire._preargs
         return self.ring.ckey.build_key(args, kwargs)
+    key.__annotations_override__ = {
+        'return': str,
+    }
 
     def execute(self, **kwargs):
         return self.ring.execute(kwargs)

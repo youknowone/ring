@@ -1,12 +1,14 @@
 """:mod:`ring.func_sync`
 is a collection of factory functions.
 """
+from typing import Optional, Any
 import time
 import re
 import hashlib
+
 from . import func_base as fbase
 
-__all__ = ('dict', 'memcache', 'redis_py', 'redis', 'disk', 'arcus')
+__all__ = ('dict', 'memcache', 'redis_py', 'redis', 'disk', )
 
 
 def ring_class_factory(cwrapper):
@@ -58,6 +60,10 @@ class CacheInterface(fbase.BaseInterface):
         except fbase.NotFound:
             result = self.ring.miss_value
         return result
+    get.__annotations_override__ = {
+        'return':
+            lambda a: Optional[a['return']] if 'return' in a else Optional[Any],
+    }
 
     def update(self, **kwargs):
         key = self.key(**kwargs)
@@ -74,18 +80,27 @@ class CacheInterface(fbase.BaseInterface):
             self.ring.storage_set(key, result)
         return result
 
-    def set(self, value, **kwargs):
+    def set(self, _value, **kwargs):
         key = self.key(**kwargs)
-        self.ring.storage_set(key, value)
+        self.ring.storage_set(key, _value)
     set._function_args_count = 1
+    set.__annotations_override__ = {
+        'return': None,
+    }
 
     def delete(self, **kwargs):
         key = self.key(**kwargs)
         self.ring.storage_delete(key)
+    delete.__annotations_override__ = {
+        'return': None,
+    }
 
     def touch(self, **kwargs):
         key = self.key(**kwargs)
         self.ring.storage_touch(key)
+    touch.__annotations_override__ = {
+        'return': None,
+    }
 
 
 class DictImpl(fbase.StorageImplementation):
