@@ -65,6 +65,13 @@ class Wire(object):
             args = self._preargs + args
         return args
 
+    def merge_args(self, args, kwargs):
+        args = self._reargs(args)
+        full_kwargs = self._callable.kwargify(args, kwargs)
+        if self._preargs:
+            full_kwargs.pop(self._callable.first_parameter.name)
+        return full_kwargs
+
     def __getattr__(self, name):
         try:
             return self.__getattribute__(name)

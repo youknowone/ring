@@ -28,14 +28,10 @@ def ring_factory(
         encode = staticmethod(coder.encode)
         decode = staticmethod(coder.decode)
 
-        @functools.wraps(_callable.callable)
-        def __call__(self, *args, **kwargs):
-            return self.run('get_or_update', *args, **kwargs)
-
         # primary primitive methods
 
         def _p_execute(self, kwargs):
-            result = c.callable(*self._preargs, **kwargs)
+            result = c.callable(*self.wire._preargs, **kwargs)
             return result
 
         def _p_get(self, key):
@@ -60,38 +56,38 @@ class CacheInterface(fbase.BaseInterface):
     def _get(self, **kwargs):
         key = self._key(**kwargs)
         try:
-            result = self._p_get(key)
+            result = self.ring._p_get(key)
         except fbase.NotFound:
-            result = self._miss_value
+            result = self.ring._miss_value
         return result
 
     def _update(self, **kwargs):
         key = self._key(**kwargs)
-        result = self._p_execute(kwargs)
-        self._p_set(key, result, self._expire_default)
+        result = self.ring._p_execute(kwargs)
+        self.ring._p_set(key, result, self.ring._expire_default)
         return result
 
     def _get_or_update(self, **kwargs):
         key = self._key(**kwargs)
         try:
-            result = self._p_get(key)
+            result = self.ring._p_get(key)
         except fbase.NotFound:
-            result = self._p_execute(kwargs)
-            self._p_set(key, result, self._expire_default)
+            result = self.ring._p_execute(kwargs)
+            self.ring._p_set(key, result, self.ring._expire_default)
         return result
 
     def _set(self, value, **kwargs):
         key = self._key(**kwargs)
-        self._p_set(key, value, self._expire_default)
+        self.ring._p_set(key, value, self.ring._expire_default)
     _set._function_args_count = 1
 
     def _delete(self, **kwargs):
         key = self._key(**kwargs)
-        self._p_delete(key)
+        self.ring._p_delete(key)
 
     def _touch(self, **kwargs):
         key = self._key(**kwargs)
-        self._p_touch(key)
+        self.ring._p_touch(key)
 
 
 class DictImpl(fbase.StorageImplementation):

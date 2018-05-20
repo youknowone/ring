@@ -26,7 +26,7 @@ def test_readme_function():
     # get internal cache key
     key = get_url.key('http://example.com')
     # and access directly to the backend
-    direct_data = get_url.storage.get(key)
+    direct_data = get_url.ring.storage.get(key)
     assert data == direct_data
 
 

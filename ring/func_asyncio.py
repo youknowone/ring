@@ -3,7 +3,6 @@ is a collection of :mod:`asyncio` factory functions.
 """
 import asyncio
 import inspect
-import functools
 import time
 from ring import func_base as fbase
 
@@ -23,7 +22,7 @@ def ring_factory(
             "The function for cache '{}' must be an async function.".format(
                 c.code.co_name))
 
-    class Ring(RingBase, Interface):
+    class Ring(RingBase):
         _callable = c
         _ckey = ckey
         _expire_default = expire_default
@@ -36,13 +35,11 @@ def ring_factory(
         encode = staticmethod(coder.encode)
         decode = staticmethod(coder.decode)
 
-        @functools.wraps(_callable.callable)
-        def __call__(self, *args, **kwargs):
-            return self.run('get_or_update', *args, **kwargs)
+        # primary primitive methods
 
         @asyncio.coroutine
         def _p_execute(self, kwargs):
-            result = yield from self._callable.callable(*self._preargs, **kwargs)
+            result = yield from self._callable.callable(*self.wire._preargs, **kwargs)
             return result
 
         @asyncio.coroutine
@@ -72,43 +69,43 @@ class CacheInterface(fbase.BaseInterface):
     def _get(self, **kwargs):
         key = self._key(**kwargs)
         try:
-            result = yield from self._p_get(key)
+            result = yield from self.ring._p_get(key)
         except fbase.NotFound:
-            result = self._miss_value
+            result = self.ring._miss_value
         return result
 
     @asyncio.coroutine
     def _update(self, **kwargs):
         key = self._key(**kwargs)
-        result = yield from self._p_execute(kwargs)
-        yield from self._p_set(key, result, self._expire_default)
+        result = yield from self.ring._p_execute(kwargs)
+        yield from self.ring._p_set(key, result, self.ring._expire_default)
         return result
 
     @asyncio.coroutine
     def _get_or_update(self, **kwargs):
         key = self._key(**kwargs)
         try:
-            result = yield from self._p_get(key)
+            result = yield from self.ring._p_get(key)
         except fbase.NotFound:
-            result = yield from self._p_execute(kwargs)
-            yield from self._p_set(key, result, self._expire_default)
+            result = yield from self.ring._p_execute(kwargs)
+            yield from self.ring._p_set(key, result, self.ring._expire_default)
         return result
 
     @asyncio.coroutine
     def _set(self, value, **kwargs):
         key = self._key(**kwargs)
-        yield from self._p_set(key, value, self._expire_default)
+        yield from self.ring._p_set(key, value, self.ring._expire_default)
     _set._function_args_count = 1
 
     @asyncio.coroutine
     def _delete(self, **kwargs):
         key = self._key(**kwargs)
-        yield from self._p_delete(key)
+        yield from self.ring._p_delete(key)
 
     @asyncio.coroutine
     def _touch(self, **kwargs):
         key = self._key(**kwargs)
-        yield from self._p_touch(key)
+        yield from self.ring._p_touch(key)
 
 
 class DictImpl(fbase.StorageImplementation):

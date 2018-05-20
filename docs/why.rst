@@ -240,8 +240,8 @@ objects serve data extractors instead.
         ...
 
     cache_key = f.key(10)  # cache key for 10
-    assert f.storage is client
-    encoded_data = f.storage.get(cache_key)  # get from memcache client
+    assert f.ring.storage is client
+    encoded_data = f.ring.storage.get(cache_key)  # get from memcache client
     actual_data = f.decode(encoded_data)  # decode
 
 :see: :doc:`control` for details.
