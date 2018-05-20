@@ -8,13 +8,13 @@ from ring.func_asyncio import ring_factory
 
 class DoubleCacheInterface(BaseInterface):
 
-    def _key2(self, **kwargs):
-        return self._key(**kwargs) + ':back'
+    def key2(self, **kwargs):
+        return self.key(**kwargs) + ':back'
 
     @asyncio.coroutine
-    def _get(self, **kwargs):
-        key1 = self._key(**kwargs)
-        key2 = self._key2(**kwargs)
+    def get(self, **kwargs):
+        key1 = self.key(**kwargs)
+        key2 = self.key2(**kwargs)
 
         result = ...
         for key in [key1, key2]:
@@ -29,24 +29,24 @@ class DoubleCacheInterface(BaseInterface):
         return result
 
     @asyncio.coroutine
-    def _update(self, **kwargs):
-        key = self._key(**kwargs)
-        key2 = self._key2(**kwargs)
-        result = yield from self._execute(**kwargs)
+    def update(self, **kwargs):
+        key = self.key(**kwargs)
+        key2 = self.key2(**kwargs)
+        result = yield from self.execute(**kwargs)
         yield from self.ring._p_set(key, result)
         yield from self.ring._p_set(key2, result, None)
         return result
 
     @asyncio.coroutine
-    def _get_or_update(self, **kwargs):
-        key = self._key(**kwargs)
-        key2 = self._key2(**kwargs)
+    def get_or_update(self, **kwargs):
+        key = self.key(**kwargs)
+        key2 = self.key2(**kwargs)
         try:
             result = yield from self.ring._p_get(key)
         except NotFound:
             try:
-                result = yield from self._execute(**kwargs)
-            except Exception as e:
+                result = yield from self.execute(**kwargs)
+            except Exception:
                 try:
                     result = yield from self.ring._p_get(key2)
                 except NotFound:
@@ -60,16 +60,16 @@ class DoubleCacheInterface(BaseInterface):
         return result
 
     @asyncio.coroutine
-    def _delete(self, **kwargs):
-        key = self._key(**kwargs)
-        key2 = self._key2(**kwargs)
+    def delete(self, **kwargs):
+        key = self.key(**kwargs)
+        key2 = self.key2(**kwargs)
         yield from self.ring._p_delete(key)
         yield from self.ring._p_delete(key2)
 
     @asyncio.coroutine
-    def _touch(self, **kwargs):
-        key = self._key(**kwargs)
-        key2 = self._key(**kwargs)
+    def touch(self, **kwargs):
+        key = self.key(**kwargs)
+        key2 = self.key(**kwargs)
         yield from self.ring._p_touch(key)
         yield from self.ring._p_touch(key2)
 
@@ -144,13 +144,13 @@ def test_coder_func():
     def f(a):
         return a
 
-    encoded_value = f.ring.encode('value')
-    decoded_value = f.ring.decode(encoded_value)
+    encoded_value = f.encode('value')
+    decoded_value = f.decode(encoded_value)
     assert encoded_value == decoded_value
 
     assert f('10') == '10'
     raw_value = storage.get(f.key('10'))  # raw value
-    value = f.ring.decode(raw_value)
+    value = f.decode(raw_value)
     assert f.get('10') == value[1]
 
 
@@ -179,10 +179,10 @@ def test_coder_method():
     u1 = User(user_id=42, name='User 1')
     u1.data()
 
-    encoded_value = u1.data.ring.encode(u1.data.key())
-    decoded_value = u1.data.ring.decode(encoded_value)
+    encoded_value = u1.data.ring.coder.encode(u1.data.key())
+    decoded_value = u1.data.ring.coder.decode(encoded_value)
     assert encoded_value == decoded_value
 
     raw_value = storage.get(u1.data.key())
-    value = u1.data.ring.decode(raw_value)
+    value = u1.data.decode(raw_value)
     assert u1.data.get() == value[1]

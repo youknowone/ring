@@ -49,13 +49,13 @@ def suggest_key_prefix(c, key_prefix):
     if key_prefix is None:
         if is_method(c):
             key_prefix = \
-                '{0.__module__}.{{self.__class__.__name__}}.' \
-                '{0.__name__}'.format(c.callable)
+                '{0.__module__}.{{self.__class__.__qualname__}}.' \
+                '{0.__qualname__}'.format(c.callable)
         elif is_classmethod(c):
             # cls is already a str object somehow
-            key_prefix = '{0.__module__}.{{cls}}.{0.__name__}'.format(c.callable)
+            key_prefix = '{0.__module__}.{{cls}}.{0.__qualname__}'.format(c.callable)
         else:
-            key_prefix = '{0.__module__}.{0.__name__}'.format(c.callable)
+            key_prefix = '{0.__module__}.{0.__qualname__}'.format(c.callable)
     else:
         key_prefix = key_prefix.replace('{', '{{').replace('}', '}}')
     return key_prefix
@@ -171,17 +171,23 @@ def factory(
             _callable, _key_prefix, _ignorable_keys,
             encoding=key_encoding, key_refactor=key_refactor)
 
-        ring = ring_factory(
+        ring_class = ring_factory(
             _callable, context, ckey, RingBase,
-            interface, storage_implementation, miss_value, expire_default,
-            coder)()
+            miss_value, expire_default,
+            coder)
 
-        class RingWire(Wire, interface):
+        class RingWire(Wire):
 
             def __init__(self, *args, **kwargs):
                 super(RingWire, self).__init__(*args, **kwargs)
+                ring = ring_class()
+                ring.wire = self
+                ring.interface = interface(ring)
+                ring.storage_impl = storage_implementation(ring)
                 self.ring = ring
-                self.ring.wire = self
+
+                self.encode = ring.coder.encode
+                self.decode = ring.coder.decode
 
             @functools.wraps(_callable.callable)
             def __call__(self, *args, **kwargs):
@@ -197,9 +203,8 @@ def factory(
                 except AttributeError:
                     pass
 
-                interface_name = '_' + name
-                if hasattr(ring._interface_class, interface_name):
-                    attr = self.__getattribute__(interface_name)
+                if hasattr(self.ring.interface, name):
+                    attr = getattr(self.ring.interface, name)
                     if callable(attr):
                         function_args_count = getattr(
                             attr, '_function_args_count', 0)
@@ -210,14 +215,20 @@ def factory(
                             function_args = args[:function_args_count]
                             return attr(*function_args, **full_kwargs)
 
+                        c = self._callable.callable
                         if function_args_count == 0:
-                            functools.wraps(self._callable.callable)(impl_f)
+                            functools.wraps(c)(impl_f)
+                        impl_f.__name__ = '.'.join((c.__name__, name))
+                        impl_f.__qualname__ = '.'.join((c.__qualname__, name))
                         setattr(self, name, impl_f)
 
                 return self.__getattribute__(name)
 
-        ring.wire = wire = RingWire.for_callable(_callable)
-        wire._shared_attrs['ring'] = ring
+            def run(self, action, *args, **kwargs):
+                attr = getattr(self, action)
+                return attr(*args, **kwargs)
+
+        wire = RingWire.for_callable(_callable)
 
         return wire
 
@@ -236,6 +247,9 @@ class NotFound(Exception):
 
 @six.add_metaclass(abc.ABCMeta)
 class StorageImplementation(object):
+
+    def __init__(self, ring):
+        self.ring = ring
 
     @abc.abstractmethod
     def get_value(self, obj, key):  # pragma: no cover
@@ -256,31 +270,30 @@ class StorageImplementation(object):
 @six.add_metaclass(abc.ABCMeta)
 class BaseInterface(object):
 
-    def _key(self, **kwargs):
-        args = self._preargs
+    def __init__(self, ring):
+        self.ring = ring
+
+    def key(self, **kwargs):
+        args = self.ring.wire._preargs
         return self.ring._ckey.build_key(args, kwargs)
 
-    def _execute(self, **kwargs):
+    def execute(self, **kwargs):
         return self.ring._p_execute(kwargs)
 
-    def _get(self, **kwargs):  # pragma: no cover
+    def get(self, **kwargs):  # pragma: no cover
         raise NotImplementedError
 
-    def _set(self, value, **kwargs):  # pragma: no cover
+    def set(self, value, **kwargs):  # pragma: no cover
         raise NotImplementedError
 
-    def _update(self, **kwargs):  # pragma: no cover
+    def update(self, **kwargs):  # pragma: no cover
         raise NotImplementedError
 
-    def _get_or_update(self, **kwargs):  # pragma: no cover
+    def get_or_update(self, **kwargs):  # pragma: no cover
         raise NotImplementedError
 
-    def _delete(self, **kwargs):  # pragma: no cover
+    def delete(self, **kwargs):  # pragma: no cover
         raise NotImplementedError
 
-    def _touch(self, **kwargs):
+    def touch(self, **kwargs):
         raise NotImplementedError
-
-    def run(self, action, *args, **kwargs):
-        attr = getattr(self, action)
-        return attr(*args, **kwargs)
