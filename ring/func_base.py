@@ -127,43 +127,9 @@ def coerce(v):
         "Add __ring_key__() or __str__().".format(v, cls))
 
 
-class RingBase(Wire):
-    # for now, RingBase is not well seperated from Wire
+class RingBase(object):
 
-    def merge_args(self, args, kwargs):
-        args = self._reargs(args)
-        full_kwargs = self._callable.kwargify(args, kwargs)
-        if self._preargs:
-            full_kwargs.pop(self._callable.first_parameter.name)
-        return full_kwargs
-
-    def __getattr__(self, name):
-        try:
-            return super(RingBase, self).__getattr__(name)
-        except AttributeError:
-            pass
-        try:
-            return self.__getattribute__(name)
-        except AttributeError:
-            pass
-
-        interface_name = '_' + name
-        if hasattr(self._interface_class, interface_name):
-            attr = self.__getattribute__(interface_name)
-            if callable(attr):
-                function_args_count = getattr(attr, '_function_args_count', 0)
-
-                def impl_f(*args, **kwargs):
-                    full_kwargs = self.merge_args(
-                        args[function_args_count:], kwargs)
-                    function_args = args[:function_args_count]
-                    return attr(*function_args, **full_kwargs)
-
-                if function_args_count == 0:
-                    functools.wraps(self._callable.callable)(impl_f)
-                setattr(self, name, impl_f)
-
-        return self.__getattribute__(name)
+    pass
 
 
 def create_ckey(c, key_prefix, ignorable_keys, coerce=coerce, encoding=None, key_refactor=lambda x: x):
@@ -205,10 +171,55 @@ def factory(
             _callable, _key_prefix, _ignorable_keys,
             encoding=key_encoding, key_refactor=key_refactor)
 
-        return ring_factory(
+        ring = ring_factory(
             _callable, context, ckey, RingBase,
             interface, storage_implementation, miss_value, expire_default,
-            coder).for_callable(_callable)
+            coder)()
+
+        class RingWire(Wire, interface):
+
+            def __init__(self, *args, **kwargs):
+                super(RingWire, self).__init__(*args, **kwargs)
+                self.ring = ring
+                self.ring.wire = self
+
+            @functools.wraps(_callable.callable)
+            def __call__(self, *args, **kwargs):
+                return self.run('get_or_update', *args, **kwargs)
+
+            def __getattr__(self, name):
+                try:
+                    return super(RingWire, self).__getattr__(name)
+                except AttributeError:
+                    pass
+                try:
+                    return self.__getattribute__(name)
+                except AttributeError:
+                    pass
+
+                interface_name = '_' + name
+                if hasattr(ring._interface_class, interface_name):
+                    attr = self.__getattribute__(interface_name)
+                    if callable(attr):
+                        function_args_count = getattr(
+                            attr, '_function_args_count', 0)
+
+                        def impl_f(*args, **kwargs):
+                            full_kwargs = self.merge_args(
+                                args[function_args_count:], kwargs)
+                            function_args = args[:function_args_count]
+                            return attr(*function_args, **full_kwargs)
+
+                        if function_args_count == 0:
+                            functools.wraps(self._callable.callable)(impl_f)
+                        setattr(self, name, impl_f)
+
+                return self.__getattribute__(name)
+
+        ring.wire = wire = RingWire.for_callable(_callable)
+        wire._shared_attrs['ring'] = ring
+
+        return wire
 
     return _decorator
 
@@ -247,10 +258,10 @@ class BaseInterface(object):
 
     def _key(self, **kwargs):
         args = self._preargs
-        return self._ckey.build_key(args, kwargs)
+        return self.ring._ckey.build_key(args, kwargs)
 
     def _execute(self, **kwargs):
-        return self._p_execute(kwargs)
+        return self.ring._p_execute(kwargs)
 
     def _get(self, **kwargs):  # pragma: no cover
         raise NotImplementedError

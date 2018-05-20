@@ -68,7 +68,7 @@ The core feature of **Ring** is explicit controllers.
     # get internal cache key
     key = get_url.key('http://example.com')
     # and access directly to the backend
-    encoded_data = get_url.storage.get(key)
+    encoded_data = get_url.ring.storage.get(key)
     cached_data = get_url.decode(encoded_data)
 
 
@@ -230,7 +230,7 @@ decides the kind of coding.
     loaded = f.get()
     assert isinstance(loaded, dict)
     assert loaded == {'key': 'data', 'number': 42}
-    raw_data = f.storage.get(f.key())
+    raw_data = f.ring.storage.get(f.key())
     assert isinstance(raw_data, bytes)  # `str` for py2
     assert raw_data == json.dumps({'key': 'data', 'number': 42})
 
@@ -268,7 +268,7 @@ don't need to be suffered by looking inside of **Ring**.
         ...
 
     key = f.key()  # retrieving the key
-    raw_data = f.storage.get(key)  # getting raw data from storage
+    raw_data = f.ring.storage.get(key)  # getting raw data from storage
 
 
 :see: :doc:`control` for more attributes.

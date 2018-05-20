@@ -52,7 +52,7 @@ Building blocks
         def f():
             ...
 
-        assert f.storage is storage
+        assert f.ring.storage is storage
 
     .. code-block:: python
 
@@ -62,7 +62,7 @@ Building blocks
         def f():
             ...
 
-        assert f.storage is client
+        assert f.ring.storage is client
 
 
 .. function:: decode(cache_data)
@@ -85,7 +85,7 @@ Building blocks
 
         r1 = f.get()
         # storage.get may vary by actual storage object
-        r2 = f.decode(f.storage.get(f.key()))
+        r2 = f.decode(f.ring.storage.get(f.key()))
         assert r1 == r2
 
 
@@ -114,7 +114,7 @@ Building blocks
         f.set(f.encode(result))
         # way #3
         # storage.set may vary by actual storage object
-        f.storage.set(f.key(), f.encode(result))
+        f.ring.storage.set(f.key(), f.encode(result))
 
 
 Cache behavior controller
