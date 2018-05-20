@@ -4,7 +4,7 @@ is a collection of factory functions.
 import time
 import re
 import hashlib
-from ring import func_base as fbase
+from . import func_base as fbase
 
 __all__ = ('dict', 'memcache', 'redis_py', 'redis', 'disk', 'arcus')
 

@@ -4,7 +4,7 @@ is a collection of :mod:`asyncio` factory functions.
 import asyncio
 import inspect
 import time
-from ring import func_base as fbase
+from . import func_base as fbase
 
 __all__ = ('dict', 'aiodict', 'aiomcache', 'aioredis', )
 

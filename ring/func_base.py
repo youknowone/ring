@@ -5,11 +5,12 @@
 import abc
 import functools
 import six
-from ring._compat import lru_cache
-from ring.callable import Callable
-from ring.key import CallableKey
-from ring.wire import Wire
-from ring.coder import registry as coder_registry, coderize
+
+from ._compat import lru_cache, qualname
+from .callable import Callable
+from .key import CallableKey
+from .wire import Wire
+from .coder import registry as coder_registry, coderize
 
 __all__ = (
     'is_method', 'is_classmethod', 'Ring', 'factory', 'NotFound',
@@ -52,15 +53,20 @@ def suggest_ignorable_keys(c, ignorable_keys):
 
 def suggest_key_prefix(c, key_prefix):
     if key_prefix is None:
+        cc = c.callable
         if is_method(c):
             key_prefix = \
                 '{0.__module__}.{{self.__class__.__qualname__}}.' \
-                '{0.__qualname__}'.format(c.callable)
+                '{1}'.format(cc, qualname(cc))
+            if not six.PY34:
+                key_prefix = key_prefix.replace('__qualname__', '__name__')
         elif is_classmethod(c):
             # cls is already a str object somehow
-            key_prefix = '{0.__module__}.{{cls}}.{0.__qualname__}'.format(c.callable)
+            key_prefix = '{0.__module__}.{{cls}}.{1}'.format(
+                cc, qualname(cc))
         else:
-            key_prefix = '{0.__module__}.{0.__qualname__}'.format(c.callable)
+            key_prefix = '{0.__module__}.{1}'.format(
+                cc, qualname(cc))
     else:
         key_prefix = key_prefix.replace('{', '{{').replace('}', '}}')
     return key_prefix
@@ -225,7 +231,17 @@ def factory(
                         if function_args_count == 0:
                             functools.wraps(c)(impl_f)
                         impl_f.__name__ = '.'.join((c.__name__, name))
-                        impl_f.__qualname__ = '.'.join((c.__qualname__, name))
+                        if six.PY34:
+                            impl_f.__qualname__ = '.'.join(
+                                (c.__qualname__, name))
+                        else:
+                            # mock __qualname__ for py2
+                            if hasattr(impl_f, 'im_class'):
+                                impl_f.__qualname__ = '.'.join(
+                                    (impl_f.im_class.__name__,
+                                     impl_f.__name__))
+                            else:
+                                impl_f.__qualname__ = impl_f.__name__
                         setattr(self, name, impl_f)
 
                 return self.__getattribute__(name)

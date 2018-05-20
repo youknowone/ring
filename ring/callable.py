@@ -1,8 +1,8 @@
 from __future__ import absolute_import
 
-from collections import OrderedDict
-from ring._util import cached_property
-from ring._compat import inspect
+import collections
+from ._util import cached_property
+from ._compat import inspect, qualname
 
 __all__ = ('Callable', )
 
@@ -41,7 +41,7 @@ class Callable(inspect.Signature):
 
     def kwargify(self, args, kwargs):
         """Create a merged kwargs-like object with given args and kwargs."""
-        merged = OrderedDict()
+        merged = collections.OrderedDict()
 
         _params = self.parameters_values
         _params_len = len(_params)
@@ -128,8 +128,8 @@ class Callable(inspect.Signature):
 
     @cached_property
     def identifier(self):
-        return '{self.callable.__module__}.{self.callable.__qualname__}'.format(
-            self=self)
+        return '.'.join(
+            (self.callable.__module__, qualname(self.callable)))
 
     @cached_property
     def first_parameter(self):
