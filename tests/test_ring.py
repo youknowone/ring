@@ -20,8 +20,8 @@ def test_ring_wrapper():
     b = A(20)
     print(a.x.key())
     print(b.x.key())
-    print(a.x.ring.storage)
-    print(b.x.ring.storage)
+    print(a.x.storage)
+    print(b.x.storage)
     assert a.x() == 10
     assert b.x() == 20
     assert a.x() == 10

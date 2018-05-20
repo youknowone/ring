@@ -23,37 +23,36 @@ class WiredProperty(object):
 class Wire(object):
 
     @classmethod
-    def for_callable(cls, c):
+    def for_callable(cls, cwrapper):
         from ring.func_base import is_method, is_classmethod
-        _callable = c
 
         _shared_attrs = {'attrs': {}}
 
-        if is_method(_callable) or is_classmethod(_callable):
+        if is_method(cwrapper) or is_classmethod(cwrapper):
             @WiredProperty
             def _w(self):
-                wrapper_name = '__wrapper_' + _callable.code.co_name
+                wrapper_name = '__wrapper_' + cwrapper.code.co_name
                 wrapper = getattr(self, wrapper_name, None)
                 if wrapper is None:
-                    _wrapper = cls(_callable, _shared_attrs)
+                    _wrapper = cls(cwrapper, _shared_attrs)
                     _wrapper._preargs = (self,)
-                    wrapper = functools.wraps(_callable.callable)(_wrapper)
+                    wrapper = functools.wraps(cwrapper.callable)(_wrapper)
                     setattr(self, wrapper_name, wrapper)
                     _wrapper._shared_attrs = _shared_attrs
                 return wrapper
 
             _w._dynamic_attrs = _shared_attrs['attrs']
         else:
-            _w = cls(_callable, _shared_attrs)
+            _w = cls(cwrapper, _shared_attrs)
             _w._preargs = ()
 
-        _w._callable = _callable
+        _w.cwrapper = cwrapper
         _w._shared_attrs = _shared_attrs
 
         return _w
 
-    def __init__(self, callable, shared_attrs):
-        self._callable = callable
+    def __init__(self, cwrapper, shared_attrs):
+        self.cwrapper = cwrapper
         self._shared_attrs = shared_attrs
 
     @property
@@ -67,9 +66,9 @@ class Wire(object):
 
     def merge_args(self, args, kwargs):
         args = self._reargs(args)
-        full_kwargs = self._callable.kwargify(args, kwargs)
+        full_kwargs = self.cwrapper.kwargify(args, kwargs)
         if self._preargs:
-            full_kwargs.pop(self._callable.first_parameter.name)
+            full_kwargs.pop(self.cwrapper.first_parameter.name)
         return full_kwargs
 
     def __getattr__(self, name):
