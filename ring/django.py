@@ -2,10 +2,11 @@
 ========================================
 """
 from __future__ import absolute_import
+
 import functools
 from django.core import cache
-from ring import func_base as fbase
-from ring.func_sync import ring_class_factory, CacheInterface
+from . import func_base as fbase
+from .func_sync import ring_class_factory, CacheInterface
 
 
 __all__ = ('django', 'django_default')

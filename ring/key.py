@@ -1,9 +1,8 @@
-
 from __future__ import absolute_import
 
 import re
-from ring._util import cached_property
-from ring.callable import Callable
+from ._util import cached_property
+from .callable import Callable
 
 
 class Key(object):
