@@ -2,7 +2,7 @@
 _missing = object()
 
 
-class cached_property(property):
+class cached_property(property):  # pragma: no cover
     """
 
     Import from:
