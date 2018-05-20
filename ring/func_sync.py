@@ -307,7 +307,8 @@ def disk(
 
 def arcus(
         client, key_prefix=None, expire=0, coder=None, ignorable_keys=None,
-        interface=CacheInterface):
+        interface=CacheInterface):  # pragma: no cover
+    """arcus support. deprecated"""
 
     class Impl(fbase.Storage):
         def get_value(self, client, key):
