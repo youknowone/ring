@@ -5,7 +5,7 @@ from __future__ import absolute_import
 import functools
 from django.core import cache
 from ring import func_base as fbase
-from ring.func_sync import ring_factory, CacheInterface
+from ring.func_sync import ring_class_factory, CacheInterface
 
 
 __all__ = ('django', 'django_default')
@@ -49,7 +49,7 @@ def django(
     """
     backend = promote_backend(backend)
     return fbase.factory(
-        backend, key_prefix=key_prefix, ring_factory=ring_factory,
+        backend, key_prefix=key_prefix, ring_class_factory=ring_class_factory,
         interface=interface, storage_implementation=storage_implementation,
         miss_value=None, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys)

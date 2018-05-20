@@ -9,44 +9,42 @@ from ring import func_base as fbase
 __all__ = ('dict', 'memcache', 'redis_py', 'redis', 'disk', 'arcus')
 
 
-def ring_factory(
-        c, storage_instance, ckey, RingBase,
-        miss_value, expire_default, coder):
+def ring_class_factory(cwrapper):
 
-    _coder = coder
-
-    class Ring(RingBase):
-        _callable = c
-        _ckey = ckey
-        _expire_default = expire_default
-
-        storage = storage_instance
-        _miss_value = miss_value
-
-        coder = _coder
-
+    class Ring(object):
         # primary primitive methods
 
-        def _p_execute(self, kwargs):
-            result = c.callable(*self.wire._preargs, **kwargs)
+        def execute(self, kwargs):
+            result = self.cwrapper.callable(
+                *self.wire._preargs, **kwargs)
             return result
 
-        def _p_get(self, key):
-            value = self.storage_impl.get_value(self.storage, key)
+        def storage_get(self, key):
+            value = self.storage_impl.get_value(
+                self.storage, key)
             return self.coder.decode(value)
 
-        def _p_set(self, key, value, expire=expire_default):
+        def storage_set(self, key, value, expire=Ellipsis):
+            if expire is Ellipsis:
+                expire = self.expire_default
             encoded = self.coder.encode(value)
-            result = self.storage_impl.set_value(self.storage, key, encoded, expire)
+            result = self.storage_impl.set_value(
+                self.storage, key, encoded, expire)
             return result
 
-        def _p_delete(self, key):
-            result = self.storage_impl.del_value(self.storage, key)
+        def storage_delete(self, key):
+            result = self.storage_impl.del_value(
+                self.storage, key)
             return result
 
-        def _p_touch(self, key, expire=expire_default):
-            result = self.storage_impl.touch_value(self.storage, key, expire)
+        def storage_touch(self, key, expire=Ellipsis):
+            if expire is Ellipsis:
+                expire = self.expire_default
+            result = self.storage_impl.touch_value(
+                self.storage, key, expire)
             return result
+
+    fbase.Ring.register(Ring)
 
     return Ring
 
@@ -56,38 +54,38 @@ class CacheInterface(fbase.BaseInterface):
     def get(self, **kwargs):
         key = self.key(**kwargs)
         try:
-            result = self.ring._p_get(key)
+            result = self.ring.storage_get(key)
         except fbase.NotFound:
-            result = self.ring._miss_value
+            result = self.ring.miss_value
         return result
 
     def update(self, **kwargs):
         key = self.key(**kwargs)
-        result = self.ring._p_execute(kwargs)
-        self.ring._p_set(key, result, self.ring._expire_default)
+        result = self.ring.execute(kwargs)
+        self.ring.storage_set(key, result)
         return result
 
     def get_or_update(self, **kwargs):
         key = self.key(**kwargs)
         try:
-            result = self.ring._p_get(key)
+            result = self.ring.storage_get(key)
         except fbase.NotFound:
-            result = self.ring._p_execute(kwargs)
-            self.ring._p_set(key, result, self.ring._expire_default)
+            result = self.ring.execute(kwargs)
+            self.ring.storage_set(key, result)
         return result
 
     def set(self, value, **kwargs):
         key = self.key(**kwargs)
-        self.ring._p_set(key, value, self.ring._expire_default)
+        self.ring.storage_set(key, value)
     set._function_args_count = 1
 
     def delete(self, **kwargs):
         key = self.key(**kwargs)
-        self.ring._p_delete(key)
+        self.ring.storage_delete(key)
 
     def touch(self, **kwargs):
         key = self.key(**kwargs)
-        self.ring._p_touch(key)
+        self.ring.storage_touch(key)
 
 
 class DictImpl(fbase.StorageImplementation):
@@ -204,7 +202,7 @@ def dict(
     :see: :func:`ring.aiodict` for :mod:`asyncio` version.
     """
     return fbase.factory(
-        obj, key_prefix=key_prefix, ring_factory=ring_factory,
+        obj, key_prefix=key_prefix, ring_class_factory=ring_class_factory,
         interface=interface, storage_implementation=storage_implementation,
         miss_value=None, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys)
@@ -252,7 +250,7 @@ def memcache(
     miss_value = None
 
     return fbase.factory(
-        client, key_prefix=key_prefix, ring_factory=ring_factory,
+        client, key_prefix=key_prefix, ring_class_factory=ring_class_factory,
         interface=interface, storage_implementation=storage_implementation,
         miss_value=miss_value, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys,
@@ -282,7 +280,7 @@ def redis_py(
     .. _redis-py: https://pypi.org/project/redis/
     """
     return fbase.factory(
-        client, key_prefix=key_prefix, ring_factory=ring_factory,
+        client, key_prefix=key_prefix, ring_class_factory=ring_class_factory,
         interface=interface, storage_implementation=storage_implementation,
         miss_value=None, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys)
@@ -301,7 +299,7 @@ def disk(
     :param diskcache.Cache obj: diskcache Cache object.
     """
     return fbase.factory(
-        obj, key_prefix=key_prefix, ring_factory=ring_factory,
+        obj, key_prefix=key_prefix, ring_class_factory=ring_class_factory,
         interface=interface, storage_implementation=storage_implementation,
         miss_value=None, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys)
@@ -341,7 +339,7 @@ def arcus(
         return 'ring-sha1:' + hashed
 
     return fbase.factory(
-        client, key_prefix=key_prefix, ring_factory=ring_factory,
+        client, key_prefix=key_prefix, ring_class_factory=ring_class_factory,
         interface=interface, storage_implementation=Impl,
         miss_value=None, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys,

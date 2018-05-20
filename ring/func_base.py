@@ -12,8 +12,13 @@ from ring.wire import Wire
 from ring.coder import registry as coder_registry, coderize
 
 __all__ = (
-    'is_method', 'is_classmethod', 'RingBase', 'factory', 'NotFound',
+    'is_method', 'is_classmethod', 'Ring', 'factory', 'NotFound',
     'StorageImplementation', 'BaseInterface')
+
+
+@six.add_metaclass(abc.ABCMeta)
+class Ring(object):
+    pass
 
 
 def is_method(c):
@@ -127,11 +132,6 @@ def coerce(v):
         "Add __ring_key__() or __str__().".format(v, cls))
 
 
-class RingBase(object):
-
-    pass
-
-
 def create_ckey(c, key_prefix, ignorable_keys, coerce=coerce, encoding=None, key_refactor=lambda x: x):
     assert isinstance(c, Callable)
     ckey = CallableKey(
@@ -154,8 +154,9 @@ def create_ckey(c, key_prefix, ignorable_keys, coerce=coerce, encoding=None, key
 
 
 def factory(
-        context, key_prefix, ring_factory,
+        storage_instance, key_prefix, ring_class_factory,
         interface, storage_implementation, miss_value, expire_default, coder,
+        default_action='get_or_update',
         ignorable_keys=None, key_encoding=None, key_refactor=lambda x: x):
 
     raw_coder = coder
@@ -164,17 +165,20 @@ def factory(
         coder = coderize(raw_coder)
 
     def _decorator(f):
-        _callable = Callable(f)
-        _ignorable_keys = suggest_ignorable_keys(_callable, ignorable_keys)
-        _key_prefix = suggest_key_prefix(_callable, key_prefix)
+        cwrapper = Callable(f)
+        _ignorable_keys = suggest_ignorable_keys(cwrapper, ignorable_keys)
+        _key_prefix = suggest_key_prefix(cwrapper, key_prefix)
         ckey = create_ckey(
-            _callable, _key_prefix, _ignorable_keys,
+            cwrapper, _key_prefix, _ignorable_keys,
             encoding=key_encoding, key_refactor=key_refactor)
 
-        ring_class = ring_factory(
-            _callable, context, ckey, RingBase,
-            miss_value, expire_default,
-            coder)
+        ring_class = ring_class_factory(cwrapper)
+        ring_class.cwrapper = cwrapper
+        ring_class.ckey = ckey
+        ring_class.miss_value = miss_value
+        ring_class.expire_default = expire_default
+        ring_class.coder = coder
+        ring_class.storage = storage_instance
 
         class RingWire(Wire):
 
@@ -184,14 +188,16 @@ def factory(
                 ring.wire = self
                 ring.interface = interface(ring)
                 ring.storage_impl = storage_implementation(ring)
-                self.ring = ring
+                self._ring = ring
 
+                self.__func__ = ring.cwrapper.callable
+                self.storage = ring.storage
                 self.encode = ring.coder.encode
                 self.decode = ring.coder.decode
 
-            @functools.wraps(_callable.callable)
+            @functools.wraps(cwrapper.callable)
             def __call__(self, *args, **kwargs):
-                return self.run('get_or_update', *args, **kwargs)
+                return self.run(default_action, *args, **kwargs)
 
             def __getattr__(self, name):
                 try:
@@ -203,8 +209,8 @@ def factory(
                 except AttributeError:
                     pass
 
-                if hasattr(self.ring.interface, name):
-                    attr = getattr(self.ring.interface, name)
+                if hasattr(self._ring.interface, name):
+                    attr = getattr(self._ring.interface, name)
                     if callable(attr):
                         function_args_count = getattr(
                             attr, '_function_args_count', 0)
@@ -215,7 +221,7 @@ def factory(
                             function_args = args[:function_args_count]
                             return attr(*function_args, **full_kwargs)
 
-                        c = self._callable.callable
+                        c = self.cwrapper.callable
                         if function_args_count == 0:
                             functools.wraps(c)(impl_f)
                         impl_f.__name__ = '.'.join((c.__name__, name))
@@ -228,7 +234,7 @@ def factory(
                 attr = getattr(self, action)
                 return attr(*args, **kwargs)
 
-        wire = RingWire.for_callable(_callable)
+        wire = RingWire.for_callable(cwrapper)
 
         return wire
 
@@ -275,10 +281,10 @@ class BaseInterface(object):
 
     def key(self, **kwargs):
         args = self.ring.wire._preargs
-        return self.ring._ckey.build_key(args, kwargs)
+        return self.ring.ckey.build_key(args, kwargs)
 
     def execute(self, **kwargs):
-        return self.ring._p_execute(kwargs)
+        return self.ring.execute(kwargs)
 
     def get(self, **kwargs):  # pragma: no cover
         raise NotImplementedError

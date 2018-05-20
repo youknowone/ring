@@ -69,7 +69,7 @@ Common factory parameters
         object. See :doc:`coder` for details.
     :param List[str] ignorable_keys: (unstable) Parameter names not to use to
         create cache key.
-    :param Union[ring.func_sync.CacheInterface,ring.func_asyncio.ring.func_sync.CacheInterface] interface:
+    :param Union[ring.func_sync.CacheInterface,ring.func_asyncio.CacheInterface] interface:
         Injective implementation of sub-functions.
     :param ring.func_base.StorageImplementation storage_implementation:
         Injective implementation of storage.

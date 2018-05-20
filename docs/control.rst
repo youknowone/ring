@@ -6,8 +6,8 @@ which give elaborate controlling. Note that `object` in `Ring object` doesn't
 mean Python object. They are a collection of Ring-interface-injected stuff
 which shares interface described in this document.
 
-Though it is up to factory functions :func:`ring.func_sync.ring_factory`
-and :func:`ring.func_asyncio.ring_factory`, they share following features.
+Though it is up to factory functions :func:`ring.func_sync.ring_class_factory`
+and :func:`ring.func_asyncio.ring_class_factory`, they share following features.
 
 
 Meta controller
@@ -52,7 +52,7 @@ Building blocks
         def f():
             ...
 
-        assert f.ring.storage is storage
+        assert f.storage is storage
 
     .. code-block:: python
 
@@ -62,7 +62,7 @@ Building blocks
         def f():
             ...
 
-        assert f.ring.storage is client
+        assert f.storage is client
 
 
 .. function:: decode(cache_data)
@@ -85,7 +85,7 @@ Building blocks
 
         r1 = f.get()
         # storage.get may vary by actual storage object
-        r2 = f.decode(f.ring.storage.get(f.key()))
+        r2 = f.decode(f.storage.get(f.key()))
         assert r1 == r2
 
 
@@ -114,7 +114,7 @@ Building blocks
         f.set(f.encode(result))
         # way #3
         # storage.set may vary by actual storage object
-        f.ring.storage.set(f.key(), f.encode(result))
+        f.storage.set(f.key(), f.encode(result))
 
 
 Cache behavior controller
