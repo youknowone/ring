@@ -2,7 +2,6 @@
 is a collection of factory functions.
 """
 import time
-import functools
 import re
 import hashlib
 from ring import func_base as fbase
@@ -12,21 +11,19 @@ __all__ = ('dict', 'memcache', 'redis_py', 'redis', 'disk', 'arcus')
 
 def ring_factory(
         c, storage_instance, ckey, RingBase,
-        Interface, StorageImplementation,
         miss_value, expire_default, coder):
 
-    class Ring(RingBase, Interface):
+    _coder = coder
+
+    class Ring(RingBase):
         _callable = c
         _ckey = ckey
         _expire_default = expire_default
-        _interface_class = Interface
 
         storage = storage_instance
-        _storage_impl = StorageImplementation()
         _miss_value = miss_value
 
-        encode = staticmethod(coder.encode)
-        decode = staticmethod(coder.decode)
+        coder = _coder
 
         # primary primitive methods
 
@@ -35,40 +32,43 @@ def ring_factory(
             return result
 
         def _p_get(self, key):
-            value = self._storage_impl.get_value(self.storage, key)
-            return self.decode(value)
+            value = self.storage_impl.get_value(self.storage, key)
+            return self.coder.decode(value)
 
         def _p_set(self, key, value, expire=expire_default):
-            encoded = self.encode(value)
-            self._storage_impl.set_value(self.storage, key, encoded, expire)
+            encoded = self.coder.encode(value)
+            result = self.storage_impl.set_value(self.storage, key, encoded, expire)
+            return result
 
         def _p_delete(self, key):
-            self._storage_impl.del_value(self.storage, key)
+            result = self.storage_impl.del_value(self.storage, key)
+            return result
 
         def _p_touch(self, key, expire=expire_default):
-            self._storage_impl.touch_value(self.storage, key, expire)
+            result = self.storage_impl.touch_value(self.storage, key, expire)
+            return result
 
     return Ring
 
 
 class CacheInterface(fbase.BaseInterface):
 
-    def _get(self, **kwargs):
-        key = self._key(**kwargs)
+    def get(self, **kwargs):
+        key = self.key(**kwargs)
         try:
             result = self.ring._p_get(key)
         except fbase.NotFound:
             result = self.ring._miss_value
         return result
 
-    def _update(self, **kwargs):
-        key = self._key(**kwargs)
+    def update(self, **kwargs):
+        key = self.key(**kwargs)
         result = self.ring._p_execute(kwargs)
         self.ring._p_set(key, result, self.ring._expire_default)
         return result
 
-    def _get_or_update(self, **kwargs):
-        key = self._key(**kwargs)
+    def get_or_update(self, **kwargs):
+        key = self.key(**kwargs)
         try:
             result = self.ring._p_get(key)
         except fbase.NotFound:
@@ -76,17 +76,17 @@ class CacheInterface(fbase.BaseInterface):
             self.ring._p_set(key, result, self.ring._expire_default)
         return result
 
-    def _set(self, value, **kwargs):
-        key = self._key(**kwargs)
+    def set(self, value, **kwargs):
+        key = self.key(**kwargs)
         self.ring._p_set(key, value, self.ring._expire_default)
-    _set._function_args_count = 1
+    set._function_args_count = 1
 
-    def _delete(self, **kwargs):
-        key = self._key(**kwargs)
+    def delete(self, **kwargs):
+        key = self.key(**kwargs)
         self.ring._p_delete(key)
 
-    def _touch(self, **kwargs):
-        key = self._key(**kwargs)
+    def touch(self, **kwargs):
+        key = self.key(**kwargs)
         self.ring._p_touch(key)
 
 

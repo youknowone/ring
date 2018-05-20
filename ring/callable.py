@@ -128,7 +128,7 @@ class Callable(inspect.Signature):
 
     @cached_property
     def identifier(self):
-        return '{self.callable.__module__}.{self.callable.__name__}'.format(
+        return '{self.callable.__module__}.{self.callable.__qualname__}'.format(
             self=self)
 
     @cached_property
