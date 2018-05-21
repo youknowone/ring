@@ -30,9 +30,9 @@ included in ring installation due to the following issues:
 Check each backend you use and manually add related packages to `setup.py`
 or `requirements.txt`.
 
-If you are new to **Ring** and cache, :func:`ring.dict` doesn't
-require any dependency. Let's start with it. Moving from dict to another
-backend is easy.
+If you are new to **Ring** and cache, let's start with :func:`ring.dict`.
+it doesn't require any dependency. Changing dict to another backend is simple
+for later.
 
 
 First example
@@ -46,7 +46,7 @@ Let's start from a simple example: function cache with bytes data.
     import requests
 
     # save in a dict, expire in 60 seconds.
-    @ring.dict({}, time=60)
+    @ring.dict({}, expire=60)
     def get_url(url):
         return requests.get(url).content
 
@@ -68,7 +68,7 @@ The core feature of **Ring** is explicit controllers.
     # get internal cache key
     key = get_url.key('http://example.com')
     # and access directly to the backend
-    encoded_data = get_url.storage.get(key)
+    encoded_data = get_url.storage.backend.get(key)
     cached_data = get_url.decode(encoded_data)
 
 
@@ -96,7 +96,7 @@ method, classmethod, staticmethod
             self.url = url
 
         def __ring_key__(self):
-            return 'page:' + self.url
+            return 'page=' + self.url
 
         @ring.dict({})
         def content(self):
@@ -114,16 +114,16 @@ method, classmethod, staticmethod
 
 
     Page.example_dot_com()  # as expected
-    assert Page.key().endswith('.example_dot_com')  # key with function-name
+    assert Page.example_dot_com.key().endswith('Page.example_dot_com')  # key with function-name
 
     Page.class_content()  # as expected
     # key with function-name + class name
-    assert Page.class_content.key().endswith('.Page.class_content:Page')
+    assert Page.class_content.key().endswith('Page.class_content:Page')
 
     p = Page('http://example.com')
     p.content()  # as expected
     # key with class name + function name + __ring_key__
-    assert p.content.key().endswith('Page.content:page:http://example.com/')
+    assert p.content.key().endswith('Page.content:page=http://example.com')
 
 
 Choosing backend
@@ -156,12 +156,12 @@ Now you are ready to edit the ``get_url`` to use Memcached.
 
     import ring
     import requests
-    import pymemcache   #1 import pymemcache
+    import pymemcache.client   #1 import pymemcache
 
-    client = pymemcache.Client((127.0.0.1, 11211))  #2 create a client
+    client = pymemcache.client.Client(('127.0.0.1', 11211))  #2 create a client
 
     # save to memcache client, expire in 60 seconds.
-    @ring.memcache(client, time=60)  #3 dict -> memcache
+    @ring.memcache(client, expire=60)  #3 dict -> memcache
     def get_url(url):
         return requests.get(url).content
 
@@ -217,11 +217,11 @@ decides the kind of coding.
 
     import ring
     import json
-    import pymemcache
+    import pymemcache.client
 
-    client = pymemcache.Client(('127.0.0.1', 11211))
+    client = pymemcache.client.Client(('127.0.0.1', 11211))
 
-    @ring.memcache(client, time=60, coder='json')
+    @ring.memcache(client, expire=60, coder='json')
     def f():
         return {'key': 'data', 'number': 42}
 
@@ -230,9 +230,9 @@ decides the kind of coding.
     loaded = f.get()
     assert isinstance(loaded, dict)
     assert loaded == {'key': 'data', 'number': 42}
-    raw_data = f.storage.get(f.key())
+    raw_data = f.storage.backend.get(f.key())
     assert isinstance(raw_data, bytes)  # `str` for py2
-    assert raw_data == json.dumps({'key': 'data', 'number': 42})
+    assert raw_data == json.dumps({'key': 'data', 'number': 42}).encode('utf-8')
 
 
 :see: :doc:`coder` about more backends.
@@ -247,8 +247,8 @@ Ring factories share common parameters to control Ring objects' behavior.
 - key_prefix
 - coder
 - ignorable_keys
-- inferface
-- storage_implementation
+- user_inferface
+- storage_interface
 
 :see: :doc:`factory` for details.
 
@@ -268,7 +268,7 @@ don't need to be suffered by looking inside of **Ring**.
         ...
 
     key = f.key()  # retrieving the key
-    raw_data = f.storage.get(key)  # getting raw data from storage
+    raw_data = f.storage.backend.get(key)  # getting raw data from storage
 
 
 :see: :doc:`control` for more attributes.

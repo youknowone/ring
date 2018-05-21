@@ -6,9 +6,6 @@ which give elaborate controlling. Note that `object` in `Ring object` doesn't
 mean Python object. They are a collection of Ring-interface-injected stuff
 which shares interface described in this document.
 
-Though it is up to factory functions :func:`ring.func_sync.ring_class_factory`
-and :func:`ring.func_asyncio.ring_class_factory`, they share following features.
-
 
 Meta controller
 ---------------
@@ -24,7 +21,7 @@ Meta controller
 
     .. code-block:: python
 
-        @ring.dict(...)
+        @ring.dict({})
         def f(a, b):
             ...
 
@@ -39,8 +36,9 @@ Building blocks
 
     Cache storage where the cached data be saved.
 
-    For most of the included factories, it returns the first argument of the
-    **Ring** factories.
+    This is an instance of BaseStorage of each data. It includes
+    `backend` attribute which refers actual storage backend - the first
+    argument of the **Ring** factories for most of the included factories.
 
     For example:
 
@@ -52,7 +50,7 @@ Building blocks
         def f():
             ...
 
-        assert f.storage is storage
+        assert f.storage.backend is storage
 
     .. code-block:: python
 
@@ -62,7 +60,7 @@ Building blocks
         def f():
             ...
 
-        assert f.storage is client
+        assert f.storage.backend is client
 
 
 .. function:: decode(cache_data)
@@ -79,10 +77,11 @@ Building blocks
 
     .. code-block:: python
 
-        @ring...
+        @ring.dict({})
         def f():
             ...
 
+        f.set('some_value')
         r1 = f.get()
         # storage.get may vary by actual storage object
         r2 = f.decode(f.storage.get(f.key()))
@@ -103,7 +102,7 @@ Building blocks
 
     .. code-block:: python
 
-        @ring...
+        @ring.dict({})
         def f():
             ...
 
@@ -124,8 +123,8 @@ Note that behavior controllers are not fixed as the following meaning. This
 section is written to describe what **Ring** and its users expect for each
 function, not to define what these functions actually do.
 
-To change behavior, inherit :class:`ring.sync.CacheInterface` or
-:class:`ring.asyncio.CacheInterface` then passes it to the ``cache_interface``
+To change behavior, inherit :class:`ring.sync.CacheUserInterface` or
+:class:`ring.asyncio.CacheUserInterface` then passes it to the `user_interface`
 parameter of **Ring** factories.
 
 
@@ -166,7 +165,7 @@ parameter of **Ring** factories.
     #. Create a cache key with given parameters.
     #. Try to get cached data by the key.
     #. If cache data exists, return it.
-    #. Otherwise, return ``miss_value`` which normally is :data:`None`.
+    #. Otherwise, return `miss_value` which normally is :data:`None`.
 
 
 .. function:: update([*args, **kwargs])
@@ -206,7 +205,7 @@ parameter of **Ring** factories.
     time.
 
     :note: Unlike other sub-functions, this feature may not be supported by
-           backends.
+           the backends.
 
     The behavior follows next steps:
 

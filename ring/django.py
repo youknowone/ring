@@ -6,7 +6,7 @@ from __future__ import absolute_import
 import functools
 from django.core import cache
 from . import func_base as fbase
-from .func_sync import ring_class_factory, CacheInterface
+from .func_sync import CacheUserInterface
 
 
 __all__ = ('django', 'django_default')
@@ -19,23 +19,23 @@ def promote_backend(backend):
     return backend
 
 
-class DjangoImpl(fbase.StorageImplementation):
-    def get_value(self, backend, key):
-        value = backend.get(key)
+class DjangoStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
+    def get_value(self, key):
+        value = self.backend.get(key)
         if value is None:
             raise fbase.NotFound
         return value
 
-    def set_value(self, backend, key, value, expire):
-        backend.set(key, value, timeout=expire)
+    def set_value(self, key, value, expire):
+        self.backend.set(key, value, timeout=expire)
 
-    def del_value(self, backend, key):
-        backend.delete(key)
+    def delete_value(self, key):
+        self.backend.delete(key)
 
 
 def django(
         backend, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
-        interface=CacheInterface, storage_implementation=DjangoImpl):
+        user_interface=CacheUserInterface, storage_class=DjangoStorage):
     """Django cache interface based on low-level cache API.
 
     :param Union[str,object] backend: Django's cache config key for
@@ -50,8 +50,8 @@ def django(
     """
     backend = promote_backend(backend)
     return fbase.factory(
-        backend, key_prefix=key_prefix, ring_class_factory=ring_class_factory,
-        interface=interface, storage_implementation=storage_implementation,
+        backend, key_prefix=key_prefix, on_manufactured=None,
+        user_interface=user_interface, storage_class=storage_class,
         miss_value=None, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys)
 

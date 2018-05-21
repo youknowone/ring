@@ -6,7 +6,6 @@ In this document, you will learn:
   #. About pre-defined factories included in **Ring**.
   #. About storage backends.
   #. About Django extension.
-  #. About :class:`ring.func_base.Ring` factory.
 
 
 Built-in factory functions and backends
@@ -40,7 +39,7 @@ Django extension
 
 Creating a new factory function is also quick & easy.
 
-Though **Django** is not a storage, it has its own low-level cache API.
+Though **Django** itself is not a storage, it has its own low-level cache API.
 **Ring** has a factory function for Django as a cache backend:
 
 .. autosummary::
@@ -54,9 +53,9 @@ Though **Django** is not a storage, it has its own low-level cache API.
 Common factory parameters
 -------------------------
 
-.. function:: <general_factory_function>(storage, [key_prefix=None,
-        expire=None, coder=None, ignorable_keys=None, interface=CacheInterface,
-        storage_implementation=Impl])
+.. function:: <general_factory_function>(storage_backend, [key_prefix=None,
+        expire=None, coder=None, ignorable_keys=None,
+        interface=CacheUserInterface, storage_class=StorageClass])
 
     :note: This is about the general factory description, not a specific
         factory called `general_factory_function`.
@@ -69,14 +68,13 @@ Common factory parameters
         object. See :doc:`coder` for details.
     :param List[str] ignorable_keys: (unstable) Parameter names not to use to
         create cache key.
-    :param Union[ring.func_sync.CacheInterface,ring.func_asyncio.CacheInterface] interface:
+    :param Union[ring.func_sync.CacheUserInterface,ring.func_asyncio.CacheUserInterface] interface:
         Injective implementation of sub-functions.
-    :param ring.func_base.StorageImplementation storage_implementation:
+    :param ring.func_base.BaseStorage storage_class:
         Injective implementation of storage.
 
 
-:see: :func:`ring.func_sync.factory` for factory definition.
-:see: :func:`ring.func_asyncio.factory` for :mod:`asyncio` factory definition.
+:see: :func:`ring.func_base.factory` for generic factory definition.
 
 
 Creating factory shortcuts
@@ -90,19 +88,19 @@ has an answer - use :func:`functools.partial` to create shortcuts.
 
     import functools
     import ring
-    import pymemcache
+    import pymemcache.client
 
-    client = pymemcache.Client(('127.0.0.1', 11211))
+    client = pymemcache.client.Client(('127.0.0.1', 11211))
 
     # Verbose calling
-    @ring.memcache(client, coder='pickle', cache_interface=DoubleCacheInterface)
+    @ring.memcache(client, coder='pickle', user_interface=DoubleCacheUserInterface)
     def f1():
         ...
 
     # Shortcut
     mem_ring = functools.partial(
         ring.memcache, client, coder='pickle',
-        cache_interface=DoubleCacheInterface)
+        user_interface=DoubleCacheUserInterface)
 
     @mem_ring()
     def f2():

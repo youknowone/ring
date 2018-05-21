@@ -75,7 +75,7 @@ def test_common(gen_storage):
 
     # `f` is a callable with argument `a` and `b`
     # test f is correct
-    assert f.storage is storage
+    assert f.storage.backend is storage
     assert f.key(a=0, b=0)  # f takes a, b
     assert base[0] is not None  # f has attr base for test
     assert ((yield from f.execute(a=1, b=2))) != ((yield from f.execute(a=1, b=3)))  # f is not singular

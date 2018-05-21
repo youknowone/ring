@@ -14,13 +14,13 @@ from .wire import Wire
 from .coder import registry as coder_registry, coderize
 
 __all__ = (
-    'is_method', 'is_classmethod', 'Ring', 'factory', 'NotFound',
-    'StorageImplementation', 'BaseInterface')
+    'is_method', 'is_classmethod', 'BaseRing', 'factory', 'NotFound',
+    'BaseUserInterface', 'BaseStorage', 'CommonMixinStorage', )
 
 
 @six.add_metaclass(abc.ABCMeta)
-class Ring(object):
-    pass
+class BaseRing(object):
+    """Abstract principal root class of Ring classes"""
 
 
 def is_method(c):
@@ -161,8 +161,8 @@ def create_ckey(c, key_prefix, ignorable_keys, coerce=coerce, encoding=None, key
 
 
 def factory(
-        storage_instance, key_prefix, ring_class_factory,
-        interface, storage_implementation, miss_value, expire_default, coder,
+        storage_backend, key_prefix, on_manufactured,
+        user_interface, storage_class, miss_value, expire_default, coder,
         default_action='get_or_update',
         ignorable_keys=None, key_encoding=None, key_refactor=lambda x: x):
 
@@ -179,28 +179,30 @@ def factory(
             cwrapper, _key_prefix, _ignorable_keys,
             encoding=key_encoding, key_refactor=key_refactor)
 
-        ring_class = ring_class_factory(cwrapper)
-        ring_class.cwrapper = cwrapper
-        ring_class.ckey = ckey
-        ring_class.miss_value = miss_value
-        ring_class.expire_default = expire_default
-        ring_class.coder = coder
-        ring_class.storage = storage_instance
+        class Ring(BaseRing):
+            pass
+
+        Ring.cwrapper = cwrapper
+        Ring.ckey = ckey
+        Ring.miss_value = miss_value
+        Ring.expire_default = expire_default
+        Ring.coder = coder
 
         class RingWire(Wire):
 
             def __init__(self, *args, **kwargs):
                 super(RingWire, self).__init__(*args, **kwargs)
-                ring = ring_class()
+                ring = Ring()
                 ring.wire = self
-                ring.interface = interface(ring)
-                ring.storage_impl = storage_implementation(ring)
+                ring.user_interface = user_interface(ring)
+                ring.storage = storage_class(ring, storage_backend)
+                ring.storage.backend = storage_backend
                 self._ring = ring
 
                 self.__func__ = ring.cwrapper.callable
-                self.storage = ring.storage
                 self.encode = ring.coder.encode
                 self.decode = ring.coder.decode
+                self.storage = ring.storage
 
             @functools.wraps(cwrapper.callable)
             def __call__(self, *args, **kwargs):
@@ -216,37 +218,35 @@ def factory(
                 except AttributeError:
                     pass
 
-                if hasattr(self._ring.interface, name):
-                    attr = getattr(self._ring.interface, name)
-                    if callable(attr):
-                        function_args_count = getattr(
-                            attr, '_function_args_count', 0)
+                attr = getattr(self._ring.user_interface, name)
+                if callable(attr):
+                    function_args_count = getattr(
+                        attr, '_function_args_count', 0)
 
-                        def impl_f(*args, **kwargs):
-                            full_kwargs = self.merge_args(
-                                args[function_args_count:], kwargs)
-                            function_args = args[:function_args_count]
-                            return attr(*function_args, **full_kwargs)
+                    def impl_f(*args, **kwargs):
+                        full_kwargs = self.merge_args(
+                            args[function_args_count:], kwargs)
+                        function_args = args[:function_args_count]
+                        return attr(*function_args, **full_kwargs)
 
-                        c = self.cwrapper.callable
-                        functools.wraps(c)(impl_f)
-                        impl_f.__name__ = '.'.join((c.__name__, name))
-                        if six.PY34:
-                            impl_f.__qualname__ = '.'.join(
-                                (c.__qualname__, name))
+                    c = self.cwrapper.callable
+                    functools.wraps(c)(impl_f)
+                    impl_f.__name__ = '.'.join((c.__name__, name))
+                    if six.PY34:
+                        impl_f.__qualname__ = '.'.join((c.__qualname__, name))
 
-                        annotations = getattr(
-                            impl_f, '__annotations__', {})
-                        annotations_override = getattr(
-                            attr, '__annotations_override__', {})
-                        for field, override in annotations_override.items():
-                            if isinstance(override, types.FunctionType):
-                                new_annotation = override(annotations)
-                            else:
-                                new_annotation = override
-                            annotations[field] = new_annotation
+                    annotations = getattr(
+                        impl_f, '__annotations__', {})
+                    annotations_override = getattr(
+                        attr, '__annotations_override__', {})
+                    for field, override in annotations_override.items():
+                        if isinstance(override, types.FunctionType):
+                            new_annotation = override(annotations)
+                        else:
+                            new_annotation = override
+                        annotations[field] = new_annotation
 
-                        setattr(self, name, impl_f)
+                    setattr(self, name, impl_f)
 
                 return self.__getattribute__(name)
 
@@ -255,6 +255,8 @@ def factory(
                 return attr(*args, **kwargs)
 
         wire = RingWire.for_callable(cwrapper)
+        if on_manufactured is not None:
+            on_manufactured(wire_frame=wire, ring_class=Ring)
         return wire
 
     return _decorator
@@ -270,30 +272,75 @@ class NotFound(Exception):
     """
 
 
-@six.add_metaclass(abc.ABCMeta)
-class StorageImplementation(object):
+class BaseStorage(object):
+    """Base storage interface."""
 
-    def __init__(self, ring):
+    def __init__(self, ring, backend):
         self.ring = ring
+        self.backend = backend
 
     @abc.abstractmethod
-    def get_value(self, obj, key):  # pragma: no cover
+    def get(self, key):  # pragma: no cover
         raise NotImplementedError
 
     @abc.abstractmethod
-    def set_value(self, obj, key, value, expire):  # pragma: no cover
+    def set(self, key, value, expire=Ellipsis):  # pragma: no cover
         raise NotImplementedError
 
     @abc.abstractmethod
-    def del_value(self, obj, key):  # pragma: no cover
+    def delete(self, key):  # pragma: no cover
         raise NotImplementedError
 
-    def touch_value(self, obj, key, expire):
+    @abc.abstractmethod
+    def touch(self, key, expire=Ellipsis):  # pragma: no cover
+        raise NotImplementedError
+
+
+class CommonMixinStorage(BaseStorage):
+    """General storage root for StorageMixin"""
+
+    def get(self, key):
+        value = self.get_value(key)
+        return self.ring.coder.decode(value)
+
+    def set(self, key, value, expire=Ellipsis):
+        if expire is Ellipsis:
+            expire = self.ring.expire_default
+        encoded = self.ring.coder.encode(value)
+        result = self.set_value(key, encoded, expire)
+        return result
+
+    def delete(self, key):
+        result = self.delete_value(key)
+        return result
+
+    def touch(self, key, expire=Ellipsis):
+        if expire is Ellipsis:
+            expire = self.ring.expire_default
+        result = self.touch_value(key, expire)
+        return result
+
+
+class StorageMixin(object):
+
+    @abc.abstractmethod
+    def get_value(self, key):  # pragma: no cover
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def set_value(self, key, value, expire):  # pragma: no cover
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def delete_value(self, key):  # pragma: no cover
+        raise NotImplementedError
+
+    def touch_value(self, key, expire):
         raise NotImplementedError
 
 
 @six.add_metaclass(abc.ABCMeta)
-class BaseInterface(object):
+class BaseUserInterface(object):
 
     def __init__(self, ring):
         self.ring = ring
@@ -306,7 +353,7 @@ class BaseInterface(object):
     }
 
     def execute(self, **kwargs):
-        return self.ring.execute(kwargs)
+        return self.ring.cwrapper.callable(*self.ring.wire._preargs, **kwargs)
 
     def get(self, **kwargs):  # pragma: no cover
         raise NotImplementedError
