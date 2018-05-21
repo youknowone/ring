@@ -13,63 +13,50 @@ inspect_iscoroutinefunction = getattr(
     inspect, 'iscoroutinefunction', lambda f: False)
 
 
-def ring_class_factory(cwrapper) -> type:
-
+def factory_doctor(wire_frame, ring_class) -> None:
+    cwrapper = ring_class.cwrapper
     if not cwrapper.is_coroutine:
         raise TypeError(
             "The function for cache '{}' must be an async function.".format(
                 cwrapper.code.co_name))
 
-    class Ring(object):
-        # primary primitive methods
 
-        @asyncio.coroutine
-        def execute(self, kwargs):
-            result = yield from self.cwrapper.callable(
-                *self.wire._preargs, **kwargs)
-            return result
+class CommonMixinStorage(fbase.BaseStorage):  # Working only as mixin
+    """General :mod:`asyncio` storage root for BaseStorageMixin"""
 
-        @asyncio.coroutine
-        def storage_get(self, key):
-            value = yield from self.storage_impl.get_value(
-                self.storage, key)
-            return self.coder.decode(value)
+    @asyncio.coroutine
+    def get(self, key):
+        value = yield from self.get_value(key)
+        return self.ring.coder.decode(value)
 
-        @asyncio.coroutine
-        def storage_set(self, key, value, expire=...):
-            if expire is ...:
-                expire = self.expire_default
-            encoded = self.coder.encode(value)
-            result = yield from self.storage_impl.set_value(
-                self.storage, key, encoded, expire)
-            return result
+    @asyncio.coroutine
+    def set(self, key, value, expire=...):
+        if expire is ...:
+            expire = self.ring.expire_default
+        encoded = self.ring.coder.encode(value)
+        result = yield from self.set_value(key, encoded, expire)
+        return result
 
-        @asyncio.coroutine
-        def storage_delete(self, key):
-            result = yield from self.storage_impl.del_value(
-                self.storage, key)
-            return result
+    @asyncio.coroutine
+    def delete(self, key):
+        result = yield from self.delete_value(key)
+        return result
 
-        @asyncio.coroutine
-        def storage_touch(self, key, expire=...):
-            if expire is ...:
-                expire = self.expire_default
-            result = yield from self.storage_impl.touch_value(
-                self.storage, key, expire)
-            return result
-
-    fbase.Ring.register(Ring)
-
-    return Ring
+    @asyncio.coroutine
+    def touch(self, key, expire=...):
+        if expire is ...:
+            expire = self.ring.expire_default
+        result = yield from self.touch_value(key, expire)
+        return result
 
 
-class CacheInterface(fbase.BaseInterface):
+class CacheUserInterface(fbase.BaseUserInterface):
 
     @asyncio.coroutine
     def get(self, **kwargs):
         key = self.key(**kwargs)
         try:
-            result = yield from self.ring.storage_get(key)
+            result = yield from self.ring.storage.get(key)
         except fbase.NotFound:
             result = self.ring.miss_value
         return result
@@ -81,24 +68,24 @@ class CacheInterface(fbase.BaseInterface):
     @asyncio.coroutine
     def update(self, **kwargs):
         key = self.key(**kwargs)
-        result = yield from self.ring.execute(kwargs)
-        yield from self.ring.storage_set(key, result)
+        result = yield from self.execute(**kwargs)
+        yield from self.ring.storage.set(key, result)
         return result
 
     @asyncio.coroutine
     def get_or_update(self, **kwargs):
         key = self.key(**kwargs)
         try:
-            result = yield from self.ring.storage_get(key)
+            result = yield from self.ring.storage.get(key)
         except fbase.NotFound:
-            result = yield from self.ring.execute(kwargs)
-            yield from self.ring.storage_set(key, result)
+            result = yield from self.execute(**kwargs)
+            yield from self.ring.storage.set(key, result)
         return result
 
     @asyncio.coroutine
     def set(self, _value, **kwargs):
         key = self.key(**kwargs)
-        yield from self.ring.storage_set(key, _value)
+        yield from self.ring.storage.set(key, _value)
     set._function_args_count = 1
     set.__annotations_override__ = {
         'return': None,
@@ -107,7 +94,7 @@ class CacheInterface(fbase.BaseInterface):
     @asyncio.coroutine
     def delete(self, **kwargs):
         key = self.key(**kwargs)
-        yield from self.ring.storage_delete(key)
+        yield from self.ring.storage.delete(key)
     delete.__annotations_override__ = {
         'return': None,
     }
@@ -115,21 +102,21 @@ class CacheInterface(fbase.BaseInterface):
     @asyncio.coroutine
     def touch(self, **kwargs):
         key = self.key(**kwargs)
-        yield from self.ring.storage_touch(key)
+        yield from self.ring.storage.touch(key)
     touch.__annotations_override__ = {
         'return': None,
     }
 
 
-class DictImpl(fbase.StorageImplementation):
+class DictStorage(CommonMixinStorage, fbase.StorageMixin):
 
     now = time.time
 
     @asyncio.coroutine
-    def get_value(self, obj, key):
+    def get_value(self, key):
         _now = self.now()
         try:
-            expired_time, value = obj[key]
+            expired_time, value = self.backend[key]
         except KeyError:
             raise fbase.NotFound from KeyError
         if expired_time is not None and expired_time < _now:
@@ -137,83 +124,80 @@ class DictImpl(fbase.StorageImplementation):
         return value
 
     @asyncio.coroutine
-    def set_value(self, obj, key, value, expire):
+    def set_value(self, key, value, expire):
         _now = self.now()
 
         if expire is None:
             expired_time = None
         else:
             expired_time = _now + expire
-        obj[key] = expired_time, value
+        self.backend[key] = expired_time, value
 
     @asyncio.coroutine
-    def del_value(self, obj, key):
+    def delete_value(self, key):
         try:
-            del obj[key]
+            del self.backend[key]
         except KeyError:
             pass
 
     @asyncio.coroutine
-    def touch_value(self, obj, key, expire):
+    def touch_value(self, key, expire):
         _now = self.now()
 
         try:
-            expired_time, value = obj[key]
+            expired_time, value = self.backend[key]
         except KeyError:
             return
         if expire is None:
             expired_time = None
         else:
             expired_time = _now + expire
-        obj[key] = expired_time, value
+        self.backend[key] = expired_time, value
 
 
-class AiomcacheImpl(fbase.StorageImplementation):
+class AiomcacheStorage(CommonMixinStorage, fbase.StorageMixin):
     @asyncio.coroutine
-    def get_value(self, client, key):
-        value = yield from client.get(key)
+    def get_value(self, key):
+        value = yield from self.backend.get(key)
         if value is None:
             raise fbase.NotFound
         return value
 
-    def set_value(self, client, key, value, expire):
-        return client.set(key, value, expire)
+    def set_value(self, key, value, expire):
+        return self.backend.set(key, value, expire)
 
-    def del_value(self, client, key):
-        return client.delete(key)
+    def delete_value(self, key):
+        return self.backend.delete(key)
 
-    def touch_value(self, client, key, expire):
-        return client.touch(key, expire)
+    def touch_value(self, key, expire):
+        return self.backend.touch(key, expire)
 
 
-class AioredisImpl(fbase.StorageImplementation):
+class AioredisStorage(CommonMixinStorage, fbase.StorageMixin):
     @asyncio.coroutine
-    def get_value(self, pool, key):
-        value = yield from pool.get(key)
+    def get_value(self, key):
+        value = yield from self.backend.get(key)
         if value is None:
             raise fbase.NotFound
         return value
 
-    @asyncio.coroutine
-    def set_value(self, pool, key, value, expire):
-        yield from pool.set(key, value, expire=expire)
+    def set_value(self, key, value, expire):
+        return self.backend.set(key, value, expire=expire)
 
-    @asyncio.coroutine
-    def del_value(self, pool, key):
-        yield from pool.delete(key)
+    def delete_value(self, key):
+        return self.backend.delete(key)
 
-    @asyncio.coroutine
-    def touch_value(self, pool, key, expire):
-        yield from pool.expire(key, expire)
+    def touch_value(self, key, expire):
+        return self.backend.expire(key, expire)
 
 
 def dict(
         obj, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
-        interface=CacheInterface, storage_implementation=DictImpl):
+        user_interface=CacheUserInterface, storage_class=DictStorage):
     """Basic Python :class:`dict` based cache.
 
-    This backend is not designed for real products, but useful by
-    keeping below in mind:
+    This backend is not designed for real products, but useful by keeping
+    below in mind:
 
     - `functools.lrucache` is the standard library for the most of local cache.
     - Expired objects will never be removed from the dict. If the function has
@@ -230,8 +214,8 @@ def dict(
     :see: :func:`ring.dict` for non-asyncio version.
     """
     return fbase.factory(
-        obj, key_prefix=key_prefix, ring_class_factory=ring_class_factory,
-        interface=interface, storage_implementation=storage_implementation,
+        obj, key_prefix=key_prefix, on_manufactured=factory_doctor,
+        user_interface=user_interface, storage_class=storage_class,
         miss_value=None, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys)
 
@@ -242,7 +226,7 @@ aiodict = dict
 
 def aiomcache(
         client, key_prefix=None, expire=0, coder=None, ignorable_keys=None,
-        interface=CacheInterface, storage_implementation=AiomcacheImpl,
+        user_interface=CacheUserInterface, storage_class=AiomcacheStorage,
         key_encoding='utf-8'):
     """Memcached_ interface for :mod:`asyncio`.
 
@@ -265,8 +249,8 @@ def aiomcache(
     from ring._memcache import key_refactor
 
     return fbase.factory(
-        client, key_prefix=key_prefix, ring_class_factory=ring_class_factory,
-        interface=interface, storage_implementation=storage_implementation,
+        client, key_prefix=key_prefix, on_manufactured=factory_doctor,
+        user_interface=user_interface, storage_class=storage_class,
         miss_value=None, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys,
         key_encoding=key_encoding,
@@ -275,7 +259,7 @@ def aiomcache(
 
 def aioredis(
         pool, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
-        interface=CacheInterface, storage_implementation=AioredisImpl):
+        user_interface=CacheUserInterface, storage_class=AioredisStorage):
     """Redis interface for :mod:`asyncio`.
 
     Expected client package is:
@@ -294,7 +278,7 @@ def aioredis(
     :see: :func:`ring.redis` for non-asyncio version.
     """
     return fbase.factory(
-        pool, key_prefix=key_prefix, ring_class_factory=ring_class_factory,
-        interface=interface, storage_implementation=storage_implementation,
+        pool, key_prefix=key_prefix, on_manufactured=factory_doctor,
+        user_interface=user_interface, storage_class=storage_class,
         miss_value=None, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys)

@@ -11,52 +11,12 @@ from . import func_base as fbase
 __all__ = ('dict', 'memcache', 'redis_py', 'redis', 'disk', )
 
 
-def ring_class_factory(cwrapper):
-
-    class Ring(object):
-        # primary primitive methods
-
-        def execute(self, kwargs):
-            result = self.cwrapper.callable(
-                *self.wire._preargs, **kwargs)
-            return result
-
-        def storage_get(self, key):
-            value = self.storage_impl.get_value(
-                self.storage, key)
-            return self.coder.decode(value)
-
-        def storage_set(self, key, value, expire=Ellipsis):
-            if expire is Ellipsis:
-                expire = self.expire_default
-            encoded = self.coder.encode(value)
-            result = self.storage_impl.set_value(
-                self.storage, key, encoded, expire)
-            return result
-
-        def storage_delete(self, key):
-            result = self.storage_impl.del_value(
-                self.storage, key)
-            return result
-
-        def storage_touch(self, key, expire=Ellipsis):
-            if expire is Ellipsis:
-                expire = self.expire_default
-            result = self.storage_impl.touch_value(
-                self.storage, key, expire)
-            return result
-
-    fbase.Ring.register(Ring)
-
-    return Ring
-
-
-class CacheInterface(fbase.BaseInterface):
+class CacheUserInterface(fbase.BaseUserInterface):
 
     def get(self, **kwargs):
         key = self.key(**kwargs)
         try:
-            result = self.ring.storage_get(key)
+            result = self.ring.storage.get(key)
         except fbase.NotFound:
             result = self.ring.miss_value
         return result
@@ -67,22 +27,22 @@ class CacheInterface(fbase.BaseInterface):
 
     def update(self, **kwargs):
         key = self.key(**kwargs)
-        result = self.ring.execute(kwargs)
-        self.ring.storage_set(key, result)
+        result = self.execute(**kwargs)
+        self.ring.storage.set(key, result)
         return result
 
     def get_or_update(self, **kwargs):
         key = self.key(**kwargs)
         try:
-            result = self.ring.storage_get(key)
+            result = self.ring.storage.get(key)
         except fbase.NotFound:
-            result = self.ring.execute(kwargs)
-            self.ring.storage_set(key, result)
+            result = self.execute(**kwargs)
+            self.ring.storage.set(key, result)
         return result
 
     def set(self, _value, **kwargs):
         key = self.key(**kwargs)
-        self.ring.storage_set(key, _value)
+        self.ring.storage.set(key, _value)
     set._function_args_count = 1
     set.__annotations_override__ = {
         'return': None,
@@ -90,113 +50,113 @@ class CacheInterface(fbase.BaseInterface):
 
     def delete(self, **kwargs):
         key = self.key(**kwargs)
-        self.ring.storage_delete(key)
+        self.ring.storage.delete(key)
     delete.__annotations_override__ = {
         'return': None,
     }
 
     def touch(self, **kwargs):
         key = self.key(**kwargs)
-        self.ring.storage_touch(key)
+        self.ring.storage.touch(key)
     touch.__annotations_override__ = {
         'return': None,
     }
 
 
-class DictImpl(fbase.StorageImplementation):
+class DictStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
 
     now = time.time
 
-    def get_value(self, obj, key):
+    def get_value(self, key):
         _now = self.now()
         try:
-            expired_time, value = obj[key]
+            expired_time, value = self.backend[key]
         except KeyError:
             raise fbase.NotFound
         if expired_time is not None and expired_time < _now:
             raise fbase.NotFound
         return value
 
-    def set_value(self, obj, key, value, expire):
+    def set_value(self, key, value, expire):
         _now = self.now()
         if expire is None:
             expired_time = None
         else:
             expired_time = _now + expire
-        obj[key] = expired_time, value
+        self.backend[key] = expired_time, value
 
-    def del_value(self, obj, key):
+    def delete_value(self, key):
         try:
-            del obj[key]
+            del self.backend[key]
         except KeyError:
             pass
 
-    def touch_value(self, obj, key, expire):
+    def touch_value(self, key, expire):
         _now = self.now()
         try:
-            expired_time, value = obj[key]
+            expired_time, value = self.backend[key]
         except KeyError:
             return
         if expire is None:
             expired_time = None
         else:
             expired_time = _now + expire
-        obj[key] = expired_time, value
+        self.backend[key] = expired_time, value
 
 
-class DiskImpl(fbase.StorageImplementation):
-    def get_value(self, client, key):
-        value = client.get(key)
+class MemcacheStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
+    def get_value(self, key):
+        value = self.backend.get(key)
         if value is None:
             raise fbase.NotFound
         return value
 
-    def set_value(self, client, key, value, expire):
-        client.set(key, value, expire)
+    def set_value(self, key, value, expire):
+        self.backend.set(key, value, expire)
 
-    def del_value(self, client, key):
-        client.delete(key)
+    def delete_value(self, key):
+        self.backend.delete(key)
+
+    def touch_value(self, key, expire):
+        self.backend.touch(key, expire)
 
 
-class MemcacheImpl(fbase.StorageImplementation):
-    def get_value(self, client, key):
-        value = client.get(key)
+class RedisStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
+    def get_value(self, key):
+        value = self.backend.get(key)
         if value is None:
             raise fbase.NotFound
         return value
 
-    def set_value(self, client, key, value, expire):
-        client.set(key, value, expire)
+    def set_value(self, key, value, expire):
+        self.backend.set(key, value, expire)
 
-    def del_value(self, client, key):
-        client.delete(key)
+    def delete_value(self, key):
+        self.backend.delete(key)
 
-    def touch_value(self, client, key, expire):
-        client.touch(key, expire)
-
-
-class RedisImplementation(fbase.StorageImplementation):
-    def get_value(self, client, key):
-        value = client.get(key)
-        if value is None:
-            raise fbase.NotFound
-        return value
-
-    def set_value(self, client, key, value, expire):
-        client.set(key, value, expire)
-
-    def del_value(self, client, key):
-        client.delete(key)
-
-    def touch_value(self, client, key, expire):
+    def touch_value(self, key, expire):
         if expire is None:
             raise TypeError("'touch' is requested for persistant cache")
-        client.expire(key, expire)
+        self.backend.expire(key, expire)
+
+
+class DiskStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
+    def get_value(self, key):
+        value = self.backend.get(key)
+        if value is None:
+            raise fbase.NotFound
+        return value
+
+    def set_value(self, key, value, expire):
+        self.backend.set(key, value, expire)
+
+    def delete_value(self, key):
+        self.backend.delete(key)
 
 
 def dict(
         obj, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
-        interface=CacheInterface, storage_implementation=DictImpl):
+        user_interface=CacheUserInterface, storage_class=DictStorage):
     """Basic Python :class:`dict` based cache.
 
     This backend is not designed for real products, but useful by
@@ -217,15 +177,15 @@ def dict(
     :see: :func:`ring.aiodict` for :mod:`asyncio` version.
     """
     return fbase.factory(
-        obj, key_prefix=key_prefix, ring_class_factory=ring_class_factory,
-        interface=interface, storage_implementation=storage_implementation,
+        obj, key_prefix=key_prefix, on_manufactured=None,
+        user_interface=user_interface, storage_class=storage_class,
         miss_value=None, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys)
 
 
 def memcache(
         client, key_prefix=None, expire=0, coder=None, ignorable_keys=None,
-        interface=CacheInterface, storage_implementation=MemcacheImpl):
+        user_interface=CacheUserInterface, storage_class=MemcacheStorage):
     """Common Memcached_ interface.
 
     This backend is common interface for various memcached client libraries
@@ -265,8 +225,8 @@ def memcache(
     miss_value = None
 
     return fbase.factory(
-        client, key_prefix=key_prefix, ring_class_factory=ring_class_factory,
-        interface=interface, storage_implementation=storage_implementation,
+        client, key_prefix=key_prefix, on_manufactured=None,
+        user_interface=user_interface, storage_class=storage_class,
         miss_value=miss_value, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys,
         key_refactor=key_refactor)
@@ -274,7 +234,7 @@ def memcache(
 
 def redis_py(
         client, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
-        interface=CacheInterface, storage_implementation=RedisImplementation):
+        user_interface=CacheUserInterface, storage_class=RedisStorage):
     """Redis_ interface.
 
     This backend depends on `redis-py`_.
@@ -295,8 +255,8 @@ def redis_py(
     .. _redis-py: https://pypi.org/project/redis/
     """
     return fbase.factory(
-        client, key_prefix=key_prefix, ring_class_factory=ring_class_factory,
-        interface=interface, storage_implementation=storage_implementation,
+        client, key_prefix=key_prefix, on_manufactured=None,
+        user_interface=user_interface, storage_class=storage_class,
         miss_value=None, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys)
 
@@ -306,7 +266,7 @@ redis = redis_py  #: Alias for redis_py for now.
 
 def disk(
         obj, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
-        interface=CacheInterface, storage_implementation=DiskImpl):
+        user_interface=CacheUserInterface, storage_class=DiskStorage):
     """diskcache_ interface
 
     .. _diskcache: https://pypi.org/project/diskcache/
@@ -314,32 +274,32 @@ def disk(
     :param diskcache.Cache obj: diskcache Cache object.
     """
     return fbase.factory(
-        obj, key_prefix=key_prefix, ring_class_factory=ring_class_factory,
-        interface=interface, storage_implementation=storage_implementation,
+        obj, key_prefix=key_prefix, on_manufactured=None,
+        user_interface=user_interface, storage_class=storage_class,
         miss_value=None, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys)
 
 
 def arcus(
         client, key_prefix=None, expire=0, coder=None, ignorable_keys=None,
-        interface=CacheInterface):  # pragma: no cover
+        user_interface=CacheUserInterface):  # pragma: no cover
     """arcus support. deprecated"""
 
-    class Impl(fbase.Storage):
-        def get_value(self, client, key):
-            value = client.get(key).get_result()
+    class Storage(fbase.CommonMixinStorage, fbase.StorageMixin):
+        def get_value(self, key):
+            value = self.backend.get(key).get_result()
             if value is None:
                 raise fbase.NotFound
             return value
 
-        def set_value(self, client, key, value):
-            client.set(key, value, expire)
+        def set_value(self, key, value, expire):
+            self.backend.set(key, value, expire)
 
-        def del_value(self, client, key):
-            client.delete(key)
+        def delete_value(self, key):
+            self.backend.delete(key)
 
-        def touch_value(self, client, key, expire):
-            client.touch(key, expire)
+        def touch_value(self, key, expire):
+            self.backend.touch(key, expire)
 
     rule = re.compile(r'[!-~]+')
 
@@ -355,8 +315,8 @@ def arcus(
         return 'ring-sha1:' + hashed
 
     return fbase.factory(
-        client, key_prefix=key_prefix, ring_class_factory=ring_class_factory,
-        interface=interface, storage_implementation=Impl,
+        client, key_prefix=key_prefix, on_manufactured=None,
+        user_interface=user_interface, storage_class=Storage,
         miss_value=None, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys,
         key_refactor=key_refactor)

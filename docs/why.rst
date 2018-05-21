@@ -26,7 +26,7 @@ Traditionally we considered cache as a storage. In that sense, calling useful
 
 .. code-block:: python
 
-    # psuedo flow
+    # psuedo code for rough flow
     key = create_key()
     if storage.has(key):
         result = storage.get(key)
@@ -47,6 +47,8 @@ Lots of cache libraries working with immutable functions share the similar
 solution. Here is a :func:`functools.lru_cache` example:
 
 .. code-block:: python
+
+    from functools import lru_cache
 
     @lru_cache(maxsize=32)
     def cached_function():
@@ -70,13 +72,15 @@ specific seconds.
 
 .. code-block:: python
 
-    @cache_view(60 * 15)
-    def cached_view(request):
+    from django.views.decorators.cache import cache_page
+
+    @cache_page(60 * 15)
+    def cached_page(request):
         ...
 
 It means the view is cached and the cached data is valid for 15 minutes. In
 this case, ``actual_function()`` is inside of the Django. The actual function
-will generate HTTP response based on the ``cached_view``. It is good enough
+will generate HTTP response based on the ``cached_page``. It is good enough
 when cache expiration is not a real-time requirement.
 
 
@@ -240,8 +244,8 @@ objects serve data extractors instead.
         ...
 
     cache_key = f.key(10)  # cache key for 10
-    assert f.storage is client
-    encoded_data = f.storage.get(cache_key)  # get from memcache client
+    assert f.storage.backend is client
+    encoded_data = f.storage.backend.get(cache_key)  # get from memcache client
     actual_data = f.decode(encoded_data)  # decode
 
 :see: :doc:`control` for details.
@@ -278,9 +282,9 @@ Ring comes with configurable commands and storage actions
 ---------------------------------------------------------
 
 
-:see: :class:`ring.func_base.StorageImplementation`
-:see: :class:`ring.func_sync.CacheInterface`
-:see: :class:`ring.func_asyncio.CacheInterface`
+:see: :class:`ring.func_base.BaseStorage`
+:see: :class:`ring.func_sync.CacheUserInterface`
+:see: :class:`ring.func_asyncio.CacheUserInterface`
 
 .. _python-memcached: https://pypi.org/project/python-memcached/
 .. _Django: https://www.djangoproject.com/

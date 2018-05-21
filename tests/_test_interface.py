@@ -2,11 +2,16 @@
 import asyncio
 import pytest
 import ring.func_sync
-from ring.func_base import BaseInterface, NotFound, factory
-from ring.func_asyncio import ring_class_factory
+from ring.func_base import BaseUserInterface, NotFound, factory
 
 
-class DoubleCacheInterface(BaseInterface):
+class DoubleCacheUserInterface(BaseUserInterface):
+
+    @asyncio.coroutine
+    def execute(self, **kwargs):
+        result = yield from self.ring.cwrapper.callable(
+            *self.ring.wire._preargs, **kwargs)
+        return result
 
     def key2(self, **kwargs):
         return self.key(**kwargs) + ':back'
@@ -19,7 +24,7 @@ class DoubleCacheInterface(BaseInterface):
         result = ...
         for key in [key1, key2]:
             try:
-                result = yield from self.ring.storage_get(key)
+                result = yield from self.ring.storage.get(key)
             except NotFound:
                 continue
             else:
@@ -33,8 +38,8 @@ class DoubleCacheInterface(BaseInterface):
         key = self.key(**kwargs)
         key2 = self.key2(**kwargs)
         result = yield from self.execute(**kwargs)
-        yield from self.ring.storage_set(key, result)
-        yield from self.ring.storage_set(key2, result, None)
+        yield from self.ring.storage.set(key, result)
+        yield from self.ring.storage.set(key2, result, None)
         return result
 
     @asyncio.coroutine
@@ -42,46 +47,46 @@ class DoubleCacheInterface(BaseInterface):
         key = self.key(**kwargs)
         key2 = self.key2(**kwargs)
         try:
-            result = yield from self.ring.storage_get(key)
+            result = yield from self.ring.storage.get(key)
         except NotFound:
             try:
                 result = yield from self.execute(**kwargs)
             except Exception:
                 try:
-                    result = yield from self.ring.storage_get(key2)
+                    result = yield from self.ring.storage.get(key2)
                 except NotFound:
                     pass
                 else:
                     return result
                 raise
             else:
-                yield from self.ring.storage_set(key, result)
-                yield from self.ring.storage_set(key2, result, None)
+                yield from self.ring.storage.set(key, result)
+                yield from self.ring.storage.set(key2, result, None)
         return result
 
     @asyncio.coroutine
     def delete(self, **kwargs):
         key = self.key(**kwargs)
         key2 = self.key2(**kwargs)
-        yield from self.ring.storage_delete(key)
-        yield from self.ring.storage_delete(key2)
+        yield from self.ring.storage.delete(key)
+        yield from self.ring.storage.delete(key2)
 
     @asyncio.coroutine
     def touch(self, **kwargs):
         key = self.key(**kwargs)
         key2 = self.key(**kwargs)
-        yield from self.ring.storage_touch(key)
-        yield from self.ring.storage_touch(key2)
+        yield from self.ring.storage.touch(key)
+        yield from self.ring.storage.touch(key2)
 
 
 def doublecache(
         client, key_prefix, expire=0, coder=None, ignorable_keys=None,
-        interface=DoubleCacheInterface):
-    from ring.func_asyncio import DictImpl
+        user_interface=DoubleCacheUserInterface):
+    from ring.func_asyncio import DictStorage
 
     return factory(
-        client, key_prefix=key_prefix, ring_class_factory=ring_class_factory,
-        interface=interface, storage_implementation=DictImpl,
+        client, key_prefix=key_prefix, on_manufactured=None,
+        user_interface=user_interface, storage_class=DictStorage,
         miss_value=None, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys)
 
