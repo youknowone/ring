@@ -1,7 +1,16 @@
+""":mod:`ring.wire` --- Universal method/function wrapper.
+==========================================================
+"""
 import functools
 
 
 class WiredProperty(object):
+    """Wire-friendly property to create method wrapper for each instance.
+
+    When the property is wrapping a method or a class method,
+    :class:`ring.wire.Wire` object will be created for each distinguishable
+    owner instance and class.
+    """
 
     def __init__(self, func):
         self.__func__ = func
@@ -21,9 +30,28 @@ class WiredProperty(object):
 
 
 class Wire(object):
+    """The universal method/function wrapper.
+
+    - For normal functions, each function is directly wrapped by **Wire**.
+    - For methods, each method is wrapped by :class:`ring.wire.WiredProperty`
+      and it creates **Wire** object for each instance.
+    - For class methods, each class method is wrapped by
+      :class:`ring.wire.WiredProperty` and it creates **Wire** object for
+      each subclass.
+
+    :note: DO NOT manually instantiate a **Wire** object. That's not what
+           you want to do.
+    :see: :meth:`ring.wire.Wire.for_callable` for actual wrapper function.
+    """
 
     @classmethod
     def for_callable(cls, cwrapper):
+        """Wrap a function/method definition.
+
+        :return: Wrapper object. The return type is up to given callable is
+                 function or method.
+        :rtype: ring.wire.Wire or ring.wire.WiredProperty
+        """
         from ring.func_base import is_method, is_classmethod
 
         _shared_attrs = {'attrs': {}}
@@ -66,6 +94,11 @@ class Wire(object):
         return args
 
     def merge_args(self, args, kwargs):
+        """Create a fake kwargs object by merging actual arguments.
+
+        The merging follows the signature of wrapped function and current
+        instance.
+        """
         args = self._reargs(args)
         full_kwargs = self.cwrapper.kwargify(args, kwargs)
         if self._preargs:

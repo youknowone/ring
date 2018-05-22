@@ -267,7 +267,7 @@ redis = redis_py  #: Alias for redis_py for now.
 def disk(
         obj, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
         user_interface=CacheUserInterface, storage_class=DiskStorage):
-    """diskcache_ interface
+    """diskcache_ interface.
 
     .. _diskcache: https://pypi.org/project/diskcache/
 
@@ -283,8 +283,7 @@ def disk(
 def arcus(
         client, key_prefix=None, expire=0, coder=None, ignorable_keys=None,
         user_interface=CacheUserInterface):  # pragma: no cover
-    """arcus support. deprecated"""
-
+    """Arcus support. deprecated."""
     class Storage(fbase.CommonMixinStorage, fbase.StorageMixin):
         def get_value(self, key):
             value = self.backend.get(key).get_result()

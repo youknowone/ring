@@ -1,5 +1,5 @@
-""":mod:`ring.func_base` --- The building blocks of :mod:`ring.func`
-====================================================================
+""":mod:`ring.func_base` --- The building blocks of :mod:`ring.func`.
+=====================================================================
 
 """
 import abc
@@ -15,18 +15,19 @@ from .coder import registry as coder_registry, coderize
 
 __all__ = (
     'is_method', 'is_classmethod', 'BaseRing', 'factory', 'NotFound',
-    'BaseUserInterface', 'BaseStorage', 'CommonMixinStorage', )
+    'BaseUserInterface', 'BaseStorage', 'CommonMixinStorage', 'StorageMixin')
 
 
 @six.add_metaclass(abc.ABCMeta)
 class BaseRing(object):
-    """Abstract principal root class of Ring classes"""
+    """Abstract principal root class of Ring classes."""
 
 
 def is_method(c):
     """Test given argument is a method or not.
 
     :param ring.callable.Callable c: A callable object.
+    :rtype: bool
 
     :note: The test is not based on python state but based on parameter name
            `self`. The test result might be wrong.
@@ -40,6 +41,7 @@ def is_classmethod(c):
     """Test given argument is a classmethod or not.
 
     :param ring.callable.Callable c: A callable object.
+    :rtype: bool
     """
     return isinstance(c.premitive, classmethod)
 
@@ -161,11 +163,45 @@ def create_ckey(c, key_prefix, ignorable_keys, coerce=coerce, encoding=None, key
 
 
 def factory(
-        storage_backend, key_prefix, on_manufactured,
-        user_interface, storage_class, miss_value, expire_default, coder,
+        storage_backend, key_prefix, expire_default, coder, miss_value,
+        user_interface, storage_class, on_manufactured,
         default_action='get_or_update',
         ignorable_keys=None, key_encoding=None, key_refactor=lambda x: x):
+    """Create a decorator which turns a function into ring wire or wire bridge.
 
+    This is the base factory function that every internal **Ring** factories
+    are based on. See the source code of :mod:`ring.func_sync` or
+    :mod:`ring.func_asyncio` for actual usages and sample code.
+
+    :param Any storage_backend: Actual storage backend instance.
+    :param Optional[str] key_prefix: Specify storage key prefix when a
+        :class:`str` value is given; Otherwise a key prefix is automatically
+        suggested based on the function signature. Note that the suggested
+        key prefix is not compatible between Python 2 and 3.
+    :param Optional[float] expire_default: Set the duration of seconds to
+        expire the data when a number is given; Otherwise the default
+        behavior depends on the backend. Note that the storage may or may
+        not support expiration or persistent saving.
+    :param Union[str,ring.coder.Coder] coder: A registered coder name or a
+        coder object. See :doc:`coder` for details.
+    :param Any miss_value: The default value when storage misses a given key.
+    :param type user_interface: Injective implementation of sub-functions.
+    :param type storage_class: Injective implementation of storage.
+
+    :param Optional[str] default_action: The default action name for
+        `__call__` of the wire object. When the given value is :data:`None`,
+        there is no `__call__` method for ring wire.
+    :param List[str] ignorable_keys: (experimental) Parameter names not to
+        use to create storage key.
+    :param Optional[str] key_encoding: The storage key is usually
+        :class:`str` typed. When this parameter is given, a key is encoded
+        into :class:`bytes` using the given encoding.
+    :param Callable[[str],str] key_refactor: Key
+    :param Optional[Callable[[type(Wire),type(Ring)],None]] on_manufactured:
+        The callback function when a new ring wire or wire bridge is created.
+    :return: The factory decorator to create new ring wire or wire bridge.
+    :rtype: (Callable)->Union[ring.wire.Wire,ring.wire.WiredProperty]
+    """
     raw_coder = coder
     coder = coder_registry.get(raw_coder)
     if not coder:
@@ -204,9 +240,12 @@ def factory(
                 self.decode = ring.coder.decode
                 self.storage = ring.storage
 
-            @functools.wraps(cwrapper.callable)
-            def __call__(self, *args, **kwargs):
-                return self.run(default_action, *args, **kwargs)
+            if default_action is not None:
+                @functools.wraps(cwrapper.callable)
+                def __call__(self, *args, **kwargs):
+                    return self.run(default_action, *args, **kwargs)
+            else:  # Empty block to test coverage
+                pass
 
             def __getattr__(self, name):
                 try:
@@ -273,7 +312,16 @@ class NotFound(Exception):
 
 
 class BaseStorage(object):
-    """Base storage interface."""
+    """Base storage interface.
+
+    To add a new storage interface, regard to use
+    :class:`ring.func_base.CommonMixinStorage` and a subclass of
+    :class:`ring.func_base.StorageMixin`.
+
+    When subclassing this interface, remember `get` and `set` methods must
+    includes coder works. The methods marked as :func:`abc.abstractmethod`
+    are mandatory; Otherwise not.
+    """
 
     def __init__(self, ring, backend):
         self.ring = ring
@@ -281,23 +329,39 @@ class BaseStorage(object):
 
     @abc.abstractmethod
     def get(self, key):  # pragma: no cover
+        """Get actual data by given key.
+
+        :param str key: Storage key.
+        """
         raise NotImplementedError
 
     @abc.abstractmethod
     def set(self, key, value, expire=Ellipsis):  # pragma: no cover
+        """Set actual data by given key, value and expire.
+
+        :param str key: Storage key.
+        """
         raise NotImplementedError
 
     @abc.abstractmethod
     def delete(self, key):  # pragma: no cover
+        """Delete data by given key.
+
+        :param str key: Storage key.
+        """
         raise NotImplementedError
 
     @abc.abstractmethod
     def touch(self, key, expire=Ellipsis):  # pragma: no cover
+        """Touch data by given key.
+
+        :param str key: Storage key.
+        """
         raise NotImplementedError
 
 
 class CommonMixinStorage(BaseStorage):
-    """General storage root for StorageMixin"""
+    """General storage root for StorageMixin."""
 
     def get(self, key):
         value = self.get_value(key)
@@ -322,25 +386,60 @@ class CommonMixinStorage(BaseStorage):
 
 
 class StorageMixin(object):
+    """Abstract storage mixin class.
+
+    Subclass this class to create a new storage mixin. The methods marked
+    as :func:`abc.abstractmethod` are mandatory; Otherwise not.
+    """
 
     @abc.abstractmethod
     def get_value(self, key):  # pragma: no cover
+        """Get value by given key.
+
+        :param str key: Storage key.
+        :rtype: :class:`bytes` is recommended.
+        """
         raise NotImplementedError
 
     @abc.abstractmethod
     def set_value(self, key, value, expire):  # pragma: no cover
+        """Set value by given key, value and expire.
+
+        :param str key: Storage key.
+        :param bytes value: :class:`bytes` is recommended.
+        :param Optional[float] expire: A duration in seconds.
+        :rtype: None
+        """
         raise NotImplementedError
 
     @abc.abstractmethod
     def delete_value(self, key):  # pragma: no cover
+        """Delete value by given key.
+
+        :param str key: Storage key.
+        """
         raise NotImplementedError
 
     def touch_value(self, key, expire):
+        """Touch value by given key.
+
+        :param str key: Storage key.
+        """
         raise NotImplementedError
 
 
 @six.add_metaclass(abc.ABCMeta)
 class BaseUserInterface(object):
+    """Abstract user interface.
+
+    This class provides sub-functions of ring wire. When trying to access
+    any sub-function of a ring wire which doesn't exist, it looks up
+    the composited user interface object and creates actual sub-function
+    into the ring wire.
+
+    Subclass this class to create a new user interface. The methods marked
+    as :func:`abc.abstractmethod` are mandatory; Otherwise not.
+    """
 
     def __init__(self, ring):
         self.ring = ring
@@ -355,18 +454,22 @@ class BaseUserInterface(object):
     def execute(self, **kwargs):
         return self.ring.cwrapper.callable(*self.ring.wire._preargs, **kwargs)
 
+    @abc.abstractmethod
     def get(self, **kwargs):  # pragma: no cover
         raise NotImplementedError
 
     def set(self, value, **kwargs):  # pragma: no cover
         raise NotImplementedError
 
+    @abc.abstractmethod
     def update(self, **kwargs):  # pragma: no cover
         raise NotImplementedError
 
+    @abc.abstractmethod
     def get_or_update(self, **kwargs):  # pragma: no cover
         raise NotImplementedError
 
+    @abc.abstractmethod
     def delete(self, **kwargs):  # pragma: no cover
         raise NotImplementedError
 

@@ -12,6 +12,7 @@ _inspect_iscoroutinefunction = getattr(
 
 
 class Callable(inspect.Signature):
+    """A wrapper of :class:`inspect.Signature` including more information of callable."""
 
     def __init__(self, f):
         self.premitive = f

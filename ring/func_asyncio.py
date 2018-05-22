@@ -22,7 +22,7 @@ def factory_doctor(wire_frame, ring_class) -> None:
 
 
 class CommonMixinStorage(fbase.BaseStorage):  # Working only as mixin
-    """General :mod:`asyncio` storage root for BaseStorageMixin"""
+    """General :mod:`asyncio` storage root for BaseStorageMixin."""
 
     @asyncio.coroutine
     def get(self, key):

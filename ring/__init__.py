@@ -1,7 +1,7 @@
-""":mod:`ring` - Top-level interfaces for end users
-===================================================
+""":mod:`ring` - Top-level interfaces for end users.
+====================================================
 
-Common ring decorators are aliased in this level as shurtcuts.
+Common ring decorators are aliased in this level as shortcuts.
 
 """
 import ring.coder  # noqa
