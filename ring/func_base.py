@@ -182,23 +182,28 @@ def factory(
         expire the data when a number is given; Otherwise the default
         behavior depends on the backend. Note that the storage may or may
         not support expiration or persistent saving.
+
     :param Union[str,ring.coder.Coder] coder: A registered coder name or a
         coder object. See :doc:`coder` for details.
     :param Any miss_value: The default value when storage misses a given key.
     :param type user_interface: Injective implementation of sub-functions.
     :param type storage_class: Injective implementation of storage.
-
     :param Optional[str] default_action: The default action name for
         `__call__` of the wire object. When the given value is :data:`None`,
         there is no `__call__` method for ring wire.
+
+    :param Optional[Callable[[type(Wire),type(Ring)],None]] on_manufactured:
+        The callback function when a new ring wire or wire bridge is created.
+
     :param List[str] ignorable_keys: (experimental) Parameter names not to
         use to create storage key.
     :param Optional[str] key_encoding: The storage key is usually
         :class:`str` typed. When this parameter is given, a key is encoded
         into :class:`bytes` using the given encoding.
-    :param Callable[[str],str] key_refactor: Key
-    :param Optional[Callable[[type(Wire),type(Ring)],None]] on_manufactured:
-        The callback function when a new ring wire or wire bridge is created.
+    :param Optional[Callable[[str],str]] key_refactor: Roughly,
+        ``key = key_refector(key)`` will be run when `key_refector` is not
+        :data:`None`; Otherwise it is omitted.
+
     :return: The factory decorator to create new ring wire or wire bridge.
     :rtype: (Callable)->Union[ring.wire.Wire,ring.wire.WiredProperty]
     """
@@ -319,7 +324,7 @@ class BaseStorage(object):
     :class:`ring.func_base.StorageMixin`.
 
     When subclassing this interface, remember `get` and `set` methods must
-    includes coder works. The methods marked as :func:`abc.abstractmethod`
+    include coder works. The methods marked as :func:`abc.abstractmethod`
     are mandatory; Otherwise not.
     """
 
@@ -332,6 +337,7 @@ class BaseStorage(object):
         """Get actual data by given key.
 
         :param str key: Storage key.
+        :return: Decoded data of the given key.
         """
         raise NotImplementedError
 
@@ -340,6 +346,9 @@ class BaseStorage(object):
         """Set actual data by given key, value and expire.
 
         :param str key: Storage key.
+        :param Any value: The value to save to the given key.
+        :param float expire: Expiration duration in seconds.
+        :rtype: None
         """
         raise NotImplementedError
 
@@ -348,6 +357,7 @@ class BaseStorage(object):
         """Delete data by given key.
 
         :param str key: Storage key.
+        :rtype: None
         """
         raise NotImplementedError
 
@@ -356,6 +366,8 @@ class BaseStorage(object):
         """Touch data by given key.
 
         :param str key: Storage key.
+        :param float expire: Expiration duration in seconds.
+        :rtype: None
         """
         raise NotImplementedError
 
@@ -407,7 +419,7 @@ class StorageMixin(object):
 
         :param str key: Storage key.
         :param bytes value: :class:`bytes` is recommended.
-        :param Optional[float] expire: A duration in seconds.
+        :param Optional[float] expire: Expiration duration in seconds.
         :rtype: None
         """
         raise NotImplementedError
@@ -417,6 +429,7 @@ class StorageMixin(object):
         """Delete value by given key.
 
         :param str key: Storage key.
+        :rtype: None
         """
         raise NotImplementedError
 
@@ -424,6 +437,7 @@ class StorageMixin(object):
         """Touch value by given key.
 
         :param str key: Storage key.
+        :rtype: None
         """
         raise NotImplementedError
 

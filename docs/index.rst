@@ -8,7 +8,8 @@ Ring - Cache interface as a programming language integration
 
 **Ring** provides function-oriented cache interface for various backends.
 
-Repository: `https://github.com/youknowone/ring/ <https://github.com/youknowone/ring/>`_
+Repository:
+    `https://github.com/youknowone/ring/ <https://github.com/youknowone/ring/>`_
 
 
 Quickstart
