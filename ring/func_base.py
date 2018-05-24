@@ -141,32 +141,40 @@ def coerce(v):
         "Add __ring_key__() or __str__().".format(v, cls))
 
 
-def create_ckey(c, key_prefix, ignorable_keys, coerce=coerce, encoding=None, key_refactor=lambda x: x):
+def create_key_builder(
+        c, key_prefix, ignorable_keys, coerce=coerce, encoding=None,
+        key_refactor=None):
     assert isinstance(c, Callable)
-    ckey = CallableKey(
+    key_generator = CallableKey(
         c, format_prefix=key_prefix, ignorable_keys=ignorable_keys)
 
     def build_key(preargs, kwargs):
         full_kwargs = kwargs.copy()
         for i, prearg in enumerate(preargs):
             full_kwargs[c.parameters_values[i].name] = preargs[i]
-        coerced_kwargs = {k: coerce(v) for k, v in full_kwargs.items() if k not in ignorable_keys}
-        key = ckey.build(coerced_kwargs)
+        coerced_kwargs = {
+            k: coerce(v) for k, v in full_kwargs.items() if k not in ignorable_keys}
+        key = key_generator.build(coerced_kwargs)
         if encoding:
             key = key.encode(encoding)
-        key = key_refactor(key)
+        if key_refactor:
+            key = key_refactor(key)
         return key
 
-    ckey.build_key = build_key
-
-    return ckey
+    return build_key
 
 
 def factory(
-        storage_backend, key_prefix, expire_default, coder, miss_value,
-        user_interface, storage_class, on_manufactured,
+        storage_backend,  # actual storage
+        key_prefix,  # manual key prefix
+        expire_default,  # default expiration
+        # building blocks
+        coder, miss_value, user_interface, storage_class,
         default_action='get_or_update',
-        ignorable_keys=None, key_encoding=None, key_refactor=lambda x: x):
+        # callback
+        on_manufactured=None,
+        # key builder related parameters
+        ignorable_keys=None, key_encoding=None, key_refactor=None):
     """Create a decorator which turns a function into ring wire or wire bridge.
 
     This is the base factory function that every internal **Ring** factories
@@ -216,7 +224,7 @@ def factory(
         cwrapper = Callable(f)
         _ignorable_keys = suggest_ignorable_keys(cwrapper, ignorable_keys)
         _key_prefix = suggest_key_prefix(cwrapper, key_prefix)
-        ckey = create_ckey(
+        key_builder = create_key_builder(
             cwrapper, _key_prefix, _ignorable_keys,
             encoding=key_encoding, key_refactor=key_refactor)
 
@@ -224,7 +232,7 @@ def factory(
             pass
 
         Ring.cwrapper = cwrapper
-        Ring.ckey = ckey
+        Ring.build_key = staticmethod(key_builder)
         Ring.miss_value = miss_value
         Ring.expire_default = expire_default
         Ring.coder = coder
@@ -460,7 +468,7 @@ class BaseUserInterface(object):
 
     def key(self, **kwargs):
         args = self.ring.wire._preargs
-        return self.ring.ckey.build_key(args, kwargs)
+        return self.ring.build_key(args, kwargs)
     key.__annotations_override__ = {
         'return': str,
     }
