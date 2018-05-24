@@ -1,4 +1,5 @@
 import sys
+import time
 import ring
 import pymemcache.client
 import memcache
@@ -196,7 +197,7 @@ def test_func_dict():
 
     base = [0]
 
-    @ring.dict(cache, key_prefix='')
+    @ring.dict(cache, key_prefix='', expire=10)
     def f(a, b):
         return base[0] + a * 100 + b
 
@@ -223,6 +224,19 @@ def test_func_dict():
     base[0] = 30000
     assert 30102 == f.update(1, b=2)
     f.touch(1, b=2)
+
+    f._ring.storage.now = lambda: time.time() + 100  # expirable duration
+    assert f.get(1, b=2) is None
+
+
+def test_func_without_expiration():
+    @ring.dict({})
+    def f():
+        return 0
+
+    assert f.get() is None
+    assert f() == 0
+    f.touch()
 
 
 def test_func_dict_expire():
@@ -280,6 +294,29 @@ def test_memcache(memcache_client):
     assert 10806 == int(memcache_client.get(f.key(8, 6)))
 
 
+def test_redis(redis_client):
+    base = [0]
+
+    @ring.redis(redis_client, 'ring-test', 5)
+    def f(a, b):
+        r = base[0] + a * 100 + b
+        return str(r).encode('utf-8')
+
+    assert f.key(1, 2) == 'ring-test:1:2'
+
+    base[0] = 10000
+    assert None is f.get(1, b=2)
+    assert 10102 == int(f(1, b=2))
+    assert 10102 == int(redis_client.get(f.key(1, 2)))
+
+    @ring.redis(redis_client, 'ring-test')
+    def g():
+        return 10
+
+    with pytest.raises(TypeError):
+        g.touch()
+
+
 def test_disk(disk_cache):
     base = [0]
 
@@ -298,22 +335,6 @@ def test_disk(disk_cache):
     assert None is f.get(8, b=6)
     assert 10806 == int(f(8, b=6))
     assert 10806 == int(disk_cache.get(f.key(8, 6)))
-
-
-def test_redis(redis_client):
-    base = [0]
-
-    @ring.redis(redis_client, 'ring-test', 5)
-    def f(a, b):
-        r = base[0] + a * 100 + b
-        return str(r).encode('utf-8')
-
-    assert f.key(1, 2) == 'ring-test:1:2'
-
-    base[0] = 10000
-    assert None is f.get(1, b=2)
-    assert 10102 == int(f(1, b=2))
-    assert 10102 == int(redis_client.get(f.key(1, 2)))
 
 
 def test_common_value(storage):

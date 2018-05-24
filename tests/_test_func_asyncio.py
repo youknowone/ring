@@ -1,7 +1,8 @@
-
-import ring
 import asyncio
+import time
+
 import aiomcache
+import ring
 
 import pytest
 
@@ -166,6 +167,36 @@ def test_func_dict():
 
     yield from f2(1, 2)
     yield from f2(1, 2)
+
+    f2._ring.storage.now = lambda: time.time() + 100  # expirable duration
+    assert ((yield from f2.get(1, 2))) is None
+
+
+@pytest.mark.asyncio
+@asyncio.coroutine
+def test_func_without_expiration():
+    @ring.aiodict({})
+    @asyncio.coroutine
+    def f():
+        return 0
+
+    yield from f.get()
+    assert (yield from f()) == 0
+    yield from f.touch()
+
+
+@pytest.mark.asyncio
+@asyncio.coroutine
+def test_aioredis(aiomcache_client):
+    client = yield from aiomcache_client
+
+    @ring.aioredis(client)
+    @asyncio.coroutine
+    def f():
+        pass
+
+    with pytest.raises(TypeError):
+        yield from f.touch()
 
 
 @pytest.mark.asyncio

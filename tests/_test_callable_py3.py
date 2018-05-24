@@ -1,4 +1,4 @@
-
+from typing import Any, Optional
 from ring.callable import Callable
 
 import pytest
@@ -23,3 +23,11 @@ def test_kwargify_py3(f, args, kwargs, merged):
 def test_kwargify_exc_py3(f, args, kwargs, exc):
     with pytest.raises(exc):
         Callable(f).kwargify(args, kwargs)
+
+
+def test_annotations():
+    def f(a: int, b: str, *c, d: Any=10, **e) -> Optional[float]:
+        pass
+
+    c = Callable(f)
+    assert c.annotations == {'a': int, 'b': str, 'd': Any, 'return': Optional[float]}

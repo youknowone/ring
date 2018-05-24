@@ -37,3 +37,8 @@ def test_kwargify(f, args, kwargs, merged):
 def test_kwargify_exc(f, args, kwargs, exc):
     with pytest.raises(exc):
         Callable(f).kwargify(args, kwargs)
+
+
+def test_empty_annotations():
+    c = Callable(lambda a, *b, **c: None)
+    assert c.annotations == {}

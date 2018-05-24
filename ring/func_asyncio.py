@@ -188,6 +188,8 @@ class AioredisStorage(CommonMixinStorage, fbase.StorageMixin):
         return self.backend.delete(key)
 
     def touch_value(self, key, expire):
+        if expire is None:
+            raise TypeError("'touch' is requested for persistent cache")
         return self.backend.expire(key, expire)
 
 
