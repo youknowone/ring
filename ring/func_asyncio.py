@@ -53,8 +53,8 @@ class CommonMixinStorage(fbase.BaseStorage):  # Working only as mixin
 class CacheUserInterface(fbase.BaseUserInterface):
 
     @asyncio.coroutine
-    def get(self, **kwargs):
-        key = self.key(**kwargs)
+    def get(self, wire, **kwargs):
+        key = self.key(wire, **kwargs)
         try:
             result = yield from self.ring.storage.get(key)
         except fbase.NotFound:
@@ -66,25 +66,25 @@ class CacheUserInterface(fbase.BaseUserInterface):
     }
 
     @asyncio.coroutine
-    def update(self, **kwargs):
-        key = self.key(**kwargs)
-        result = yield from self.execute(**kwargs)
+    def update(self, wire, **kwargs):
+        key = self.key(wire, **kwargs)
+        result = yield from self.execute(wire, **kwargs)
         yield from self.ring.storage.set(key, result)
         return result
 
     @asyncio.coroutine
-    def get_or_update(self, **kwargs):
-        key = self.key(**kwargs)
+    def get_or_update(self, wire, **kwargs):
+        key = self.key(wire, **kwargs)
         try:
             result = yield from self.ring.storage.get(key)
         except fbase.NotFound:
-            result = yield from self.execute(**kwargs)
+            result = yield from self.execute(wire, **kwargs)
             yield from self.ring.storage.set(key, result)
         return result
 
     @asyncio.coroutine
-    def set(self, _value, **kwargs):
-        key = self.key(**kwargs)
+    def set(self, wire, _value, **kwargs):
+        key = self.key(wire, **kwargs)
         yield from self.ring.storage.set(key, _value)
     set._function_args_count = 1
     set.__annotations_override__ = {
@@ -92,16 +92,16 @@ class CacheUserInterface(fbase.BaseUserInterface):
     }
 
     @asyncio.coroutine
-    def delete(self, **kwargs):
-        key = self.key(**kwargs)
+    def delete(self, wire, **kwargs):
+        key = self.key(wire, **kwargs)
         yield from self.ring.storage.delete(key)
     delete.__annotations_override__ = {
         'return': None,
     }
 
     @asyncio.coroutine
-    def touch(self, **kwargs):
-        key = self.key(**kwargs)
+    def touch(self, wire, **kwargs):
+        key = self.key(wire, **kwargs)
         yield from self.ring.storage.touch(key)
     touch.__annotations_override__ = {
         'return': None,

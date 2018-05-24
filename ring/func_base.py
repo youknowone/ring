@@ -229,7 +229,10 @@ def factory(
             encoding=key_encoding, key_refactor=key_refactor)
 
         class Ring(BaseRing):
-            pass
+            def __init__(self):
+                super(BaseRing, self).__init__()
+                self.user_interface = user_interface(self)
+                self.storage = storage_class(self, storage_backend)
 
         Ring.cwrapper = cwrapper
         Ring.build_key = staticmethod(key_builder)
@@ -237,15 +240,12 @@ def factory(
         Ring.expire_default = expire_default
         Ring.coder = coder
 
+        ring = Ring()
+
         class RingWire(Wire):
 
             def __init__(self, *args, **kwargs):
                 super(RingWire, self).__init__(*args, **kwargs)
-                ring = Ring()
-                ring.wire = self
-                ring.user_interface = user_interface(ring)
-                ring.storage = storage_class(ring, storage_backend)
-                ring.storage.backend = storage_backend
                 self._ring = ring
 
                 self.__func__ = ring.cwrapper.callable
@@ -279,7 +279,7 @@ def factory(
                         full_kwargs = self.merge_args(
                             args[function_args_count:], kwargs)
                         function_args = args[:function_args_count]
-                        return attr(*function_args, **full_kwargs)
+                        return attr(self, *function_args, **full_kwargs)
 
                     c = self.cwrapper.callable
                     functools.wraps(c)(impl_f)
@@ -466,34 +466,34 @@ class BaseUserInterface(object):
     def __init__(self, ring):
         self.ring = ring
 
-    def key(self, **kwargs):
-        args = self.ring.wire._preargs
+    def key(self, wire, **kwargs):
+        args = wire._preargs
         return self.ring.build_key(args, kwargs)
     key.__annotations_override__ = {
         'return': str,
     }
 
-    def execute(self, **kwargs):
-        return self.ring.cwrapper.callable(*self.ring.wire._preargs, **kwargs)
+    def execute(self, wire, **kwargs):
+        return self.ring.cwrapper.callable(*wire._preargs, **kwargs)
 
     @abc.abstractmethod
-    def get(self, **kwargs):  # pragma: no cover
+    def get(self, wire, **kwargs):  # pragma: no cover
         raise NotImplementedError
 
-    def set(self, value, **kwargs):  # pragma: no cover
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def update(self, **kwargs):  # pragma: no cover
+    def set(self, wire, value, **kwargs):  # pragma: no cover
         raise NotImplementedError
 
     @abc.abstractmethod
-    def get_or_update(self, **kwargs):  # pragma: no cover
+    def update(self, wire, **kwargs):  # pragma: no cover
         raise NotImplementedError
 
     @abc.abstractmethod
-    def delete(self, **kwargs):  # pragma: no cover
+    def get_or_update(self, wire, **kwargs):  # pragma: no cover
         raise NotImplementedError
 
-    def touch(self, **kwargs):
+    @abc.abstractmethod
+    def delete(self, wire, **kwargs):  # pragma: no cover
+        raise NotImplementedError
+
+    def touch(self, wire, **kwargs):
         raise NotImplementedError

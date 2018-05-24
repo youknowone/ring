@@ -13,8 +13,8 @@ __all__ = ('dict', 'memcache', 'redis_py', 'redis', 'disk', )
 
 class CacheUserInterface(fbase.BaseUserInterface):
 
-    def get(self, **kwargs):
-        key = self.key(**kwargs)
+    def get(self, wire, **kwargs):
+        key = self.key(wire, **kwargs)
         try:
             result = self.ring.storage.get(key)
         except fbase.NotFound:
@@ -25,38 +25,38 @@ class CacheUserInterface(fbase.BaseUserInterface):
             lambda a: Optional[a['return']] if 'return' in a else Optional[Any],
     }
 
-    def update(self, **kwargs):
-        key = self.key(**kwargs)
-        result = self.execute(**kwargs)
+    def update(self, wire, **kwargs):
+        key = wire.key(**kwargs)
+        result = wire.execute(**kwargs)
         self.ring.storage.set(key, result)
         return result
 
-    def get_or_update(self, **kwargs):
-        key = self.key(**kwargs)
+    def get_or_update(self, wire, **kwargs):
+        key = self.key(wire, **kwargs)
         try:
             result = self.ring.storage.get(key)
         except fbase.NotFound:
-            result = self.execute(**kwargs)
+            result = self.execute(wire, **kwargs)
             self.ring.storage.set(key, result)
         return result
 
-    def set(self, _value, **kwargs):
-        key = self.key(**kwargs)
+    def set(self, wire, _value, **kwargs):
+        key = self.key(wire, **kwargs)
         self.ring.storage.set(key, _value)
     set._function_args_count = 1
     set.__annotations_override__ = {
         'return': None,
     }
 
-    def delete(self, **kwargs):
-        key = self.key(**kwargs)
+    def delete(self, wire, **kwargs):
+        key = self.key(wire, **kwargs)
         self.ring.storage.delete(key)
     delete.__annotations_override__ = {
         'return': None,
     }
 
-    def touch(self, **kwargs):
-        key = self.key(**kwargs)
+    def touch(self, wire, **kwargs):
+        key = self.key(wire, **kwargs)
         self.ring.storage.touch(key)
     touch.__annotations_override__ = {
         'return': None,
