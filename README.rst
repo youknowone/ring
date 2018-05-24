@@ -3,6 +3,8 @@ Ring
 
 .. image:: https://travis-ci.org/youknowone/ring.svg?branch=master
     :target: https://travis-ci.org/youknowone/ring
+.. image:: https://codecov.io/gh/youknowone/ring/graph/badge.svg
+    :target: https://codecov.io/gh/youknowone/ring
 
 Let's concentrate on code, not on storages.
 
