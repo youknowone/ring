@@ -8,18 +8,18 @@ from ring.func_base import BaseUserInterface, NotFound, factory
 class DoubleCacheUserInterface(BaseUserInterface):
 
     @asyncio.coroutine
-    def execute(self, **kwargs):
+    def execute(self, wire, **kwargs):
         result = yield from self.ring.cwrapper.callable(
-            *self.ring.wire._preargs, **kwargs)
+            *wire._preargs, **kwargs)
         return result
 
-    def key2(self, **kwargs):
-        return self.key(**kwargs) + ':back'
+    def key2(self, wire, **kwargs):
+        return wire.key(**kwargs) + ':back'
 
     @asyncio.coroutine
-    def get(self, **kwargs):
-        key1 = self.key(**kwargs)
-        key2 = self.key2(**kwargs)
+    def get(self, wire, **kwargs):
+        key1 = wire.key(**kwargs)
+        key2 = wire.key2(**kwargs)
 
         result = ...
         for key in [key1, key2]:
@@ -34,23 +34,23 @@ class DoubleCacheUserInterface(BaseUserInterface):
         return result
 
     @asyncio.coroutine
-    def update(self, **kwargs):
-        key = self.key(**kwargs)
-        key2 = self.key2(**kwargs)
-        result = yield from self.execute(**kwargs)
+    def update(self, wire, **kwargs):
+        key = wire.key(**kwargs)
+        key2 = wire.key2(**kwargs)
+        result = yield from wire.execute(**kwargs)
         yield from self.ring.storage.set(key, result)
         yield from self.ring.storage.set(key2, result, None)
         return result
 
     @asyncio.coroutine
-    def get_or_update(self, **kwargs):
-        key = self.key(**kwargs)
-        key2 = self.key2(**kwargs)
+    def get_or_update(self, wire, **kwargs):
+        key = wire.key(**kwargs)
+        key2 = wire.key2(**kwargs)
         try:
             result = yield from self.ring.storage.get(key)
         except NotFound:
             try:
-                result = yield from self.execute(**kwargs)
+                result = yield from wire.execute(**kwargs)
             except Exception:
                 try:
                     result = yield from self.ring.storage.get(key2)
@@ -65,16 +65,16 @@ class DoubleCacheUserInterface(BaseUserInterface):
         return result
 
     @asyncio.coroutine
-    def delete(self, **kwargs):
-        key = self.key(**kwargs)
-        key2 = self.key2(**kwargs)
+    def delete(self, wire, **kwargs):
+        key = wire.key(**kwargs)
+        key2 = wire.key2(**kwargs)
         yield from self.ring.storage.delete(key)
         yield from self.ring.storage.delete(key2)
 
     @asyncio.coroutine
-    def touch(self, **kwargs):
-        key = self.key(**kwargs)
-        key2 = self.key(**kwargs)
+    def touch(self, wire, **kwargs):
+        key = wire.key(**kwargs)
+        key2 = wire.key(**kwargs)
         yield from self.ring.storage.touch(key)
         yield from self.ring.storage.touch(key2)
 
