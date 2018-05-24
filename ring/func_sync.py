@@ -136,7 +136,7 @@ class RedisStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
 
     def touch_value(self, key, expire):
         if expire is None:
-            raise TypeError("'touch' is requested for persistant cache")
+            raise TypeError("'touch' is requested for persistent cache")
         self.backend.expire(key, expire)
 
 
