@@ -1,7 +1,7 @@
 """:mod:`ring.func_sync`
 is a collection of factory functions.
 """
-from typing import Optional, Any
+from typing import Any, Optional, List
 import time
 import re
 import hashlib
@@ -11,12 +11,14 @@ from . import func_base as fbase
 __all__ = ('dict', 'memcache', 'redis_py', 'redis', 'disk', )
 
 
+type_dict = dict
+
+
 class CacheUserInterface(fbase.BaseUserInterface):
 
     @fbase.interface_attrs(
         transform_args=fbase.wire_kwargs_only0,
-        return_annotation=lambda a:
-            Optional[a['return']] if 'return' in a else Optional[Any])
+        return_annotation=lambda a: Optional[a.get('return', Any)])
     def get(self, wire, **kwargs):
         key = self.key(wire, **kwargs)
         try:
@@ -61,6 +63,91 @@ class CacheUserInterface(fbase.BaseUserInterface):
         self.ring.storage.touch(key)
 
 
+def execute_bulk_item(wire, args):
+    if isinstance(args, tuple):
+        return wire._ring.cwrapper.callable(*(wire._preargs + args))
+    elif isinstance(args, type_dict):
+        return wire._ring.cwrapper.callable(*wire._preargs, **args)
+    else:
+        raise TypeError(
+            "Each parameter of '_many' suffixed sub-functions must be an "
+            "instance of 'tuple' or 'dict'")
+
+
+def create_bulk_key(interface, wire, args):
+    if isinstance(args, tuple):
+        kwargs = wire.merge_args(args, {})
+        return interface.key(wire, **kwargs)
+    elif isinstance(args, type_dict):
+        return interface.key(wire, **args)
+    else:
+        raise TypeError(
+            "Each parameter of '_many' suffixed sub-functions must be an "
+            "instance of 'tuple' or 'dict'")
+
+
+class BulkInterfaceMixin(object):
+    """Experimental."""
+
+    @fbase.interface_attrs(
+        return_annotation=lambda a: List[a.get('return', Any)])
+    def execute_many(self, wire, *args_list):
+        values = [execute_bulk_item(wire, args) for args in args_list]
+        return values
+
+    @fbase.interface_attrs(return_annotation=type_dict)
+    def get_many(self, wire, *args_list):
+        keys = [create_bulk_key(self, wire, args) for args in args_list]
+        results = self.ring.storage.get_many(
+            keys, miss_value=self.ring.miss_value)
+        return results
+
+    @fbase.interface_attrs(return_annotation=None)
+    def update_many(self, wire, *args_list):
+        keys = [create_bulk_key(self, wire, args) for args in args_list]
+        values = [execute_bulk_item(wire, args) for args in args_list]
+        self.ring.storage.set_many(keys, values)
+
+    @fbase.interface_attrs(return_annotation=None)
+    def delete_many(self, wire, *args_list):
+        keys = [create_bulk_key(self, wire, args) for args in args_list]
+        self.ring.storage.delete_many(keys)
+
+    @fbase.interface_attrs(return_annotation=None)
+    def set_many(self, wire, args_list, value_list):
+        keys = [create_bulk_key(self, wire, args) for args in args_list]
+        self.ring.storage.set_many(keys, value_list)
+
+    @fbase.interface_attrs(return_annotation=None)
+    def touch_many(self, wire, *args_list):
+        keys = [create_bulk_key(self, wire, args) for args in args_list]
+        self.ring.storage.touch_many(keys)
+
+
+class BulkStorageMixin(object):
+
+    def get_many(self, keys, miss_value):
+        values = self.get_many_values(keys)
+        results = [
+            self.ring.coder.decode(v) if v is not fbase.NotFound else miss_value
+            for v in values]
+        return results
+
+    def set_many(self, keys, values, expire=Ellipsis):
+        if expire is Ellipsis:
+            expire = self.ring.expire_default
+        self.set_many_values(
+            keys, [self.ring.coder.encode(v) for v in values], expire)
+
+    def delete_many(self, keys):
+        self.delete_many_values(keys)
+
+    def touch_many(self, keys, expire=Ellipsis):
+        if expire is Ellipsis:
+            expire = self.ring.expire_default
+        self.touch_many_values(keys, expire)
+
+
 class DictStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
 
     now = time.time
@@ -102,7 +189,9 @@ class DictStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
         self.backend[key] = expired_time, value
 
 
-class MemcacheStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
+class MemcacheStorage(
+        fbase.CommonMixinStorage, fbase.StorageMixin, BulkStorageMixin):
+
     def get_value(self, key):
         value = self.backend.get(key)
         if value is None:
@@ -117,6 +206,16 @@ class MemcacheStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
 
     def touch_value(self, key, expire):
         self.backend.touch(key, expire)
+
+    def get_many_values(self, keys):
+        values = self.backend.get_multi(keys)
+        return [values.get(k, fbase.NotFound) for k in keys]
+
+    def set_many_values(self, keys, values, expire):
+        self.backend.set_multi({k: v for k, v in zip(keys, values)}, expire)
+
+    def delete_many_values(self, keys):
+        return self.backend.delete_multi(keys)
 
 
 class RedisStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
@@ -183,7 +282,8 @@ def dict(
 
 def memcache(
         client, key_prefix=None, expire=0, coder=None, ignorable_keys=None,
-        user_interface=CacheUserInterface, storage_class=MemcacheStorage):
+        user_interface=(CacheUserInterface, BulkInterfaceMixin),
+        storage_class=MemcacheStorage):
     """Common Memcached_ interface.
 
     This backend is common interface for various memcached client libraries

@@ -241,8 +241,9 @@ class BaseUserInterface(object):
     def delete(self, wire, **kwargs):  # pragma: no cover
         raise NotImplementedError
 
+    @abc.abstractmethod
     @interface_attrs(transform_args=wire_kwargs_only0)
-    def touch(self, wire, **kwargs):
+    def touch(self, wire, **kwargs):  # pragma: no cover
         raise NotImplementedError
 
 
@@ -303,9 +304,7 @@ def factory(
         coder = coderize(raw_coder)
 
     if isinstance(user_interface, (tuple, list)):
-        class _UserInterface(*user_interface):
-            pass
-        user_interface = _UserInterface
+        user_interface = type('_ComposedUserInterface', user_interface, {})
 
     def _decorator(f):
         cw = Callable(f)
