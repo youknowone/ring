@@ -1,15 +1,11 @@
 # coding: utf-8
 import ring
-import pymemcache.client
-import memcache
-import redis
 
 import pytest
+from .test_func_sync import memcache_client
 
+__all__ = ('memcache_client', )
 
-pymemcache_client = pymemcache.client.Client(('127.0.0.1', 11211))
-memcache_client = memcache.Client(["127.0.0.1:11211"])
-redis_client = redis.StrictRedis()
 
 try:
     import pylibmc
@@ -19,16 +15,11 @@ else:
     pylibmc_client = pylibmc.Client(['127.0.0.1'])
 
 
-@pytest.mark.parametrize('client', [
-    memcache_client,
-    pymemcache_client,
-    pylibmc_client,
-])
-def test_memcache_key(client):
-    if client is None:
+def test_memcache_key(memcache_client):
+    if memcache_client is None:
         pytest.skip()
 
-    @ring.memcache(client, 'ring-test')
+    @ring.memcache(memcache_client, 'ring-test')
     def f(a, b):
         r = a + b
         if isinstance(r, str):
@@ -48,3 +39,83 @@ def test_memcache_key(client):
     assert None is f.get('a', 'b with space')
     assert b'ab with space' == f('a', b='b with space')
     assert b'ab with space' == f.get('a', b='b with space')
+
+
+def test_memcache(memcache_client):
+    base = [0]
+
+    @ring.memcache(memcache_client, 'ring-test')
+    def f(a, b):
+        r = base[0] + a * 100 + b
+        sr = str(r)
+        if memcache_client.is_binary:
+            sr = sr.encode('utf-8')
+        return sr
+
+    f.delete(8, 6)
+    assert f.key(8, 6) == 'ring-test:8:6'
+
+    base[0] = 10000
+    assert None is f.get(8, b=6)
+    assert 10806 == int(f(8, b=6))
+    assert 10806 == int(memcache_client.get(f.key(8, 6)))
+
+
+def test_memcache_multi(memcache_client):
+    @ring.memcache(memcache_client, 'ring-test', coder='json')
+    def f(a, b):
+        return a * 100 + b
+
+    mv = f.execute_many(
+        {'a': 1, 'b': 2},
+        (1, 4),
+        (5, 1),
+    )
+    assert mv == [102, 104, 501]
+
+    f.delete_many(
+        {'a': 1, 'b': 2},
+        (1, 4),
+        (5, 1),
+    )
+
+    mv = f.get_many(
+        {'a': 1, 'b': 2},
+        {'a': 1, 'b': 4},
+        (5, 1),
+    )
+    assert mv == [None, None, None]
+
+    f.update_many(
+        {'a': 1, 'b': 2},
+        (5, 1),
+    )
+
+    mv = f.get_many(
+        (1, 2),
+        (1, 4),
+        (5, 1),
+    )
+    assert mv == [102, None, 501]
+
+    f.set_many((
+        (1, 2),
+        (1, 4),
+    ), (
+        503,
+        716,
+    ))
+    mv = f.get_many(
+        (1, 2),
+        (1, 4),
+        (5, 1),
+    )
+    assert mv == [503, 716, 501]
+
+    with pytest.raises(AttributeError):
+        f.touch_many(
+            (1, 2),
+            (1, 4),
+        )
+    with pytest.raises(TypeError):
+        f.delete_many([1, 4])

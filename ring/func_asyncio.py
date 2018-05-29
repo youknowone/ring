@@ -54,8 +54,7 @@ class CacheUserInterface(fbase.BaseUserInterface):
 
     @fbase.interface_attrs(
         transform_args=fbase.wire_kwargs_only0,
-        return_annotation=lambda a:
-            Optional[a['return']] if 'return' in a else Optional[Any])
+        return_annotation=lambda a: Optional[a.get('return', Any)])
     @asyncio.coroutine
     def get(self, wire, **kwargs):
         key = self.key(wire, **kwargs)

@@ -274,26 +274,6 @@ def test_ring_key(value):
     assert simple(value) == value  # cache hit
 
 
-def test_memcache(memcache_client):
-    base = [0]
-
-    @ring.memcache(memcache_client, 'ring-test')
-    def f(a, b):
-        r = base[0] + a * 100 + b
-        sr = str(r)
-        if memcache_client.is_binary:
-            sr = sr.encode('utf-8')
-        return sr
-
-    f.delete(8, 6)
-    assert f.key(8, 6) == 'ring-test:8:6'
-
-    base[0] = 10000
-    assert None is f.get(8, b=6)
-    assert 10806 == int(f(8, b=6))
-    assert 10806 == int(memcache_client.get(f.key(8, 6)))
-
-
 def test_redis(redis_client):
     base = [0]
 
@@ -335,6 +315,9 @@ def test_disk(disk_cache):
     assert None is f.get(8, b=6)
     assert 10806 == int(f(8, b=6))
     assert 10806 == int(disk_cache.get(f.key(8, 6)))
+
+    with pytest.raises(NotImplementedError):
+        f.touch(0, 0)
 
 
 def test_common_value(storage):
