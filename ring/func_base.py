@@ -164,6 +164,88 @@ def create_key_builder(
     return build_key
 
 
+def interface_attrs(**kwargs):
+    if 'return_annotation' in kwargs:
+        kwargs['__annotations_override__'] = {
+            'return': kwargs.pop('return_annotation')}
+
+    assert frozenset(kwargs.keys()) <= frozenset(
+        {'transform_args', '__annotations_override__'})
+
+    def _decorator(f):
+        f.__dict__.update(kwargs)
+        return f
+
+    return _decorator
+
+
+def create_wire_kwargs_only(prefix_count=0):
+    def _wire_kwargs_only(wire, args, kwargs):
+        wrapper_args = args[:prefix_count]
+        function_args = args[prefix_count:]
+        full_kwargs = wire.merge_args(function_args, kwargs)
+        return wrapper_args, full_kwargs
+    return _wire_kwargs_only
+
+
+wire_kwargs_only0 = create_wire_kwargs_only(0)
+wire_kwargs_only1 = create_wire_kwargs_only(1)
+
+
+@six.add_metaclass(abc.ABCMeta)
+class BaseUserInterface(object):
+    """Abstract user interface.
+
+    This class provides sub-functions of ring wire. When trying to access
+    any sub-function of a ring wire which doesn't exist, it looks up
+    the composited user interface object and creates actual sub-function
+    into the ring wire.
+
+    Subclass this class to create a new user interface. The methods marked
+    as :func:`abc.abstractmethod` are mandatory; Otherwise not.
+    """
+
+    def __init__(self, ring):
+        self.ring = ring
+
+    @interface_attrs(transform_args=wire_kwargs_only0, return_annotation=str)
+    def key(self, wire, **kwargs):
+        args = wire._preargs
+        return self.ring.build_key(args, kwargs)
+
+    @interface_attrs(transform_args=wire_kwargs_only0)
+    def execute(self, wire, **kwargs):
+        return self.ring.cwrapper.callable(*wire._preargs, **kwargs)
+
+    @abc.abstractmethod
+    @interface_attrs(transform_args=wire_kwargs_only0)
+    def get(self, wire, **kwargs):  # pragma: no cover
+        raise NotImplementedError
+
+    @interface_attrs(transform_args=wire_kwargs_only1)
+    def set(self, wire, value, **kwargs):  # pragma: no cover
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    @interface_attrs(transform_args=wire_kwargs_only0)
+    def update(self, wire, **kwargs):  # pragma: no cover
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    @interface_attrs(transform_args=wire_kwargs_only0)
+    def get_or_update(self, wire, **kwargs):  # pragma: no cover
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    @interface_attrs(transform_args=wire_kwargs_only0)
+    def delete(self, wire, **kwargs):  # pragma: no cover
+        raise NotImplementedError
+
+    @interface_attrs(transform_args=wire_kwargs_only0)
+    def touch(self, wire, **kwargs):
+        raise NotImplementedError
+
+
 def factory(
         storage_backend,  # actual storage
         key_prefix,  # manual key prefix
@@ -220,27 +302,33 @@ def factory(
     if not coder:
         coder = coderize(raw_coder)
 
+    if isinstance(user_interface, (tuple, list)):
+        class _UserInterface(*user_interface):
+            pass
+        user_interface = _UserInterface
+
     def _decorator(f):
-        cwrapper = Callable(f)
-        _ignorable_keys = suggest_ignorable_keys(cwrapper, ignorable_keys)
-        _key_prefix = suggest_key_prefix(cwrapper, key_prefix)
+        cw = Callable(f)
+        _ignorable_keys = suggest_ignorable_keys(cw, ignorable_keys)
+        _key_prefix = suggest_key_prefix(cw, key_prefix)
         key_builder = create_key_builder(
-            cwrapper, _key_prefix, _ignorable_keys,
+            cw, _key_prefix, _ignorable_keys,
             encoding=key_encoding, key_refactor=key_refactor)
 
-        class Ring(BaseRing):
+        class RingCore(BaseRing):
+            cwrapper = cw
+            build_key = staticmethod(key_builder)
+
             def __init__(self):
                 super(BaseRing, self).__init__()
                 self.user_interface = user_interface(self)
                 self.storage = storage_class(self, storage_backend)
 
-        Ring.cwrapper = cwrapper
-        Ring.build_key = staticmethod(key_builder)
-        Ring.miss_value = miss_value
-        Ring.expire_default = expire_default
-        Ring.coder = coder
+        RingCore.miss_value = miss_value
+        RingCore.expire_default = expire_default
+        RingCore.coder = coder
 
-        ring = Ring()
+        ring = RingCore()
 
         class RingWire(Wire):
 
@@ -254,7 +342,7 @@ def factory(
                 self.storage = ring.storage
 
             if default_action is not None:
-                @functools.wraps(cwrapper.callable)
+                @functools.wraps(ring.cwrapper.callable)
                 def __call__(self, *args, **kwargs):
                     return self.run(default_action, *args, **kwargs)
             else:  # Empty block to test coverage
@@ -272,16 +360,15 @@ def factory(
 
                 attr = getattr(self._ring.user_interface, name)
                 if callable(attr):
-                    function_args_count = getattr(
-                        attr, '_function_args_count', 0)
+                    transform_args = getattr(
+                        attr, 'transform_args', None)
 
                     def impl_f(*args, **kwargs):
-                        full_kwargs = self.merge_args(
-                            args[function_args_count:], kwargs)
-                        function_args = args[:function_args_count]
-                        return attr(self, *function_args, **full_kwargs)
+                        if transform_args:
+                            args, kwargs = transform_args(self, args, kwargs)
+                        return attr(self, *args, **kwargs)
 
-                    c = self.cwrapper.callable
+                    c = self._ring.cwrapper.callable
                     functools.wraps(c)(impl_f)
                     impl_f.__name__ = '.'.join((c.__name__, name))
                     if six.PY34:
@@ -306,9 +393,10 @@ def factory(
                 attr = getattr(self, action)
                 return attr(*args, **kwargs)
 
-        wire = RingWire.for_callable(cwrapper)
+        wire = RingWire.for_callable(ring.cwrapper)
         if on_manufactured is not None:
-            on_manufactured(wire_frame=wire, ring_class=Ring)
+            on_manufactured(wire_frame=wire, ring=ring)
+
         return wire
 
     return _decorator
@@ -447,53 +535,4 @@ class StorageMixin(object):
         :param str key: Storage key.
         :rtype: None
         """
-        raise NotImplementedError
-
-
-@six.add_metaclass(abc.ABCMeta)
-class BaseUserInterface(object):
-    """Abstract user interface.
-
-    This class provides sub-functions of ring wire. When trying to access
-    any sub-function of a ring wire which doesn't exist, it looks up
-    the composited user interface object and creates actual sub-function
-    into the ring wire.
-
-    Subclass this class to create a new user interface. The methods marked
-    as :func:`abc.abstractmethod` are mandatory; Otherwise not.
-    """
-
-    def __init__(self, ring):
-        self.ring = ring
-
-    def key(self, wire, **kwargs):
-        args = wire._preargs
-        return self.ring.build_key(args, kwargs)
-    key.__annotations_override__ = {
-        'return': str,
-    }
-
-    def execute(self, wire, **kwargs):
-        return self.ring.cwrapper.callable(*wire._preargs, **kwargs)
-
-    @abc.abstractmethod
-    def get(self, wire, **kwargs):  # pragma: no cover
-        raise NotImplementedError
-
-    def set(self, wire, value, **kwargs):  # pragma: no cover
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def update(self, wire, **kwargs):  # pragma: no cover
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def get_or_update(self, wire, **kwargs):  # pragma: no cover
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def delete(self, wire, **kwargs):  # pragma: no cover
-        raise NotImplementedError
-
-    def touch(self, wire, **kwargs):
         raise NotImplementedError

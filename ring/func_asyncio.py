@@ -13,8 +13,8 @@ inspect_iscoroutinefunction = getattr(
     inspect, 'iscoroutinefunction', lambda f: False)
 
 
-def factory_doctor(wire_frame, ring_class) -> None:
-    cwrapper = ring_class.cwrapper
+def factory_doctor(wire_frame, ring) -> None:
+    cwrapper = ring.cwrapper
     if not cwrapper.is_coroutine:
         raise TypeError(
             "The function for cache '{}' must be an async function.".format(
@@ -52,6 +52,10 @@ class CommonMixinStorage(fbase.BaseStorage):  # Working only as mixin
 
 class CacheUserInterface(fbase.BaseUserInterface):
 
+    @fbase.interface_attrs(
+        transform_args=fbase.wire_kwargs_only0,
+        return_annotation=lambda a:
+            Optional[a['return']] if 'return' in a else Optional[Any])
     @asyncio.coroutine
     def get(self, wire, **kwargs):
         key = self.key(wire, **kwargs)
@@ -60,11 +64,8 @@ class CacheUserInterface(fbase.BaseUserInterface):
         except fbase.NotFound:
             result = self.ring.miss_value
         return result
-    get.__annotations_override__ = {
-        'return':
-            lambda a: Optional[a['return']] if 'return' in a else Optional[Any],
-    }
 
+    @fbase.interface_attrs(transform_args=fbase.wire_kwargs_only0)
     @asyncio.coroutine
     def update(self, wire, **kwargs):
         key = self.key(wire, **kwargs)
@@ -72,6 +73,7 @@ class CacheUserInterface(fbase.BaseUserInterface):
         yield from self.ring.storage.set(key, result)
         return result
 
+    @fbase.interface_attrs(transform_args=fbase.wire_kwargs_only0)
     @asyncio.coroutine
     def get_or_update(self, wire, **kwargs):
         key = self.key(wire, **kwargs)
@@ -82,30 +84,26 @@ class CacheUserInterface(fbase.BaseUserInterface):
             yield from self.ring.storage.set(key, result)
         return result
 
+    @fbase.interface_attrs(
+        transform_args=fbase.wire_kwargs_only1, return_annotation=None)
     @asyncio.coroutine
     def set(self, wire, _value, **kwargs):
         key = self.key(wire, **kwargs)
         yield from self.ring.storage.set(key, _value)
-    set._function_args_count = 1
-    set.__annotations_override__ = {
-        'return': None,
-    }
 
+    @fbase.interface_attrs(
+        transform_args=fbase.wire_kwargs_only0, return_annotation=None)
     @asyncio.coroutine
     def delete(self, wire, **kwargs):
         key = self.key(wire, **kwargs)
         yield from self.ring.storage.delete(key)
-    delete.__annotations_override__ = {
-        'return': None,
-    }
 
+    @fbase.interface_attrs(
+        transform_args=fbase.wire_kwargs_only0, return_annotation=None)
     @asyncio.coroutine
     def touch(self, wire, **kwargs):
         key = self.key(wire, **kwargs)
         yield from self.ring.storage.touch(key)
-    touch.__annotations_override__ = {
-        'return': None,
-    }
 
 
 class DictStorage(CommonMixinStorage, fbase.StorageMixin):

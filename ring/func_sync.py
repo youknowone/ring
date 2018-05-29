@@ -13,6 +13,10 @@ __all__ = ('dict', 'memcache', 'redis_py', 'redis', 'disk', )
 
 class CacheUserInterface(fbase.BaseUserInterface):
 
+    @fbase.interface_attrs(
+        transform_args=fbase.wire_kwargs_only0,
+        return_annotation=lambda a:
+            Optional[a['return']] if 'return' in a else Optional[Any])
     def get(self, wire, **kwargs):
         key = self.key(wire, **kwargs)
         try:
@@ -20,17 +24,15 @@ class CacheUserInterface(fbase.BaseUserInterface):
         except fbase.NotFound:
             result = self.ring.miss_value
         return result
-    get.__annotations_override__ = {
-        'return':
-            lambda a: Optional[a['return']] if 'return' in a else Optional[Any],
-    }
 
+    @fbase.interface_attrs(transform_args=fbase.wire_kwargs_only0)
     def update(self, wire, **kwargs):
         key = wire.key(**kwargs)
         result = wire.execute(**kwargs)
         self.ring.storage.set(key, result)
         return result
 
+    @fbase.interface_attrs(transform_args=fbase.wire_kwargs_only0)
     def get_or_update(self, wire, **kwargs):
         key = self.key(wire, **kwargs)
         try:
@@ -40,27 +42,23 @@ class CacheUserInterface(fbase.BaseUserInterface):
             self.ring.storage.set(key, result)
         return result
 
+    @fbase.interface_attrs(
+        transform_args=fbase.wire_kwargs_only1, return_annotation=None)
     def set(self, wire, _value, **kwargs):
         key = self.key(wire, **kwargs)
         self.ring.storage.set(key, _value)
-    set._function_args_count = 1
-    set.__annotations_override__ = {
-        'return': None,
-    }
 
+    @fbase.interface_attrs(
+        transform_args=fbase.wire_kwargs_only0, return_annotation=None)
     def delete(self, wire, **kwargs):
         key = self.key(wire, **kwargs)
         self.ring.storage.delete(key)
-    delete.__annotations_override__ = {
-        'return': None,
-    }
 
+    @fbase.interface_attrs(
+        transform_args=fbase.wire_kwargs_only0, return_annotation=None)
     def touch(self, wire, **kwargs):
         key = self.key(wire, **kwargs)
         self.ring.storage.touch(key)
-    touch.__annotations_override__ = {
-        'return': None,
-    }
 
 
 class DictStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
