@@ -155,8 +155,14 @@ def test_func_dict():
     def f1(a, b):
         return a * 100 + b
 
-    yield from f1(1, 2)
-    yield from f1(1, 2)
+    r = yield from f1.has(1, 2)
+    assert r is False
+    r = yield from f1(1, 2)
+    assert r == 102
+    r = yield from f1(1, 2)
+    assert r == 102
+    r = yield from f1.has(1, 2)
+    assert r is True
 
     cache = {}
 
@@ -187,30 +193,79 @@ def test_func_without_expiration():
 
 @pytest.mark.asyncio
 @asyncio.coroutine
+def test_many(aiomcache_client):
+    client = yield from aiomcache_client
+
+    @ring.aiomcache(client)
+    @asyncio.coroutine
+    def f(a):
+        return 't{}'.format(a).encode()
+
+    r = yield from f.execute_many(
+        (1,),
+        {'a': 2},
+    )
+    assert r == [b't1', b't2']
+
+    with pytest.raises(TypeError):
+        yield from f.execute_many(
+            [1],
+        )
+
+
+@pytest.mark.asyncio
+@asyncio.coroutine
 def test_aiomcache(aiomcache_client):
     client = yield from aiomcache_client
 
     @ring.aiomcache(client)
     @asyncio.coroutine
     def f(a):
-        return b'test'
+        return 't{}'.format(a).encode()
 
     yield from f.delete(1)
     yield from f(1)
     yield from f.touch(1)
 
+    r = yield from f.get_many(
+        (1,),
+        {'a': 2},
+    )
+    assert r == [b't1', None]
 
+    with pytest.raises(AttributeError):
+        yield from f.has(1)
+
+    with pytest.raises(NotImplementedError):
+        yield from f.update_many()
+
+    with pytest.raises(NotImplementedError):
+        yield from f.delete_many()
+
+    with pytest.raises(AttributeError):
+        yield from f.has_many()
+
+    with pytest.raises(AttributeError):
+        yield from f.touch_many()
+
+
+@pytest.mark.parametrize('expire', [
+    1,
+    None,
+])
 @pytest.mark.asyncio
 @asyncio.coroutine
-def test_aioredis(aioredis_pool):
+def test_aioredis(aioredis_pool, expire):
     client = yield from aioredis_pool
 
-    @ring.aioredis(client)
+    @ring.aioredis(client, expire=expire)
     @asyncio.coroutine
     def f(a):
-        return b'test'
+        return 't{}'.format(a).encode()
 
     yield from f.delete(1)
+    yield from f.delete(2)
+    yield from f.delete(3)
     r = yield from f.get(1)
     assert r is None
     r = yield from f.has(1)
@@ -220,8 +275,48 @@ def test_aioredis(aioredis_pool):
     r = yield from f.has(1)
     assert r is True
 
-    with pytest.raises(TypeError):
+    if expire is None:
+        with pytest.raises(TypeError):
+            yield from f.touch(1)
+    else:
         yield from f.touch(1)
+
+    # _many
+    r = yield from f.get_many(
+        (1,),
+        {'a': 2},
+    )
+    assert r == [b't1', None]
+
+    r = yield from f.update_many(
+        (1,),
+        {'a': 3},
+    )
+    assert r == [b't1', b't3']
+
+    yield from f.set_many((
+        (1,),
+        (2,),
+    ), (
+        b'foo',
+        b'bar',
+    ))
+
+    r = yield from f.get_many(
+        {'a': 1},
+        (2,),
+        (3,),
+    )
+    assert r == [b'foo', b'bar', b't3']
+
+    with pytest.raises(AttributeError):
+        yield from f.delete_many()
+
+    with pytest.raises(AttributeError):
+        yield from f.has_many()
+
+    with pytest.raises(AttributeError):
+        yield from f.touch_many()
 
 
 @pytest.mark.asyncio

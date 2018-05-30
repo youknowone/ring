@@ -1,16 +1,20 @@
 """:mod:`ring.func_asyncio`
 is a collection of :mod:`asyncio` factory functions.
 """
-from typing import Optional, Any
+from typing import Any, Optional, List
 import asyncio
 import inspect
+import itertools
 import time
 from . import func_base as fbase
+from .func_sync import create_bulk_key
 
 __all__ = ('dict', 'aiodict', 'aiomcache', 'aioredis', )
 
 inspect_iscoroutinefunction = getattr(
     inspect, 'iscoroutinefunction', lambda f: False)
+
+type_dict = dict
 
 
 def factory_doctor(wire_frame, ring) -> None:
@@ -90,32 +94,120 @@ class CacheUserInterface(fbase.BaseUserInterface):
 
     @fbase.interface_attrs(
         transform_args=fbase.wire_kwargs_only1, return_annotation=None)
-    @asyncio.coroutine
     def set(self, wire, _value, **kwargs):
         key = self.key(wire, **kwargs)
-        yield from self.ring.storage.set(key, _value)
+        return self.ring.storage.set(key, _value)
 
     @fbase.interface_attrs(
         transform_args=fbase.wire_kwargs_only0, return_annotation=None)
-    @asyncio.coroutine
     def delete(self, wire, **kwargs):
         key = self.key(wire, **kwargs)
-        yield from self.ring.storage.delete(key)
+        return self.ring.storage.delete(key)
 
     @fbase.interface_attrs(
         transform_args=fbase.wire_kwargs_only0, return_annotation=bool)
-    @asyncio.coroutine
     def has(self, wire, **kwargs):
         key = self.key(wire, **kwargs)
-        result = yield from self.ring.storage.has(key)
-        return result
+        return self.ring.storage.has(key)
 
     @fbase.interface_attrs(
         transform_args=fbase.wire_kwargs_only0, return_annotation=None)
-    @asyncio.coroutine
     def touch(self, wire, **kwargs):
         key = self.key(wire, **kwargs)
-        yield from self.ring.storage.touch(key)
+        return self.ring.storage.touch(key)
+
+
+@asyncio.coroutine
+def execute_bulk_item(wire, args):
+    if isinstance(args, tuple):
+        result = yield from wire._ring.cwrapper.callable(
+            *(wire._preargs + args))
+        return result
+    elif isinstance(args, type_dict):
+        result = yield from wire._ring.cwrapper.callable(
+            *wire._preargs, **args)
+        return result
+    else:
+        raise TypeError(
+            "Each parameter of '_many' suffixed sub-functions must be an "
+            "instance of 'tuple' or 'dict'")
+
+
+class BulkInterfaceMixin(object):
+    """Experimental."""
+
+    @fbase.interface_attrs(return_annotation=List[str])
+    def key_many(self, wire, *args_list):
+        return [create_bulk_key(self, wire, args) for args in args_list]
+
+    @fbase.interface_attrs(
+        return_annotation=lambda a: List[a.get('return', Any)])
+    def execute_many(self, wire, *args_list):
+        return asyncio.gather(*(
+            execute_bulk_item(wire, args) for args in args_list))
+
+    @fbase.interface_attrs(
+        return_annotation=lambda a: List[Optional[a.get('return', Any)]])
+    def get_many(self, wire, *args_list):
+        keys = self.key_many(wire, *args_list)
+        return self.ring.storage.get_many(
+            keys, miss_value=self.ring.miss_value)
+
+    @fbase.interface_attrs(return_annotation=None)
+    @asyncio.coroutine
+    def update_many(self, wire, *args_list):
+        keys = self.key_many(wire, *args_list)
+        values = yield from self.execute_many(wire, *args_list)
+        yield from self.ring.storage.set_many(keys, values)
+        return values
+
+    @fbase.interface_attrs(return_annotation=None)
+    def set_many(self, wire, args_list, value_list):
+        keys = self.key_many(wire, *args_list)
+        return self.ring.storage.set_many(keys, value_list)
+
+    @fbase.interface_attrs(return_annotation=None)
+    def delete_many(self, wire, *args_list):
+        keys = self.key_many(wire, *args_list)
+        return self.ring.storage.delete_many(keys)
+
+    @fbase.interface_attrs(return_annotation=None)
+    def has_many(self, wire, *args_list):
+        keys = self.key_many(wire, *args_list)
+        return self.ring.storage.has_many(keys)
+
+    @fbase.interface_attrs(return_annotation=None)
+    def touch_many(self, wire, *args_list):
+        keys = self.key_many(wire, *args_list)
+        return self.ring.storage.touch_many(keys)
+
+
+class BulkStorageMixin(object):
+
+    @asyncio.coroutine
+    def get_many(self, keys, miss_value):
+        values = yield from self.get_many_values(keys)
+        results = [
+            self.ring.coder.decode(v) if v is not fbase.NotFound else miss_value
+            for v in values]
+        return results
+
+    def set_many(self, keys, values, expire=Ellipsis):
+        if expire is Ellipsis:
+            expire = self.ring.expire_default
+        return self.set_many_values(
+            keys, [self.ring.coder.encode(v) for v in values], expire)
+
+    def delete_many(self, keys):
+        return self.delete_many_values(keys)
+
+    def has_many(self, keys):
+        return self.has_many_values(keys)
+
+    def touch_many(self, keys, expire=Ellipsis):
+        if expire is Ellipsis:
+            expire = self.ring.expire_default
+        return self.touch_many_values(keys, expire)
 
 
 class DictStorage(CommonMixinStorage, fbase.StorageMixin):
@@ -169,7 +261,9 @@ class DictStorage(CommonMixinStorage, fbase.StorageMixin):
         self.backend[key] = expired_time, value
 
 
-class AiomcacheStorage(CommonMixinStorage, fbase.StorageMixin):
+class AiomcacheStorage(
+        CommonMixinStorage, fbase.StorageMixin, BulkStorageMixin):
+
     @asyncio.coroutine
     def get_value(self, key):
         value = yield from self.backend.get(key)
@@ -186,8 +280,19 @@ class AiomcacheStorage(CommonMixinStorage, fbase.StorageMixin):
     def touch_value(self, key, expire):
         return self.backend.touch(key, expire)
 
+    @asyncio.coroutine
+    def get_many_values(self, keys):
+        values = yield from self.backend.multi_get(*keys)
+        return [v if v is not None else fbase.NotFound for v in values]
 
-class AioredisStorage(CommonMixinStorage, fbase.StorageMixin):
+    def set_many_values(self, keys, values, expire):
+        raise NotImplementedError("aiomcache doesn't support set_multi.")
+
+    def delete_many_values(self, keys):
+        raise NotImplementedError("aiomcache doesn't support delete_multi.")
+
+
+class AioredisStorage(CommonMixinStorage, fbase.StorageMixin, BulkStorageMixin):
     @asyncio.coroutine
     def get_value(self, key):
         value = yield from self.backend.get(key)
@@ -210,6 +315,19 @@ class AioredisStorage(CommonMixinStorage, fbase.StorageMixin):
         if expire is None:
             raise TypeError("'touch' is requested for persistent cache")
         return self.backend.expire(key, expire)
+
+    @asyncio.coroutine
+    def get_many_values(self, keys):
+        values = yield from self.backend.mget(*keys)
+        return [v if v is not None else fbase.NotFound for v in values]
+
+    @asyncio.coroutine
+    def set_many_values(self, keys, values, expire):
+        params = itertools.chain.from_iterable(zip(keys, values))
+        yield from self.backend.mset(*params)
+        if expire is not None:
+            asyncio.ensure_future(asyncio.gather(*(
+                self.backend.expire(key, expire) for key in keys)))
 
 
 def dict(
@@ -247,8 +365,8 @@ aiodict = dict
 
 def aiomcache(
         client, key_prefix=None, expire=0, coder=None, ignorable_keys=None,
-        user_interface=CacheUserInterface, storage_class=AiomcacheStorage,
-        key_encoding='utf-8'):
+        user_interface=(CacheUserInterface, BulkInterfaceMixin),
+        storage_class=AiomcacheStorage, key_encoding='utf-8'):
     """Memcached_ interface for :mod:`asyncio`.
 
     Expected client package is:
@@ -280,7 +398,8 @@ def aiomcache(
 
 def aioredis(
         pool, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
-        user_interface=CacheUserInterface, storage_class=AioredisStorage):
+        user_interface=(CacheUserInterface, BulkInterfaceMixin),
+        storage_class=AioredisStorage):
     """Redis interface for :mod:`asyncio`.
 
     Expected client package is:

@@ -95,38 +95,49 @@ def create_bulk_key(interface, wire, args):
 class BulkInterfaceMixin(object):
     """Experimental."""
 
+    @fbase.interface_attrs(return_annotation=lambda a: List[str])
+    def key_many(self, wire, *args_list):
+        return [create_bulk_key(self, wire, args) for args in args_list]
+
     @fbase.interface_attrs(
         return_annotation=lambda a: List[a.get('return', Any)])
     def execute_many(self, wire, *args_list):
         values = [execute_bulk_item(wire, args) for args in args_list]
         return values
 
-    @fbase.interface_attrs(return_annotation=type_dict)
+    @fbase.interface_attrs(
+        return_annotation=lambda a: List[Optional[a.get('return', Any)]])
     def get_many(self, wire, *args_list):
-        keys = [create_bulk_key(self, wire, args) for args in args_list]
+        keys = self.key_many(wire, *args_list)
         results = self.ring.storage.get_many(
             keys, miss_value=self.ring.miss_value)
         return results
 
     @fbase.interface_attrs(return_annotation=None)
     def update_many(self, wire, *args_list):
-        keys = [create_bulk_key(self, wire, args) for args in args_list]
+        keys = self.key_many(wire, *args_list)
         values = [execute_bulk_item(wire, args) for args in args_list]
         self.ring.storage.set_many(keys, values)
-
-    @fbase.interface_attrs(return_annotation=None)
-    def delete_many(self, wire, *args_list):
-        keys = [create_bulk_key(self, wire, args) for args in args_list]
-        self.ring.storage.delete_many(keys)
+        return values
 
     @fbase.interface_attrs(return_annotation=None)
     def set_many(self, wire, args_list, value_list):
-        keys = [create_bulk_key(self, wire, args) for args in args_list]
+        keys = self.key_many(wire, *args_list)
         self.ring.storage.set_many(keys, value_list)
 
     @fbase.interface_attrs(return_annotation=None)
+    def delete_many(self, wire, *args_list):
+        keys = self.key_many(wire, *args_list)
+        self.ring.storage.delete_many(keys)
+
+    @fbase.interface_attrs(return_annotation=None)
+    def has_many(self, wire, *args_list):
+        keys = self.key_many(wire, *args_list)
+        self.ring.storage.has_many(keys)
+
+    @fbase.interface_attrs(return_annotation=None)
     def touch_many(self, wire, *args_list):
-        keys = [create_bulk_key(self, wire, args) for args in args_list]
+        keys = self.key_many(wire, *args_list)
         self.ring.storage.touch_many(keys)
 
 
@@ -230,7 +241,9 @@ class MemcacheStorage(
         return self.backend.delete_multi(keys)
 
 
-class RedisStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
+class RedisStorage(
+        fbase.CommonMixinStorage, fbase.StorageMixin, BulkStorageMixin):
+
     def get_value(self, key):
         value = self.backend.get(key)
         if value is None:
@@ -253,10 +266,13 @@ class RedisStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
 
     def get_many_values(self, keys):
         values = self.backend.mget(keys)
-        return [values.get(k, fbase.NotFound) for k in keys]
+        return [v if v is not None else fbase.NotFound for v in values]
 
     def set_many_values(self, keys, values, expire):
-        self.backend.mset({k: v for k, v in zip(keys, values)}, expire)
+        self.backend.mset({k: v for k, v in zip(keys, values)})
+        if expire is not None:
+            for key in keys:
+                self.backend.expire(key, expire)
 
 
 class DiskStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
@@ -354,7 +370,8 @@ def memcache(
 
 def redis_py(
         client, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
-        user_interface=CacheUserInterface, storage_class=RedisStorage):
+        user_interface=(CacheUserInterface, BulkInterfaceMixin),
+        storage_class=RedisStorage):
     """Redis_ interface.
 
     This backend depends on `redis-py`_.
