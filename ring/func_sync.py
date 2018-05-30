@@ -1,5 +1,7 @@
-""":mod:`ring.func_sync`
-is a collection of factory functions.
+""":mod:`ring.func_sync` --- a collection of factory functions.
+
+This module includes building blocks and storage implementations of **Ring**
+factories.
 """
 from typing import Any, Optional, List
 import time
@@ -15,6 +17,11 @@ type_dict = dict
 
 
 class CacheUserInterface(fbase.BaseUserInterface):
+    """General cache user interface provider.
+
+    :see: :class:`ring.func_base.BaseUserInterface` for class and methods
+        details.
+    """
 
     @fbase.interface_attrs(
         transform_args=fbase.wire_kwargs_only0,
@@ -80,24 +87,12 @@ def execute_bulk_item(wire, args):
             "instance of 'tuple' or 'dict'")
 
 
-def create_bulk_key(interface, wire, args):
-    if isinstance(args, tuple):
-        kwargs = wire.merge_args(args, {})
-        return interface.key(wire, **kwargs)
-    elif isinstance(args, type_dict):
-        return interface.key(wire, **args)
-    else:
-        raise TypeError(
-            "Each parameter of '_many' suffixed sub-functions must be an "
-            "instance of 'tuple' or 'dict'")
+class BulkInterfaceMixin(fbase.AbstractBulkUserInterfaceMixin):
+    """Bulk access interface mixin.
 
-
-class BulkInterfaceMixin(object):
-    """Experimental."""
-
-    @fbase.interface_attrs(return_annotation=lambda a: List[str])
-    def key_many(self, wire, *args_list):
-        return [create_bulk_key(self, wire, args) for args in args_list]
+    Any corresponding storage class must be a subclass of
+    :class:`ring.func_sync.BulkStorageMixin`.
+    """
 
     @fbase.interface_attrs(
         return_annotation=lambda a: List[a.get('return', Any)])
@@ -297,7 +292,8 @@ def dict(
     This backend is not designed for real products, but useful by
     keeping below in mind:
 
-    - `functools.lrucache` is the standard library for the most of local cache.
+    - :func:`functools.lru_cache` is the standard library for the most of
+      local cache.
     - Expired objects will never be removed from the dict. If the function has
       unlimited input combinations, never use dict.
     - It is designed to "simulate" cache backends, not to provide an actual
@@ -308,6 +304,8 @@ def dict(
     advantage of it when your demands fit.
 
     :param dict obj: Cache storage. Any :class:`dict` compatible object.
+
+    :see: :func:`ring.func_sync.CacheUserInterface` for sub-functions.
 
     :see: :func:`ring.aiodict` for :mod:`asyncio` version.
     """
@@ -348,13 +346,19 @@ def memcache(
       ``memcache.Client(["127.0.0.1:11211"])``
     - pylibmc: ``pylibmc.Client(['127.0.0.1'])``
 
+    :note: `touch` feature availability depends on memcached library.
+
     .. _Memcached: http://memcached.org/
 
     :param object client: Memcached client object. See above for details.
     :param object key_refactor: The default key refactor may hash the cache
         key when it doesn't meet memcached key restriction.
 
-    :note: `touch` feature availability depends on memcached library.
+    :see: :func:`ring.func_sync.CacheUserInterface` for single access
+        sub-functions.
+    :see: :func:`ring.func_sync.BulkInterfaceMixin` for bulk access
+        sub-functions.
+
     :see: :func:`ring.aiomcache` for :mod:`asyncio` version.
     """
     from ring._memcache import key_refactor
@@ -385,6 +389,11 @@ def redis_py(
 
     :param redis.StrictRedis client: Redis client object.
 
+    :see: :func:`ring.func_sync.CacheUserInterface` for single access
+        sub-functions.
+    :see: :func:`ring.func_sync.BulkInterfaceMixin` for bulk access
+        sub-functions.
+
     :see: :func:`ring.aioredis` for :mod:`asyncio` version.
     :see: Redis_ for Redis documentation.
 
@@ -409,6 +418,8 @@ def disk(
     .. _diskcache: https://pypi.org/project/diskcache/
 
     :param diskcache.Cache obj: diskcache Cache object.
+
+    :see: :func:`ring.func_sync.CacheUserInterface` for sub-functions.
     """
     return fbase.factory(
         obj, key_prefix=key_prefix, on_manufactured=None,

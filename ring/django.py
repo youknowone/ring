@@ -20,6 +20,8 @@ def promote_backend(backend):
 
 
 class DjangoStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
+    """Storage implementation for :data:`django.core.cache.caches`."""
+
     def get_value(self, key):
         value = self.backend.get(key)
         if value is None:

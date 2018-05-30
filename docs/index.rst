@@ -50,6 +50,7 @@ Documents
    contribution.rst
 
 .. toctree::
+   :titlesonly:
    :maxdepth: 2
    :caption: Reference:
 
