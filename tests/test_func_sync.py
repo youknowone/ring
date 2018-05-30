@@ -285,9 +285,11 @@ def test_redis(redis_client):
     assert f.key(1, 2) == 'ring-test:1:2'
 
     base[0] = 10000
+    assert False is f.has(1, 2)
     assert None is f.get(1, b=2)
     assert 10102 == int(f(1, b=2))
     assert 10102 == int(redis_client.get(f.key(1, 2)))
+    assert True is f.has(1, 2)
 
     @ring.redis(redis_client, 'ring-test')
     def g():

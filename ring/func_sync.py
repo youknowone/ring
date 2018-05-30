@@ -57,6 +57,12 @@ class CacheUserInterface(fbase.BaseUserInterface):
         self.ring.storage.delete(key)
 
     @fbase.interface_attrs(
+        transform_args=fbase.wire_kwargs_only0, return_annotation=bool)
+    def has(self, wire, **kwargs):
+        key = self.key(wire, **kwargs)
+        return self.ring.storage.has(key)
+
+    @fbase.interface_attrs(
         transform_args=fbase.wire_kwargs_only0, return_annotation=None)
     def touch(self, wire, **kwargs):
         key = self.key(wire, **kwargs)
@@ -142,6 +148,9 @@ class BulkStorageMixin(object):
     def delete_many(self, keys):
         self.delete_many_values(keys)
 
+    def has_many(self, keys):
+        return self.has_many_values(keys)
+
     def touch_many(self, keys, expire=Ellipsis):
         if expire is Ellipsis:
             expire = self.ring.expire_default
@@ -175,6 +184,9 @@ class DictStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
             del self.backend[key]
         except KeyError:
             pass
+
+    def has_value(self, key):
+        return key in self.backend
 
     def touch_value(self, key, expire):
         _now = self.now()
@@ -231,10 +243,20 @@ class RedisStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
     def delete_value(self, key):
         self.backend.delete(key)
 
+    def has_value(self, key):
+        return self.backend.exists(key)
+
     def touch_value(self, key, expire):
         if expire is None:
             raise TypeError("'touch' is requested for persistent cache")
         self.backend.expire(key, expire)
+
+    def get_many_values(self, keys):
+        values = self.backend.mget(keys)
+        return [values.get(k, fbase.NotFound) for k in keys]
+
+    def set_many_values(self, keys, values, expire):
+        self.backend.mset({k: v for k, v in zip(keys, values)}, expire)
 
 
 class DiskStorage(fbase.CommonMixinStorage, fbase.StorageMixin):

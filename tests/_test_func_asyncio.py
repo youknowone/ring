@@ -187,16 +187,41 @@ def test_func_without_expiration():
 
 @pytest.mark.asyncio
 @asyncio.coroutine
-def test_aioredis(aiomcache_client):
+def test_aiomcache(aiomcache_client):
     client = yield from aiomcache_client
+
+    @ring.aiomcache(client)
+    @asyncio.coroutine
+    def f(a):
+        return b'test'
+
+    yield from f.delete(1)
+    yield from f(1)
+    yield from f.touch(1)
+
+
+@pytest.mark.asyncio
+@asyncio.coroutine
+def test_aioredis(aioredis_pool):
+    client = yield from aioredis_pool
 
     @ring.aioredis(client)
     @asyncio.coroutine
-    def f():
-        pass
+    def f(a):
+        return b'test'
+
+    yield from f.delete(1)
+    r = yield from f.get(1)
+    assert r is None
+    r = yield from f.has(1)
+    assert r is False
+
+    yield from f(1)
+    r = yield from f.has(1)
+    assert r is True
 
     with pytest.raises(TypeError):
-        yield from f.touch()
+        yield from f.touch(1)
 
 
 @pytest.mark.asyncio
