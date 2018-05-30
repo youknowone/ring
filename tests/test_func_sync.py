@@ -274,7 +274,7 @@ def test_disk(disk_cache):
     assert 10806 == int(f(8, b=6))
     assert 10806 == int(disk_cache.get(f.key(8, 6)))
 
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(AttributeError):
         f.touch(0, 0)
 
 

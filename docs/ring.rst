@@ -6,6 +6,7 @@
    :caption: User interfaces
 
    ring/func
+   ring/func_base
    ring/coder
    ring/django
 

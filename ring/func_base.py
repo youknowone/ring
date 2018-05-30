@@ -5,6 +5,7 @@
 import abc
 import functools
 import types
+from typing import List
 
 import six
 from ._compat import lru_cache, qualname
@@ -180,6 +181,27 @@ def interface_attrs(**kwargs):
 
 
 def create_wire_kwargs_only(prefix_count=0):
+    """Create a function for `transform_args` in interfaces' basic method.
+
+    Each created function is called *transform function*. They are
+    able to be passed as a value of `transform_args` parameter in
+    :func:`ring.func_base.interface_attrs` decorator.
+
+    The created transform function turns actual arguments of ring wires into
+    uniform fully keyword-annotated arguments except for the first
+    `prefix_count` number of positional arguments. So that the interface
+    programmers can concentrate on the logic of the interface - not on the
+    details of argument handling.
+
+    :param int prefix_count: The number of prefix parameters. When it is
+        a non-zero positive integer, the transform function will skip the
+        first `prefix_count` number of positional arguments when it composes
+        the fully keyword-annotated arguments. Use this to allow a method has
+        the exact `prefix_count` number of additional *method parameters*.
+    :return: A transform function with the given `prefix_count` option.
+
+    :see: :class:`ring.func_base.BaseUserInterface` for usage.
+    """
     def _wire_kwargs_only(wire, args, kwargs):
         wrapper_args = args[:prefix_count]
         function_args = args[prefix_count:]
@@ -188,21 +210,52 @@ def create_wire_kwargs_only(prefix_count=0):
     return _wire_kwargs_only
 
 
+#: The single-access *transform_args* with 0 prefix parameter.
+#: This function is created with :func:`ring.func_base.create_wire_kwargs_only`.
 wire_kwargs_only0 = create_wire_kwargs_only(0)
+#: The single-access *transform_args* with 1 prefix parameter.
+#: This function is created with :func:`ring.func_base.create_wire_kwargs_only`.
 wire_kwargs_only1 = create_wire_kwargs_only(1)
 
 
 @six.add_metaclass(abc.ABCMeta)
 class BaseUserInterface(object):
-    """Abstract user interface.
+    """The base user interface class for single item access.
 
-    This class provides sub-functions of ring wire. When trying to access
+    An instance of interface class is bound to a **Ring** object. They have
+    the one-to-one relationship. Subclass this class to create a new user
+    interface. This is an abstract class. The methods marked as
+    :func:`abc.abstractmethod` are mandatory; Otherwise not.
+
+    This class provides sub-functions of ring wires. When trying to access
     any sub-function of a ring wire which doesn't exist, it looks up
-    the composited user interface object and creates actual sub-function
+    the composed user interface object and creates actual sub-function
     into the ring wire.
 
-    Subclass this class to create a new user interface. The methods marked
-    as :func:`abc.abstractmethod` are mandatory; Otherwise not.
+    The parameter *transform_args* in :func:`ring.func_base.interface_attrs`
+    defines the figure of method parameters. For the base user interface,
+    every method's *transform_args* is one of the results of
+    :func:`ring.func_base.create_wire_kwargs_only`, e.g.
+    :data:`ring.func_base.wire_kwargs_only0` or
+    :data:`ring.func_base.wire_kwargs_only1`. Other mixins or subclasses may
+    have different *transform_args*.
+
+    The first parameter of interface method *always* is a **RingWire** object.
+    The other parameters are composed by *transform_args*.
+
+    :see: :func:`ring.func_base.create_wire_kwargs_only` for the specific
+        argument transformation rule for each methods.
+
+    The parameters below describe common methods' parameters.
+
+    :param ring.func_base.factory...RingWire wire: The corresponding ring
+        wire object.
+    :param Dict[str,Any] kwargs: Fully keyword-annotated arguments. When
+        actual function arguments are passed to each sub-function of the
+        wire, they are merged as the form of keyword arguments. This gives
+        the consistent interface for arguments handling. Note that it only
+        describes the methods' *transform_args* attribute is the result of
+        :func:`ring.func_base.create_wire_kwargs_only`
     """
 
     def __init__(self, ring):
@@ -210,43 +263,243 @@ class BaseUserInterface(object):
 
     @interface_attrs(transform_args=wire_kwargs_only0, return_annotation=str)
     def key(self, wire, **kwargs):
+        """Create and return the composed key for storage.
+
+        :see: The class documentation for the parameter details.
+        :return: The composed key with given arguments.
+        :rtype: str
+        """
         args = wire._preargs
         return self.ring.compose_key(args, kwargs)
 
     @interface_attrs(transform_args=wire_kwargs_only0)
     def execute(self, wire, **kwargs):
+        """Execute and return the result of original function.
+
+        :see: The class documentation for the parameter details.
+        :return: The result of the original function.
+        """
         return self.ring.cwrapper.callable(*wire._preargs, **kwargs)
 
     @abc.abstractmethod
     @interface_attrs(transform_args=wire_kwargs_only0)
     def get(self, wire, **kwargs):  # pragma: no cover
+        """Try to get and return the storage value of the corresponding key.
+
+        :see: The class documentation for the parameter details.
+        :see: :meth:`ring.func_base.BaseUserInterface.key` for the key.
+        :return: The storage value for the corresponding key if it exists;
+            Otherwise the `miss_value` of **Ring** object.
+        """
         raise NotImplementedError
 
     @interface_attrs(transform_args=wire_kwargs_only1)
     def set(self, wire, value, **kwargs):  # pragma: no cover
+        """Set the storage value of the corresponding key as the given `value`.
+
+        :see: :meth:`ring.func_base.BaseUserInterface.key` for the key.
+
+        :see: The class documentation for common parameter details.
+        :param Any value: The value to save in the storage.
+        :rtype: None
+        """
         raise NotImplementedError
 
     @abc.abstractmethod
     @interface_attrs(transform_args=wire_kwargs_only0)
     def update(self, wire, **kwargs):  # pragma: no cover
+        """Execute the original function and `set` the result as the value.
+
+        This action is comprehensible as a concatnation of
+        :meth:`ring.func_base.BaseUserInterface.execute` and
+        :meth:`ring.func_base.BaseUserInterface.set`.
+
+        :see: :meth:`ring.func_base.BaseUserInterface.key` for the key.
+        :see: :meth:`ring.func_base.BaseUserInterface.execute` for the
+            execution.
+
+        :see: The class documentation for the parameter details.
+        :return: The result of the original function.
+        """
         raise NotImplementedError
 
     @abc.abstractmethod
     @interface_attrs(transform_args=wire_kwargs_only0)
     def get_or_update(self, wire, **kwargs):  # pragma: no cover
+        """Try to get and return the storage value; Otherwise, update and so.
+
+        :see: :meth:`ring.func_base.BaseUserInterface.get` for get.
+        :see: :meth:`ring.func_base.BaseUserInterface.update` for update.
+
+        :see: The class documentation for the parameter details.
+        :return: The storage value for the corresponding key if it exists;
+            Otherwise result of the original function.
+        """
         raise NotImplementedError
 
     @abc.abstractmethod
     @interface_attrs(transform_args=wire_kwargs_only0)
     def delete(self, wire, **kwargs):  # pragma: no cover
+        """Delete the storage value of the corresponding key.
+
+        :see: :meth:`ring.func_base.BaseUserInterface.key` for the key.
+
+        :see: The class documentation for the parameter details.
+        :rtype: None
+        """
         raise NotImplementedError
 
     @interface_attrs(transform_args=wire_kwargs_only0)
     def has(self, wire, **kwargs):  # pragma: no cover
+        """Return whether the storage has a value of the corresponding key.
+
+        This is an optional function.
+
+        :see: :meth:`ring.func_base.BaseUserInterface.key` for the key.
+
+        :see: The class documentation for the parameter details.
+        :return: Whether the storage has a value of the corresponding key.
+        :rtype: bool
+        """
         raise NotImplementedError
 
     @interface_attrs(transform_args=wire_kwargs_only0)
     def touch(self, wire, **kwargs):  # pragma: no cover
+        """Touch the storage value of the corresponding key.
+
+        This is an optional function.
+
+        :note: `Touch` means resetting the expiration.
+        :see: :meth:`ring.func_base.BaseUserInterface.key` for the key.
+
+        :see: The class documentation for the parameter details.
+        :rtype: bool
+        """
+        raise NotImplementedError
+
+
+def create_bulk_key(interface, wire, args):
+    if isinstance(args, tuple):
+        kwargs = wire.merge_args(args, {})
+        return interface.key(wire, **kwargs)
+    elif isinstance(args, dict):
+        return interface.key(wire, **args)
+    else:
+        raise TypeError(
+            "Each parameter of '_many' suffixed sub-functions must be an "
+            "instance of 'tuple' or 'dict'")
+
+
+class AbstractBulkUserInterfaceMixin(object):
+    """Bulk access interface mixin.
+
+    Every method in this mixin is optional. The methods have each
+    corresponding function in :class:`ring.func_base.BaseUserInterface`.
+
+    The parameters below describe common methods' parameters.
+
+    :param ring.func_base.factory...RingWire wire: The corresponding ring
+        wire object.
+    :param Iterable[Union[tuple,dict]] args_list: A sequence of arguments of
+        the original function. While **args_list** is a list of **args**,
+        each **args** (:class:`Union[tuple,dict]`) is a complete set of
+        positional-only formed or keyword-only formed arguments.
+        When the **args** (:class:`tuple`) is positional-only formed, its type
+        must be always :class:`tuple`. Any other iterable types like `list`
+        are not allowed. When any keyword-only argument is required, use
+        keyword-only formed arguments.
+        When the **args** (:class:`dict`) is keyword-only formed, its type must
+        be always :class:`dict`. When there is a variant positional argument,
+        pass the values them as a :class:`tuple` of parameters with the
+        corresponding variant positional parameter name.
+        The restriction gives the simple and consistent interface for
+        multiple dispatching. Note that it only describes the methods which
+        don't have *transform_args* attribute.
+    """
+
+    @interface_attrs(return_annotation=lambda a: List[str])
+    def key_many(self, wire, *args_list):
+        """Create and return the composed keys for storage.
+
+        :see: The class documentation for the parameter details.
+        :return: A sequence of created keys.
+        :rtype: Sequence[str]
+        """
+        return [create_bulk_key(self, wire, args) for args in args_list]
+
+    def execute_many(self, wire, *args_list):  # pragma: no cover
+        """Execute and return the results of the original function.
+
+        :see: The class documentation for the parameter details.
+        :return: A sequence of the results of the original function.
+        :rtype: Sequence of the return type of the original function
+        """
+        raise NotImplementedError
+
+    def get_many(self, wire, *args_list):  # pragma: no cover
+        """Try to get and returns the storage values.
+
+        :see: The class documentation for the parameter details.
+        :return: A sequence of the storage values or `miss_value` for the
+            corresponding keys. When a key exists in the storage, the matching
+            value is selected; Otherwise the `miss_value` of **Ring** object
+            is.
+        """
+        raise NotImplementedError
+
+    def update_many(self, wire, *args_list):  # pragma: no cover
+        """Execute the original function and `set` the result as the value.
+
+        :see: The class documentation for the parameter details.
+        :return: A sequence of the results of the original function.
+        :rtype: Sequence of the return type of the original function
+        """
+        raise NotImplementedError
+
+    def get_or_update_many(self, wire, *args_list):  # pragma: no cover
+        """Try to get and returns the storage values.
+
+        :note: The semantic of this function may vary by the implementation.
+        :see: The class documentation for the parameter details.
+        :return: A sequence of the storage values or the exceuted result of the
+            original function for the corresponding keys. When a key exists
+            in the storage, the matching value is selected; Otherwise the
+            result of the original function is.
+        """
+        raise NotImplementedError
+
+    def set_many(self, wire, args_list, value_list):  # pragma: no cover
+        """Set the storage values of the corresponding keys as the given values.
+
+        :see: The class documentation for common parameter details.
+        :param Iterable[Any] value_list: A list of the values to save in
+            the storage.
+        :rtype: None
+        """
+        raise NotImplementedError
+
+    def delete_many(self, wire, *args_list):  # pragma: no cover
+        """Delete the storage values of the corresponding keys.
+
+        :see: The class documentation for the parameter details.
+        :rtype: None
+        """
+        raise NotImplementedError
+
+    def has_many(self, wire, *args_list):  # pragma: no cover
+        """Return whether the storage has values of the corresponding keys.
+
+        :see: The class documentation for the parameter details.
+        :rtype: Sequence[bool]
+        """
+        raise NotImplementedError
+
+    def touch_many(self, wire, *args_list):  # pragma: no cover
+        """Touch the storage values of the corresponding keys.
+
+        :see: The class documentation for the parameter details.
+        :rtype: None
+        """
         raise NotImplementedError
 
 
@@ -408,7 +661,7 @@ class NotFound(Exception):
     """Internal exception for a cache miss.
 
     Ring internally use this exception to indicate a cache miss. Though common
-    convention of cache miss is :data:`None` for many implementations,
+    convention of the cache miss is :data:`None` for many implementations,
     :mod:`ring.coder` allows :data:`None` to be proper cached value in
     **Ring**.
     """
@@ -432,41 +685,22 @@ class BaseStorage(object):
 
     @abc.abstractmethod
     def get(self, key):  # pragma: no cover
-        """Get actual data by given key.
-
-        :param str key: Storage key.
-        :return: Decoded data of the given key.
-        """
+        """Get actual data by given key."""
         raise NotImplementedError
 
     @abc.abstractmethod
     def set(self, key, value, expire=Ellipsis):  # pragma: no cover
-        """Set actual data by given key, value and expire.
-
-        :param str key: Storage key.
-        :param Any value: The value to save to the given key.
-        :param float expire: Expiration duration in seconds.
-        :rtype: None
-        """
+        """Set actual data by given key, value and expire."""
         raise NotImplementedError
 
     @abc.abstractmethod
     def delete(self, key):  # pragma: no cover
-        """Delete data by given key.
-
-        :param str key: Storage key.
-        :rtype: None
-        """
+        """Delete data by given key."""
         raise NotImplementedError
 
     @abc.abstractmethod
     def touch(self, key, expire=Ellipsis):  # pragma: no cover
-        """Touch data by given key.
-
-        :param str key: Storage key.
-        :param float expire: Expiration duration in seconds.
-        :rtype: None
-        """
+        """Touch data by given key."""
         raise NotImplementedError
 
 
@@ -508,37 +742,23 @@ class StorageMixin(object):
 
     @abc.abstractmethod
     def get_value(self, key):  # pragma: no cover
-        """Get value by given key.
-
-        :param str key: Storage key.
-        :rtype: :class:`bytes` is recommended.
-        """
+        """Get and return value for the given key."""
         raise NotImplementedError
 
     @abc.abstractmethod
     def set_value(self, key, value, expire):  # pragma: no cover
-        """Set value by given key, value and expire.
-
-        :param str key: Storage key.
-        :param bytes value: :class:`bytes` is recommended.
-        :param Optional[float] expire: Expiration duration in seconds.
-        :rtype: None
-        """
+        """Set value for the given key, value and expire."""
         raise NotImplementedError
 
     @abc.abstractmethod
     def delete_value(self, key):  # pragma: no cover
-        """Delete value by given key.
-
-        :param str key: Storage key.
-        :rtype: None
-        """
+        """Delete value for the given key."""
         raise NotImplementedError
+
+    def has_value(self, key):
+        """Check and return data existences for the given key. (optional)"""
+        raise AttributeError
 
     def touch_value(self, key, expire):
-        """Touch value by given key.
-
-        :param str key: Storage key.
-        :rtype: None
-        """
-        raise NotImplementedError
+        """Touch value for the given key. (optional)"""
+        raise AttributeError

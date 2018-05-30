@@ -184,4 +184,5 @@ intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
     'redis': ('http://redis-py.readthedocs.io/en/stable/', None),
     'django': ('https://docs.djangoproject.com/en/stable/', 'https://docs.djangoproject.com/en/stable/_objects/'),
+    'aioredis': ('https://aioredis.readthedocs.io/en/stable/', None),
 }
