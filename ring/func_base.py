@@ -148,7 +148,7 @@ def create_key_builder(
     key_generator = CallableKey(
         c, format_prefix=key_prefix, ignorable_keys=ignorable_keys)
 
-    def build_key(preargs, kwargs):
+    def compose_key(preargs, kwargs):
         full_kwargs = kwargs.copy()
         for i, prearg in enumerate(preargs):
             full_kwargs[c.parameters_values[i].name] = preargs[i]
@@ -161,7 +161,7 @@ def create_key_builder(
             key = key_refactor(key)
         return key
 
-    return build_key
+    return compose_key
 
 
 def interface_attrs(**kwargs):
@@ -211,7 +211,7 @@ class BaseUserInterface(object):
     @interface_attrs(transform_args=wire_kwargs_only0, return_annotation=str)
     def key(self, wire, **kwargs):
         args = wire._preargs
-        return self.ring.build_key(args, kwargs)
+        return self.ring.compose_key(args, kwargs)
 
     @interface_attrs(transform_args=wire_kwargs_only0)
     def execute(self, wire, **kwargs):
@@ -319,7 +319,7 @@ def factory(
 
         class RingCore(BaseRing):
             cwrapper = cw
-            build_key = staticmethod(key_builder)
+            compose_key = staticmethod(key_builder)
 
             def __init__(self):
                 super(BaseRing, self).__init__()
