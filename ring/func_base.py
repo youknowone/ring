@@ -241,7 +241,10 @@ class BaseUserInterface(object):
     def delete(self, wire, **kwargs):  # pragma: no cover
         raise NotImplementedError
 
-    @abc.abstractmethod
+    @interface_attrs(transform_args=wire_kwargs_only0)
+    def has(self, wire, **kwargs):  # pragma: no cover
+        raise NotImplementedError
+
     @interface_attrs(transform_args=wire_kwargs_only0)
     def touch(self, wire, **kwargs):  # pragma: no cover
         raise NotImplementedError
@@ -483,6 +486,10 @@ class CommonMixinStorage(BaseStorage):
 
     def delete(self, key):
         result = self.delete_value(key)
+        return result
+
+    def has(self, key):
+        result = self.has_value(key)
         return result
 
     def touch(self, key, expire=Ellipsis):

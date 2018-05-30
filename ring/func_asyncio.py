@@ -43,6 +43,11 @@ class CommonMixinStorage(fbase.BaseStorage):  # Working only as mixin
         return result
 
     @asyncio.coroutine
+    def has(self, key):
+        result = yield from self.has_value(key)
+        return result
+
+    @asyncio.coroutine
     def touch(self, key, expire=...):
         if expire is ...:
             expire = self.ring.expire_default
@@ -98,6 +103,14 @@ class CacheUserInterface(fbase.BaseUserInterface):
         yield from self.ring.storage.delete(key)
 
     @fbase.interface_attrs(
+        transform_args=fbase.wire_kwargs_only0, return_annotation=bool)
+    @asyncio.coroutine
+    def has(self, wire, **kwargs):
+        key = self.key(wire, **kwargs)
+        result = yield from self.ring.storage.has(key)
+        return result
+
+    @fbase.interface_attrs(
         transform_args=fbase.wire_kwargs_only0, return_annotation=None)
     @asyncio.coroutine
     def touch(self, wire, **kwargs):
@@ -136,6 +149,10 @@ class DictStorage(CommonMixinStorage, fbase.StorageMixin):
             del self.backend[key]
         except KeyError:
             pass
+
+    @asyncio.coroutine
+    def has_value(self, key):
+        return key in self.backend
 
     @asyncio.coroutine
     def touch_value(self, key, expire):
@@ -183,6 +200,11 @@ class AioredisStorage(CommonMixinStorage, fbase.StorageMixin):
 
     def delete_value(self, key):
         return self.backend.delete(key)
+
+    @asyncio.coroutine
+    def has_value(self, key):
+        result = yield from self.backend.exists(key)
+        return bool(result)
 
     def touch_value(self, key, expire):
         if expire is None:
