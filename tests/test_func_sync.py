@@ -204,7 +204,9 @@ def test_func_dict():
     assert f.key(1, 2) == ':1:2'  # dict doesn't have prefix by default
 
     base[0] = 10000
+    assert False is f.has(1, 2)
     assert 10102 == f(1, b=2)
+    assert True is f.has(1, 2)
 
     assert cache[f.key(1, 2)][1] == 10102
     assert 10103 == f(1, b=3)
@@ -229,7 +231,7 @@ def test_func_dict():
     assert f.get(1, b=2) is None
 
 
-def test_func_without_expiration():
+def test_func_dict_without_expiration():
     @ring.dict({})
     def f():
         return 0
@@ -251,52 +253,6 @@ def test_func_dict_expire():
     assert f.update(1, 2) == 102
     f.delete(1, 2)
     assert f.get(1, 2) is None
-
-
-@pytest.mark.parametrize('value', [
-    1,
-    0,
-    True,
-    False,
-    u'str',
-    b'bytes',
-    ['list', 'with', 'values'],
-    {'dict': 'also', 'matters': '!'},
-    {'set', 'should', 'be', 'ordered'},
-])
-def test_ring_key(value):
-    # test only with real cache backends. dict doesn't help this test
-    @ring.memcache(pythonmemcache_client, expire=1)
-    def simple(key):
-        return key
-
-    assert simple(value) == value  # cache miss
-    assert simple(value) == value  # cache hit
-
-
-def test_redis(redis_client):
-    base = [0]
-
-    @ring.redis(redis_client, 'ring-test', 5)
-    def f(a, b):
-        r = base[0] + a * 100 + b
-        return str(r).encode('utf-8')
-
-    assert f.key(1, 2) == 'ring-test:1:2'
-
-    base[0] = 10000
-    assert False is f.has(1, 2)
-    assert None is f.get(1, b=2)
-    assert 10102 == int(f(1, b=2))
-    assert 10102 == int(redis_client.get(f.key(1, 2)))
-    assert True is f.has(1, 2)
-
-    @ring.redis(redis_client, 'ring-test')
-    def g():
-        return 10
-
-    with pytest.raises(TypeError):
-        g.touch()
 
 
 def test_disk(disk_cache):
@@ -354,3 +310,20 @@ def test_common_value(storage):
     v1 = complicated(0, 1, 2, 3, b=4, c=5, d=6)
     v2 = complicated.get(0, 1, 2, 3, b=4, c=5, d=6)
     assert v1 == v2
+
+
+def test_execute_many(redis_client):
+    client = redis_client
+
+    @ring.memcache(client, coder='json')
+    def f(a):
+        return a
+
+    r = f.execute_many(
+        (1, ),
+        (2, ),
+    )
+    assert r == [1, 2]
+
+    with pytest.raises(TypeError):
+        f.execute_many([1])

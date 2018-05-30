@@ -86,10 +86,11 @@ def test_memcache_multi(memcache_client):
     )
     assert mv == [None, None, None]
 
-    f.update_many(
+    mv = f.update_many(
         {'a': 1, 'b': 2},
         (5, 1),
     )
+    assert mv == [102, 501]
 
     mv = f.get_many(
         (1, 2),
@@ -113,9 +114,10 @@ def test_memcache_multi(memcache_client):
     assert mv == [503, 716, 501]
 
     with pytest.raises(AttributeError):
-        f.touch_many(
-            (1, 2),
-            (1, 4),
-        )
+        f.touch_many()
+
     with pytest.raises(TypeError):
         f.delete_many([1, 4])
+
+    with pytest.raises(AttributeError):
+        f.has_many()
