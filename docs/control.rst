@@ -146,19 +146,19 @@ parameter of **Ring** factories.
 
 .. function:: execute([*args, **kwargs])
 
-    Execute the original function with given arguments.
+    Execute the original function with given arguments and return the result.
 
     This sub-function is exactly the same as calling the original function.
 
 
 .. function:: key([*args, **kwargs])
 
-    Create a cache key with given arguments.
+    Create and return a cache key with given arguments.
 
 
 .. function:: get([*args, **kwargs])
 
-    Try to get the cache data; otherwise, execute the function and update cache.
+    Try to get the cache data; Otherwise, execute the function and update cache.
 
     The behavior follows next steps:
 
@@ -170,18 +170,19 @@ parameter of **Ring** factories.
 
 .. function:: update([*args, **kwargs])
 
-    Update cache data for the given arguments.
+    Execute the function, update cache data and return the result.
 
     The behavior follows next steps:
 
     #. Create a cache key with given parameters.
     #. Execute the original function to create a result.
     #. Set the result as cache data of created cache key.
+    #. Return the execution result.
 
 
 .. function:: set(value, [*args, **kwargs])
 
-    Set value as cache data for the given arguments.
+    Set the given value as cache data for the given arguments.
 
     The behavior follows next steps:
 
@@ -199,6 +200,20 @@ parameter of **Ring** factories.
     #. Delete the value of created cache key.
 
 
+.. function:: has([*args, **kwargs])
+
+    Check and return existence of cache data for the given arguments.
+
+    :note: Unlike other sub-functions, this feature may not be supported by
+           the backends.
+
+    The behavior follows next steps:
+
+    #. Create a cache key with given parameters.
+    #. Check the value of created cache key exists.
+    #. Return the existence.
+
+
 .. function:: touch([*args, **kwargs])
 
     Touch cache data of the given arguments. `Touch` means extending expiration
@@ -211,3 +226,82 @@ parameter of **Ring** factories.
 
     #. Create a cache key with given parameters.
     #. Touch the value of created cache key.
+
+
+The bulk access controller
+--------------------------
+
+The bulk access controller is an optional feature. The backends may or may not
+implements the feature.
+
+**args_list** is the common variable-length positional argument. It is a
+sequence of arguments of the original function. While **args_list** is a
+list of **args**, each **args** is typed as :class:`Union[tuple,dict]`.
+Each of them is a complete set of positional-only formed or keyword-only
+formed arguments.
+
+When the **args** is positional-only formed, its type
+must be always :class:`tuple`. Any other iterable types like `list`
+are not allowed. When any keyword-only argument is required, use
+keyword-only formed arguments.
+
+When the **args** is keyword-only formed, its type must be always
+:class:`dict`. When there is a variable-length positional argument,
+pass the values them as a :class:`tuple` of parameters with the
+corresponding variable-length positional parameter name.
+
+
+.. function:: get_or_update_many(*args_list)
+
+    Try to get the cached data with the given arguments list; Otherwise,
+    execute the function and update cache.
+
+    The basic idea is:
+
+    #. Try to retrieve existing data as much as possible.
+    #. Update missing values.
+
+    :note: The details of this function may vary by the implementation.
+
+
+.. function:: execute_many(*args_list)
+
+    `Many` version of **execute**.
+
+
+.. function:: key_many(*args_list)
+
+    `Many` version of **key**.
+
+
+.. function:: get_many(*args_list)
+
+    `Many` version of **get**.
+
+
+.. function:: update_many(*args_list)
+
+    `Many` version of **update**.
+
+
+.. function:: set_many(args_list, value_list)
+
+    `Many` version of **set**.
+
+    :note: This function has a little bit different signature to other
+        bulk-access controllers and **set**.
+
+
+.. function:: has_many(*args_list)
+
+    `Many` version of **has**.
+
+
+.. function:: delete_many(*args_list)
+
+    `Many` version of **delete**.
+
+
+.. function:: touch_many(*args_list)
+
+    `Many` version of **touch**.

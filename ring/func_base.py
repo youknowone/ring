@@ -420,9 +420,9 @@ class AbstractBulkUserInterfaceMixin(object):
         are not allowed. When any keyword-only argument is required, use
         keyword-only formed arguments.
         When the **args** (:class:`dict`) is keyword-only formed, its type must
-        be always :class:`dict`. When there is a variant positional argument,
-        pass the values them as a :class:`tuple` of parameters with the
-        corresponding variant positional parameter name.
+        be always :class:`dict`. When there is a variable-length positional
+        argument, pass the values them as a :class:`tuple` of parameters
+        with the corresponding variable-length positional parameter name.
         The restriction gives the simple and consistent interface for
         multiple dispatching. Note that it only describes the methods which
         don't have *transform_args* attribute.
