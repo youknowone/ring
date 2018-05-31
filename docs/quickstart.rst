@@ -274,6 +274,24 @@ don't need to be suffered by looking inside of **Ring**.
 :see: :doc:`control` for more attributes.
 
 
+Bulk access
+-----------
+
+Bulk access API is optionally supported.
+
+.. code-block:: python
+
+    @ring.memcache(...)
+    def f(a, b):
+        ...
+
+    # getting data for f(1, 2), f(1, 3), f(a=2, b=2)
+    data = f.get_many((1, 2), (1, 3), {'a': 2, 'b': 2})
+
+
+:see: :doc:`control` for more attributes.
+
+
 Further documents
 -----------------
 

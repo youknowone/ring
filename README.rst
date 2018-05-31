@@ -24,6 +24,11 @@ Documentation
 Full documentation with examples and references:
 `<http://ring-cache.readthedocs.io/>`_
 
+- Function/method support.
+- asyncio support.
+- Django support.
+- Bulk access support.
+
 
 Function cache
 --------------
