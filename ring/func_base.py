@@ -390,6 +390,17 @@ def create_bulk_key(interface, wire, args):
             "instance of 'tuple' or 'dict'")
 
 
+def execute_bulk_item(wire, args):
+    if isinstance(args, tuple):
+        return wire._ring.cwrapper.callable(*(wire._preargs + args))
+    elif isinstance(args, dict):
+        return wire._ring.cwrapper.callable(*wire._preargs, **args)
+    else:
+        raise TypeError(
+            "Each parameter of '_many' suffixed sub-functions must be an "
+            "instance of 'tuple' or 'dict'")
+
+
 class AbstractBulkUserInterfaceMixin(object):
     """Bulk access interface mixin.
 

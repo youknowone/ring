@@ -123,22 +123,6 @@ class CacheUserInterface(fbase.BaseUserInterface):
         return self.ring.storage.touch(key)
 
 
-@asyncio.coroutine
-def execute_bulk_item(wire, args):
-    if isinstance(args, tuple):
-        result = yield from wire._ring.cwrapper.callable(
-            *(wire._preargs + args))
-        return result
-    elif isinstance(args, type_dict):
-        result = yield from wire._ring.cwrapper.callable(
-            *wire._preargs, **args)
-        return result
-    else:
-        raise TypeError(
-            "Each parameter of '_many' suffixed sub-functions must be an "
-            "instance of 'tuple' or 'dict'")
-
-
 class BulkInterfaceMixin(fbase.AbstractBulkUserInterfaceMixin):
     """Bulk access interface mixin.
 
@@ -150,7 +134,7 @@ class BulkInterfaceMixin(fbase.AbstractBulkUserInterfaceMixin):
         return_annotation=lambda a: List[a.get('return', Any)])
     def execute_many(self, wire, *args_list):
         return asyncio.gather(*(
-            execute_bulk_item(wire, args) for args in args_list))
+            fbase.execute_bulk_item(wire, args) for args in args_list))
 
     @fbase.interface_attrs(
         return_annotation=lambda a: List[Optional[a.get('return', Any)]])
@@ -159,13 +143,39 @@ class BulkInterfaceMixin(fbase.AbstractBulkUserInterfaceMixin):
         return self.ring.storage.get_many(
             keys, miss_value=self.ring.miss_value)
 
-    @fbase.interface_attrs(return_annotation=None)
+    @fbase.interface_attrs(
+        return_annotation=lambda a: List[a.get('return', Any)])
     @asyncio.coroutine
     def update_many(self, wire, *args_list):
         keys = self.key_many(wire, *args_list)
         values = yield from self.execute_many(wire, *args_list)
         yield from self.ring.storage.set_many(keys, values)
         return values
+
+    @fbase.interface_attrs(
+        return_annotation=lambda a: List[a.get('return', Any)])
+    @asyncio.coroutine
+    def get_or_update_many(self, wire, *args_list):
+        keys = self.key_many(wire, *args_list)
+        miss_value = object()
+        results = yield from self.ring.storage.get_many(
+            keys, miss_value=miss_value)
+
+        miss_indices = []
+        for i, akr in enumerate(zip(args_list, keys, results)):
+            args, key, result = akr
+            if result is not miss_value:
+                continue
+            miss_indices.append(i)
+
+        new_results = yield from asyncio.gather(*(
+            fbase.execute_bulk_item(wire, args_list[i]) for i in miss_indices))
+        new_keys = [keys[i] for i in miss_indices]
+        yield from self.ring.storage.set_many(new_keys, new_results)
+
+        for new_i, old_i in enumerate(miss_indices):
+            results[old_i] = new_results[new_i]
+        return results
 
     @fbase.interface_attrs(return_annotation=None)
     def set_many(self, wire, args_list, value_list):

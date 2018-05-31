@@ -112,6 +112,13 @@ def test_memcache_multi(memcache_client):
         (5, 1),
     )
     assert mv == [503, 716, 501]
+    f.delete(1, 4)
+    mv = f.get_or_update_many(
+        (1, 2),
+        (1, 4),
+        (5, 1),
+    )
+    assert mv == [503, 104, 501]
 
     with pytest.raises(AttributeError):
         f.touch_many()

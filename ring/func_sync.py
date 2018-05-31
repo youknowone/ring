@@ -13,9 +13,6 @@ from . import func_base as fbase
 __all__ = ('dict', 'memcache', 'redis_py', 'redis', 'disk', )
 
 
-type_dict = dict
-
-
 class CacheUserInterface(fbase.BaseUserInterface):
     """General cache user interface provider.
 
@@ -76,17 +73,6 @@ class CacheUserInterface(fbase.BaseUserInterface):
         self.ring.storage.touch(key)
 
 
-def execute_bulk_item(wire, args):
-    if isinstance(args, tuple):
-        return wire._ring.cwrapper.callable(*(wire._preargs + args))
-    elif isinstance(args, type_dict):
-        return wire._ring.cwrapper.callable(*wire._preargs, **args)
-    else:
-        raise TypeError(
-            "Each parameter of '_many' suffixed sub-functions must be an "
-            "instance of 'tuple' or 'dict'")
-
-
 class BulkInterfaceMixin(fbase.AbstractBulkUserInterfaceMixin):
     """Bulk access interface mixin.
 
@@ -97,7 +83,7 @@ class BulkInterfaceMixin(fbase.AbstractBulkUserInterfaceMixin):
     @fbase.interface_attrs(
         return_annotation=lambda a: List[a.get('return', Any)])
     def execute_many(self, wire, *args_list):
-        values = [execute_bulk_item(wire, args) for args in args_list]
+        values = [fbase.execute_bulk_item(wire, args) for args in args_list]
         return values
 
     @fbase.interface_attrs(
@@ -108,12 +94,36 @@ class BulkInterfaceMixin(fbase.AbstractBulkUserInterfaceMixin):
             keys, miss_value=self.ring.miss_value)
         return results
 
-    @fbase.interface_attrs(return_annotation=None)
+    @fbase.interface_attrs(
+        return_annotation=lambda a: List[a.get('return', Any)])
     def update_many(self, wire, *args_list):
         keys = self.key_many(wire, *args_list)
-        values = [execute_bulk_item(wire, args) for args in args_list]
+        values = self.execute_many(wire, *args_list)
         self.ring.storage.set_many(keys, values)
         return values
+
+    @fbase.interface_attrs(
+        return_annotation=lambda a: List[a.get('return', Any)])
+    def get_or_update_many(self, wire, *args_list):
+        keys = self.key_many(wire, *args_list)
+        miss_value = object()
+        results = self.ring.storage.get_many(keys, miss_value=miss_value)
+
+        miss_indices = []
+        for i, akr in enumerate(zip(args_list, keys, results)):
+            args, key, result = akr
+            if result is not miss_value:
+                continue
+            miss_indices.append(i)
+
+        new_results = [
+            fbase.execute_bulk_item(wire, args_list[i]) for i in miss_indices]
+        new_keys = [keys[i] for i in miss_indices]
+        self.ring.storage.set_many(new_keys, new_results)
+
+        for new_i, old_i in enumerate(miss_indices):
+            results[old_i] = new_results[new_i]
+        return results
 
     @fbase.interface_attrs(return_annotation=None)
     def set_many(self, wire, args_list, value_list):
