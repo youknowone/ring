@@ -308,6 +308,14 @@ def test_aioredis(aioredis_pool, expire):
         (3,),
     )
     assert r == [b'foo', b'bar', b't3']
+    yield from f.delete(2)
+
+    r = yield from f.get_or_update_many(
+        (1,),
+        (2,),
+        (3,),
+    )
+    assert r == [b'foo', b't2', b't3']
 
     with pytest.raises(AttributeError):
         yield from f.delete_many()
