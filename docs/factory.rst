@@ -37,14 +37,13 @@ backend descriptions.
 Django extension
 ----------------
 
-Creating a new factory function is also quick & easy.
-
-Though **Django** itself is not a storage, it has its own low-level cache API.
-**Ring** has a factory function for Django as a cache backend:
+Though **Django** itself is not a storage, it has its own cache API.
+**Ring** has a factory function for high-level interface `cache_page` and
+the other one `cache` for low-level interface.
 
 .. autosummary::
-    ring.django
-    ring.django_default
+    ring.django.cache_page
+    ring.django.cache
 
 
 :see: :mod:`ring.django` for extension.

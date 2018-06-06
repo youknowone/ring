@@ -8,10 +8,9 @@ import ring.coder  # noqa
 from ring.func import (
     dict, memcache, redis, disk,
     aiodict, aiomcache, aioredis)
-from ring.django import django, django_default
+import ring.django  # noqa
 
 
 __all__ = (
     'dict', 'memcache', 'redis', 'disk',
-    'aiodict', 'aiomcache', 'aioredis',
-    'django', 'django_default')
+    'aiodict', 'aiomcache', 'aioredis')
