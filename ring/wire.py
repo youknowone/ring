@@ -56,10 +56,17 @@ class Wire(object):
 
         _shared_attrs = {'attrs': {}}
 
-        if is_method(cwrapper) or is_classmethod(cwrapper):
+        c_is_method = is_method(cwrapper)
+        c_is_classmethod = is_classmethod(cwrapper)
+        if c_is_method or c_is_classmethod:
             @WiredProperty
             def _w(self):
-                wrapper_name = '__wrapper_' + cwrapper.code.co_name
+                wrapper_name_parts = ['__wire_', cwrapper.code.co_name]
+                if c_is_classmethod:
+                    self_cls = self if type(self) == type else type(self)  # fragile
+                    wrapper_name_parts.extend(('_', self_cls.__name__))
+                    self = self_cls
+                wrapper_name = ''.join(wrapper_name_parts)
                 wrapper = getattr(self, wrapper_name, None)
                 if wrapper is None:
                     _wrapper = cls(cwrapper, _shared_attrs)
