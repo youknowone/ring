@@ -40,7 +40,7 @@ class LowLevelCacheStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
         self.backend.delete(key)
 
 
-def transform_cache_page_args(wire, args, kwargs):
+def transform_cache_page_args(wire, rules, args, kwargs):
     raw_request = args[0]
     if isinstance(raw_request, HttpRequest):
         request = raw_request
@@ -123,7 +123,7 @@ class CachePageUserInterface(fbase.BaseUserInterface):
         return self.ring.miss_value
 
     @fbase.interface_attrs(
-        transform_args=fbase.wire_kwargs_only1, return_annotation=None)
+        transform_args=transform_cache_page_args, return_annotation=None)
     def set(self, wire, response, request, *args, **kwargs):
         if not hasattr(request, '_cache_update_cache'):
             request._cache_update_cache = request.method in ('GET', 'HEAD')
@@ -167,11 +167,15 @@ class CachePageUserInterface(fbase.BaseUserInterface):
     @fbase.interface_attrs(
         transform_args=transform_cache_page_args, return_annotation=bool)
     def has(self, *args, **kwargs):
-        return self.key(*args, **kwargs) != (None, None)
+        raise NotImplementedError
+        # The below implementation is not reliable for the return value `True`.
+        # `False` always means the cache doesn't exist; While `True` doesn't
+        # guarantee the cache is valid.
+        # return self.key(*args, **kwargs) != (None, None)
 
     @fbase.interface_attrs(
         transform_args=transform_cache_page_args, return_annotation=None)
-    def touch(self, wire, request, *args, **kwargs):
+    def touch(self, wire, request, *args, **kwargs):  #
         raise NotImplementedError
 
 

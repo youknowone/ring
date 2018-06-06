@@ -170,6 +170,15 @@ def interface_attrs(**kwargs):
         kwargs['__annotations_override__'] = {
             'return': kwargs.pop('return_annotation')}
 
+    if 'transform_args' in kwargs:
+        transform_args = kwargs.pop('transform_args')
+        if transform_args:
+            if type(transform_args) != tuple:
+                transform_args = transform_args, {}
+            func, rules = transform_args
+            assert frozenset(rules.keys()) <= frozenset({'prefix_count'})
+            kwargs['transform_args'] = transform_args
+
     assert frozenset(kwargs.keys()) <= frozenset(
         {'transform_args', '__annotations_override__'})
 
@@ -180,42 +189,36 @@ def interface_attrs(**kwargs):
     return _decorator
 
 
-def create_wire_kwargs_only(prefix_count=0):
-    """Create a function for `transform_args` in interfaces' basic method.
+def transform_kwargs_only(wire, rules, args, kwargs):
+    """`transform_args` for basic single-access methods in interfaces.
 
-    Each created function is called *transform function*. They are
-    able to be passed as a value of `transform_args` parameter in
-    :func:`ring.func_base.interface_attrs` decorator.
+    Create and returns uniform fully keyword-annotated arguments except for
+    the first ``rule.get('prefix_count')`` number of positional arguments for
+    given actual arguments of ring wires. So that the interface programmers
+    can concentrate on the logic of the interface - not on the details of
+    argument handling.
 
-    The created transform function turns actual arguments of ring wires into
-    uniform fully keyword-annotated arguments except for the first
-    `prefix_count` number of positional arguments. So that the interface
-    programmers can concentrate on the logic of the interface - not on the
-    details of argument handling.
+    This function is the argument of `transform_args` parameter of
+    :func:`ring.func_base.interface_attrs` decorator for ordinary
+    single-access methods.
 
-    :param int prefix_count: The number of prefix parameters. When it is
-        a non-zero positive integer, the transform function will skip the
+    :param int rules.prefix_count: The number of prefix parameters. When it is
+        a positive integer, the transform function will skip the
         first `prefix_count` number of positional arguments when it composes
         the fully keyword-annotated arguments. Use this to allow a method has
         the exact `prefix_count` number of additional *method parameters*.
-    :return: A transform function with the given `prefix_count` option.
+        The default value is ``0``.
+    :return: The fully keyword-annotated arguments.
+    :rtype: dict
 
-    :see: :class:`ring.func_base.BaseUserInterface` for usage.
+    :see: the source code of :class:`ring.func_base.BaseUserInterface` about
+        actual usage.
     """
-    def _wire_kwargs_only(wire, args, kwargs):
-        wrapper_args = args[:prefix_count]
-        function_args = args[prefix_count:]
-        full_kwargs = wire.merge_args(function_args, kwargs)
-        return wrapper_args, full_kwargs
-    return _wire_kwargs_only
-
-
-#: The single-access *transform_args* with 0 prefix parameter.
-#: This function is created with :func:`ring.func_base.create_wire_kwargs_only`.
-wire_kwargs_only0 = create_wire_kwargs_only(0)
-#: The single-access *transform_args* with 1 prefix parameter.
-#: This function is created with :func:`ring.func_base.create_wire_kwargs_only`.
-wire_kwargs_only1 = create_wire_kwargs_only(1)
+    prefix_count = rules.get('prefix_count', 0)
+    wrapper_args = args[:prefix_count]
+    function_args = args[prefix_count:]
+    full_kwargs = wire.merge_args(function_args, kwargs)
+    return wrapper_args, full_kwargs
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -233,17 +236,16 @@ class BaseUserInterface(object):
     into the ring wire.
 
     The parameter *transform_args* in :func:`ring.func_base.interface_attrs`
-    defines the figure of method parameters. For the base user interface,
-    every method's *transform_args* is one of the results of
-    :func:`ring.func_base.create_wire_kwargs_only`, e.g.
-    :data:`ring.func_base.wire_kwargs_only0` or
-    :data:`ring.func_base.wire_kwargs_only1`. Other mixins or subclasses may
-    have different *transform_args*.
+    defines the figure of method parameters. For the **BaseUserInterface**,
+    every method's *transform_args* is
+    :func:`ring.func_base.transform_kwargs_only` which force to pass uniform
+    keyword arguments to the interface methods.
+    Other mix-ins or subclasses may have different *transform_args*.
 
     The first parameter of interface method *always* is a **RingWire** object.
     The other parameters are composed by *transform_args*.
 
-    :see: :func:`ring.func_base.create_wire_kwargs_only` for the specific
+    :see: :func:`ring.func_base.transform_kwargs_only` for the specific
         argument transformation rule for each methods.
 
     The parameters below describe common methods' parameters.
@@ -254,14 +256,14 @@ class BaseUserInterface(object):
         actual function arguments are passed to each sub-function of the
         wire, they are merged as the form of keyword arguments. This gives
         the consistent interface for arguments handling. Note that it only
-        describes the methods' *transform_args* attribute is the result of
-        :func:`ring.func_base.create_wire_kwargs_only`
+        describes the methods' *transform_args* attribute is
+        :func:`ring.func_base.transform_kwargs_only`
     """
 
     def __init__(self, ring):
         self.ring = ring
 
-    @interface_attrs(transform_args=wire_kwargs_only0, return_annotation=str)
+    @interface_attrs(transform_args=transform_kwargs_only, return_annotation=str)
     def key(self, wire, **kwargs):
         """Create and return the composed key for storage.
 
@@ -272,7 +274,7 @@ class BaseUserInterface(object):
         args = wire._preargs
         return self.ring.compose_key(args, kwargs)
 
-    @interface_attrs(transform_args=wire_kwargs_only0)
+    @interface_attrs(transform_args=transform_kwargs_only)
     def execute(self, wire, **kwargs):
         """Execute and return the result of original function.
 
@@ -282,7 +284,7 @@ class BaseUserInterface(object):
         return self.ring.cwrapper.callable(*wire._preargs, **kwargs)
 
     @abc.abstractmethod
-    @interface_attrs(transform_args=wire_kwargs_only0)
+    @interface_attrs(transform_args=transform_kwargs_only)
     def get(self, wire, **kwargs):  # pragma: no cover
         """Try to get and return the storage value of the corresponding key.
 
@@ -293,7 +295,8 @@ class BaseUserInterface(object):
         """
         raise NotImplementedError
 
-    @interface_attrs(transform_args=wire_kwargs_only1)
+    @interface_attrs(
+        transform_args=(transform_kwargs_only, {'prefix_count': 1}))
     def set(self, wire, value, **kwargs):  # pragma: no cover
         """Set the storage value of the corresponding key as the given `value`.
 
@@ -306,7 +309,7 @@ class BaseUserInterface(object):
         raise NotImplementedError
 
     @abc.abstractmethod
-    @interface_attrs(transform_args=wire_kwargs_only0)
+    @interface_attrs(transform_args=transform_kwargs_only)
     def update(self, wire, **kwargs):  # pragma: no cover
         """Execute the original function and `set` the result as the value.
 
@@ -324,7 +327,7 @@ class BaseUserInterface(object):
         raise NotImplementedError
 
     @abc.abstractmethod
-    @interface_attrs(transform_args=wire_kwargs_only0)
+    @interface_attrs(transform_args=transform_kwargs_only)
     def get_or_update(self, wire, **kwargs):  # pragma: no cover
         """Try to get and return the storage value; Otherwise, update and so.
 
@@ -338,7 +341,7 @@ class BaseUserInterface(object):
         raise NotImplementedError
 
     @abc.abstractmethod
-    @interface_attrs(transform_args=wire_kwargs_only0)
+    @interface_attrs(transform_args=transform_kwargs_only)
     def delete(self, wire, **kwargs):  # pragma: no cover
         """Delete the storage value of the corresponding key.
 
@@ -349,7 +352,7 @@ class BaseUserInterface(object):
         """
         raise NotImplementedError
 
-    @interface_attrs(transform_args=wire_kwargs_only0)
+    @interface_attrs(transform_args=transform_kwargs_only)
     def has(self, wire, **kwargs):  # pragma: no cover
         """Return whether the storage has a value of the corresponding key.
 
@@ -363,7 +366,7 @@ class BaseUserInterface(object):
         """
         raise NotImplementedError
 
-    @interface_attrs(transform_args=wire_kwargs_only0)
+    @interface_attrs(transform_args=transform_kwargs_only)
     def touch(self, wire, **kwargs):  # pragma: no cover
         """Touch the storage value of the corresponding key.
 
@@ -631,7 +634,9 @@ def factory(
 
                     def impl_f(*args, **kwargs):
                         if transform_args:
-                            args, kwargs = transform_args(self, args, kwargs)
+                            transform_func, transform_rules = transform_args
+                            args, kwargs = transform_func(
+                                self, transform_rules, args, kwargs)
                         return attr(self, *args, **kwargs)
 
                     c = self._ring.cwrapper.callable

@@ -68,7 +68,7 @@ class CacheUserInterface(fbase.BaseUserInterface):
     """
 
     @fbase.interface_attrs(
-        transform_args=fbase.wire_kwargs_only0,
+        transform_args=fbase.transform_kwargs_only,
         return_annotation=lambda a: Optional[a.get('return', Any)])
     @asyncio.coroutine
     def get(self, wire, **kwargs):
@@ -79,7 +79,7 @@ class CacheUserInterface(fbase.BaseUserInterface):
             result = self.ring.miss_value
         return result
 
-    @fbase.interface_attrs(transform_args=fbase.wire_kwargs_only0)
+    @fbase.interface_attrs(transform_args=fbase.transform_kwargs_only)
     @asyncio.coroutine
     def update(self, wire, **kwargs):
         key = self.key(wire, **kwargs)
@@ -87,7 +87,7 @@ class CacheUserInterface(fbase.BaseUserInterface):
         yield from self.ring.storage.set(key, result)
         return result
 
-    @fbase.interface_attrs(transform_args=fbase.wire_kwargs_only0)
+    @fbase.interface_attrs(transform_args=fbase.transform_kwargs_only)
     @asyncio.coroutine
     def get_or_update(self, wire, **kwargs):
         key = self.key(wire, **kwargs)
@@ -99,25 +99,26 @@ class CacheUserInterface(fbase.BaseUserInterface):
         return result
 
     @fbase.interface_attrs(
-        transform_args=fbase.wire_kwargs_only1, return_annotation=None)
+        transform_args=(fbase.transform_kwargs_only, {'prefix_count': 1}),
+        return_annotation=None)
     def set(self, wire, _value, **kwargs):
         key = self.key(wire, **kwargs)
         return self.ring.storage.set(key, _value)
 
     @fbase.interface_attrs(
-        transform_args=fbase.wire_kwargs_only0, return_annotation=None)
+        transform_args=fbase.transform_kwargs_only, return_annotation=None)
     def delete(self, wire, **kwargs):
         key = self.key(wire, **kwargs)
         return self.ring.storage.delete(key)
 
     @fbase.interface_attrs(
-        transform_args=fbase.wire_kwargs_only0, return_annotation=bool)
+        transform_args=fbase.transform_kwargs_only, return_annotation=bool)
     def has(self, wire, **kwargs):
         key = self.key(wire, **kwargs)
         return self.ring.storage.has(key)
 
     @fbase.interface_attrs(
-        transform_args=fbase.wire_kwargs_only0, return_annotation=None)
+        transform_args=fbase.transform_kwargs_only, return_annotation=None)
     def touch(self, wire, **kwargs):
         key = self.key(wire, **kwargs)
         return self.ring.storage.touch(key)
