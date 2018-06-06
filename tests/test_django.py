@@ -82,6 +82,8 @@ def test_django_cache_page(view_func_source):
 
     with pytest.raises(NotImplementedError):
         view_func.touch(request_main())
+    with pytest.raises(NotImplementedError):
+        view_func.has(request_main())
 
     view_func.delete(request_main())  # delete
 
