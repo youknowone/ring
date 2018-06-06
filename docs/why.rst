@@ -106,6 +106,7 @@ turns into a storage approach which we demonstrated at first section.
 You can control them in a consistent level with **Ring**.
 
 :see: :ref:`lifecycle` section for details.
+:see: :func:`ring.django.cache_page` which exactly solved the problem.
 
 
 Fixed strategy
