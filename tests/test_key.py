@@ -1,3 +1,4 @@
+import six
 import ring
 from ring.key import FormatKey, CallableKey
 
@@ -61,7 +62,22 @@ def test_classmethod_key():
         pass
 
     assert A.f.key().endswith('.A.f:A'), A.f.key()
-    # assert B.f.key().endswith('.A.f:B'), B.f.key() -- TODO
+    if six.PY2:
+        assert B.f.key().endswith('.B.f:B'), B.f.key()
+    else:
+        assert B.f.key().endswith('.A.f:B'), B.f.key()
+
+    a = A()
+    b = B()
+
+    assert a.f.key().endswith('.A.f:A'), a.f.key()
+    if six.PY2:
+        assert b.f.key().endswith('.B.f:B'), b.f.key()
+    else:
+        assert b.f.key().endswith('.A.f:B'), b.f.key()
+
+    assert A.f.key() == a.f.key()
+    assert B.f.key() == b.f.key()
 
 
 def test_unexisting_ring_key():
