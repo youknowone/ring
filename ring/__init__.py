@@ -2,13 +2,16 @@
 ====================================================
 
 Common ring decorators are aliased in this level as shortcuts.
-
 """
 import ring.coder  # noqa
+from ring.__version__ import __version__  # noqa
 from ring.func import (
     dict, memcache, redis, disk,
     aiodict, aiomcache, aioredis)
-import ring.django  # noqa
+try:
+    import ring.django  # noqa
+except ImportError:
+    pass
 
 
 __all__ = (

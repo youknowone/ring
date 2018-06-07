@@ -5,8 +5,10 @@ import sys
 
 
 def get_version():
-    with open('ring/version.txt') as f:
-        return f.read().strip()
+    with open('ring/__version__.py') as f:
+        empty, version = f.read().split('__version__ = ')
+        assert empty == ''
+        version = version.strip()
 
 
 install_requires = [

@@ -51,3 +51,9 @@ def test_ring_key(value):
 
     assert simple(value) == value  # cache miss
     assert simple(value) == value  # cache hit
+
+
+def test_package_version():
+    parts = ring.__version__.split('.')
+    assert len(parts) == 3
+    assert parts[0] == '0'
