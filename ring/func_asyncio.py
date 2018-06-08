@@ -357,6 +357,7 @@ class AioredisStorage(CommonMixinStorage, fbase.StorageMixin, BulkStorageMixin):
 
 def dict(
         obj, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
+        default_action='get_or_update', coder_registry=None,
         user_interface=CacheUserInterface, storage_class=DictStorage):
     """Basic Python :class:`dict` based cache.
 
@@ -383,6 +384,7 @@ def dict(
     return fbase.factory(
         obj, key_prefix=key_prefix, on_manufactured=factory_doctor,
         user_interface=user_interface, storage_class=storage_class,
+        default_action=default_action, coder_registry=coder_registry,
         miss_value=None, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys)
 
@@ -393,6 +395,7 @@ aiodict = dict
 
 def aiomcache(
         client, key_prefix=None, expire=0, coder=None, ignorable_keys=None,
+        default_action='get_or_update', coder_registry=None,
         user_interface=(CacheUserInterface, BulkInterfaceMixin),
         storage_class=AiomcacheStorage, key_encoding='utf-8'):
     """Memcached_ interface for :mod:`asyncio`.
@@ -422,6 +425,7 @@ def aiomcache(
     return fbase.factory(
         client, key_prefix=key_prefix, on_manufactured=factory_doctor,
         user_interface=user_interface, storage_class=storage_class,
+        default_action=default_action, coder_registry=coder_registry,
         miss_value=None, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys,
         key_encoding=key_encoding,
@@ -430,6 +434,7 @@ def aiomcache(
 
 def aioredis(
         redis, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
+        default_action='get_or_update', coder_registry=None,
         user_interface=(CacheUserInterface, BulkInterfaceMixin),
         storage_class=AioredisStorage):
     """Redis interface for :mod:`asyncio`.
@@ -458,5 +463,6 @@ def aioredis(
     return fbase.factory(
         redis, key_prefix=key_prefix, on_manufactured=factory_doctor,
         user_interface=user_interface, storage_class=storage_class,
+        default_action=default_action, coder_registry=coder_registry,
         miss_value=None, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys)

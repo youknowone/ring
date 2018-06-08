@@ -46,9 +46,6 @@ def coderize(raw_coder):
     if isinstance(raw_coder, Coder):
         coder = raw_coder
     else:
-        if isinstance(raw_coder, str):  # py2 support
-            raise TypeError(
-                "The given coder is not a registered name in coder registry.")
         if isinstance(raw_coder, tuple):
             coder = CoderTuple(*raw_coder)
         elif hasattr(raw_coder, 'encode') and hasattr(raw_coder, 'decode'):
@@ -94,6 +91,16 @@ class Registry(object):
         ring object factory.
         """
         coder = self.coders.get(coder_name)
+        return coder
+
+    def get_or_coderize(self, raw_coder):
+        coder = self.get(raw_coder)
+        if coder is None:
+            if isinstance(raw_coder, str):  # py2 support
+                raise TypeError(
+                    "The given coder is not a registered name in coder "
+                    "registry.")
+            coder = coderize(raw_coder)
         return coder
 
 

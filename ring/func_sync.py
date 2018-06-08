@@ -297,6 +297,7 @@ class DiskStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
 
 def dict(
         obj, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
+        default_action='get_or_update', coder_registry=None,
         user_interface=CacheUserInterface, storage_class=DictStorage):
     """Basic Python :class:`dict` based cache.
 
@@ -323,12 +324,14 @@ def dict(
     return fbase.factory(
         obj, key_prefix=key_prefix, on_manufactured=None,
         user_interface=user_interface, storage_class=storage_class,
+        default_action=default_action, coder_registry=coder_registry,
         miss_value=None, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys)
 
 
 def memcache(
         client, key_prefix=None, expire=0, coder=None, ignorable_keys=None,
+        default_action='get_or_update', coder_registry=None,
         user_interface=(CacheUserInterface, BulkInterfaceMixin),
         storage_class=MemcacheStorage):
     """Common Memcached_ interface.
@@ -378,13 +381,16 @@ def memcache(
     return fbase.factory(
         client, key_prefix=key_prefix, on_manufactured=None,
         user_interface=user_interface, storage_class=storage_class,
+        default_action=default_action, coder_registry=coder_registry,
         miss_value=miss_value, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys,
+
         key_refactor=key_refactor)
 
 
 def redis_py(
         client, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
+        default_action='get_or_update', coder_registry=None,
         user_interface=(CacheUserInterface, BulkInterfaceMixin),
         storage_class=RedisStorage):
     """Redis_ interface.
@@ -414,6 +420,7 @@ def redis_py(
     return fbase.factory(
         client, key_prefix=key_prefix, on_manufactured=None,
         user_interface=user_interface, storage_class=storage_class,
+        default_action=default_action, coder_registry=coder_registry,
         miss_value=None, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys)
 
@@ -423,6 +430,7 @@ redis = redis_py  #: Alias for redis_py for now.
 
 def disk(
         obj, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
+        default_action='get_or_update', coder_registry=None,
         user_interface=CacheUserInterface, storage_class=DiskStorage):
     """diskcache_ interface.
 
@@ -435,12 +443,14 @@ def disk(
     return fbase.factory(
         obj, key_prefix=key_prefix, on_manufactured=None,
         user_interface=user_interface, storage_class=storage_class,
+        default_action=default_action, coder_registry=coder_registry,
         miss_value=None, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys)
 
 
 def arcus(
         client, key_prefix=None, expire=0, coder=None, ignorable_keys=None,
+        default_action='get_or_update', coder_registry=None,
         user_interface=CacheUserInterface):  # pragma: no cover
     """Arcus support. deprecated."""
     class Storage(fbase.CommonMixinStorage, fbase.StorageMixin):
@@ -475,6 +485,7 @@ def arcus(
     return fbase.factory(
         client, key_prefix=key_prefix, on_manufactured=None,
         user_interface=user_interface, storage_class=Storage,
+        default_action=default_action, coder_registry=coder_registry,
         miss_value=None, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys,
         key_refactor=key_refactor)

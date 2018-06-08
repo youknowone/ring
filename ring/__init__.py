@@ -10,7 +10,7 @@ from ring.func import (
     aiodict, aiomcache, aioredis)
 try:
     import ring.django  # noqa
-except ImportError:
+except ImportError:  # pragma: no cover
     pass
 
 

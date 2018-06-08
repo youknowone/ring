@@ -12,7 +12,7 @@ from ._compat import lru_cache, qualname
 from .callable import Callable
 from .key import CallableKey
 from .wire import Wire
-from .coder import registry as coder_registry, coderize
+from .coder import registry as default_registry
 
 __all__ = (
     'is_method', 'is_classmethod', 'BaseRing', 'factory', 'NotFound',
@@ -524,6 +524,7 @@ def factory(
         # building blocks
         coder, miss_value, user_interface, storage_class,
         default_action='get_or_update',
+        coder_registry=None,
         # callback
         on_manufactured=None,
         # key builder related parameters
@@ -552,6 +553,9 @@ def factory(
     :param Optional[str] default_action: The default action name for
         `__call__` of the wire object. When the given value is :data:`None`,
         there is no `__call__` method for ring wire.
+    :param Optional[ring.coder.Registry] coder_registry: The coder registry
+        to load the given `coder`. The default value is
+        :data:`ring.coder.registry` when :data:`None` is given.
 
     :param Optional[Callable[[type(Wire),type(Ring)],None]] on_manufactured:
         The callback function when a new ring wire or wire bridge is created.
@@ -568,10 +572,10 @@ def factory(
     :return: The factory decorator to create new ring wire or wire bridge.
     :rtype: (Callable)->Union[ring.wire.Wire,ring.wire.WiredProperty]
     """
+    if coder_registry is None:
+        coder_registry = default_registry
     raw_coder = coder
-    coder = coder_registry.get(raw_coder)
-    if not coder:
-        coder = coderize(raw_coder)
+    coder = coder_registry.get_or_coderize(raw_coder)
 
     if isinstance(user_interface, (tuple, list)):
         user_interface = type('_ComposedUserInterface', user_interface, {})
