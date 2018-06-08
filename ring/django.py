@@ -3,6 +3,7 @@
 """
 from __future__ import absolute_import
 
+import warnings
 from typing import Any, Optional, Tuple
 from django.core import cache as django_cache
 from django.http.request import HttpRequest
@@ -50,16 +51,18 @@ def transform_cache_page_args(wire, rules, args, kwargs):
             raise TypeError
         request = HttpRequest()
         request.__dict__.update(template_request.__dict__)
+        request._fake_request = True
         request.method = 'GET'
-        try:
-            path = reverse(path_hint)
-        except NoReverseMatch:
-            path = path_hint
-        request.path = path
+        if path_hint is not None:
+            try:
+                path = reverse(path_hint)
+            except NoReverseMatch:
+                path = path_hint
+            request.path = path
     else:
         request = raw_request  # type error?
 
-    return (request,) + args[1:], kwargs
+    return (request, ) + args[1:], kwargs
 
 
 class CachePageUserInterface(fbase.BaseUserInterface):
@@ -157,8 +160,14 @@ class CachePageUserInterface(fbase.BaseUserInterface):
 
     @fbase.interface_attrs(
         transform_args=transform_cache_page_args, return_annotation=None)
-    def delete(self, *args, **kwargs):
-        key_get, key_head = self.key(*args, **kwargs)
+    def delete(self, wire, request, *args, **kwargs):
+        if not getattr(request, '_fake_request', None):
+            warnings.warn(
+                "A request is given as first argument. If this is intended "
+                "try '(request, None)'. Otherwise, Use '(request, path)' "
+                "instead of 'request' to convert the actual request to have "
+                "the target path.")
+        key_get, key_head = self.key(wire, request, *args, **kwargs)
         if key_get:
             self.middleware.cache.delete(key_get)
         if key_head:

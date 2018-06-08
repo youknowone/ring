@@ -50,7 +50,7 @@ def test_django_cache_page(view_func_source):
     request_factory = RequestFactory()
     request_main = functools.partial(request_factory.get, '/ring')
 
-    view_func.delete(request_main())
+    view_func.delete((request_main(), None))
     response = view_func.get(request_main())
     assert response is None  # not cached
 
@@ -85,7 +85,7 @@ def test_django_cache_page(view_func_source):
     with pytest.raises(NotImplementedError):
         view_func.has(request_main())
 
-    view_func.delete(request_main())  # delete
+    view_func.delete((request_main(), None))  # delete
 
     response = view_func.get(request_main())
     assert response is None  # no cache anymore
@@ -139,7 +139,6 @@ def test_django_chaining():
 
 
 def test_django_invalid_reverse():
-
     request_factory = RequestFactory()
     request = request_factory.get('/chain/new')
 

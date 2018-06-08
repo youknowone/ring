@@ -7,8 +7,10 @@ import sys
 def get_version():
     with open('ring/__version__.py') as f:
         empty, version = f.read().split('__version__ = ')
-        assert empty == ''
-        version = version.strip()
+    assert empty == ''
+    version = version.strip().strip("'")
+    assert version.startswith('0.')
+    return version
 
 
 install_requires = [
@@ -93,9 +95,7 @@ setup(
     packages=(
         'ring',
     ),
-    package_data={
-        'ring': ['version.txt'],
-    },
+    package_data={},
     install_requires=install_requires,
     tests_require=tests_require + ['tox', 'tox-pyenv'],
     extras_require={
