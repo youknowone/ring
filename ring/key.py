@@ -63,7 +63,7 @@ class CallableKey(Key):
 
     @cached_property
     def ordered_provider_keys(self):
-        keys = [arg.name for arg in self.provider.parameters_values]
+        keys = [arg.name for arg in self.provider.parameters]
         for key in self.ignorable_keys:
             if key not in keys:
                 raise KeyError(

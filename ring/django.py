@@ -95,7 +95,7 @@ class CachePageUserInterface(fbase.BaseUserInterface):
         transform_args=transform_cache_page_args)
     def execute(self, wire, request, *args, **kwargs):
         middleware = self.middleware
-        view_func = self.ring.cwrapper.callable
+        view_func = self.ring.cwrapper.wrapped_callable
         try:
             response = view_func(request, *args, **kwargs)
         except Exception as e:

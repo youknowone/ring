@@ -1,6 +1,8 @@
 from __future__ import absolute_import
 
 import collections
+import types
+import six
 from ._util import cached_property
 from ._compat import inspect, qualname
 
@@ -11,41 +13,100 @@ _inspect_iscoroutinefunction = getattr(
     inspect, 'iscoroutinefunction', lambda f: False)
 
 
-class Callable(inspect.Signature):
+class Callable(object):
     """A wrapper of :class:`inspect.Signature` including more information of callable."""
 
     def __init__(self, f):
-        self.premitive = f
+        self.wrapped_object = f
         if not callable(f):
             f = f.__func__
-        s = inspect.signature(f)
-        super(Callable, self).__init__(
-            s.parameters.values(), return_annotation=s.return_annotation)
-        self.callable = f
+        self.wrapped_callable = f
         self.is_wrapped_coroutine = getattr(f, '_is_coroutine', None)
         self.is_coroutine = self.is_wrapped_coroutine or \
             _inspect_iscoroutinefunction(f)
 
-        self.parameters_values = list(self.parameters.values())
+    @cached_property
+    def signature(self):
+        signature = inspect.signature(self.wrapped_callable)
+        return signature
+
+    @cached_property
+    def parameters(self):
+        return list(self.signature.parameters.values())
 
     @cached_property
     def code(self):
         """REAL __code__ for the given callable."""
-        code_owner = self.callable
+        code_owner = self.wrapped_callable
         if self.is_wrapped_coroutine:
             code_owner = code_owner.__wrapped__
         return code_owner.__code__
 
     @property
     def annotations(self):
-        return getattr(self.callable, '__annotations__', None) or {}
+        return getattr(self.wrapped_callable, '__annotations__', None) or {}
+
+    @cached_property
+    def is_descriptor(self):
+        return type(self.wrapped_object).__get__ is not types.FunctionType.__get__  # noqa
+
+    @cached_property
+    def is_barefunction(self):
+        cc = self.wrapped_callable
+        if six.PY34:
+            method_name = cc.__qualname__.split('<locals>.')[-1]
+            if method_name == cc.__name__:
+                return True
+            if method_name.endswith('<locals>.' + cc.__name__):
+                return True
+            return False
+        else:
+            if self.is_descriptor:
+                return False
+            # im_class does not exist at this point
+            return not (self.is_method or self.is_classmethod)
+
+    @cached_property
+    def is_method(self):
+        """Test given argument is a method or not.
+
+        :param ring.callable.Callable c: A callable object.
+        :rtype: bool
+
+        :note: The test is not based on python state but based on parameter name
+               `self`. The test result might be wrong.
+        """
+        if six.PY34:
+            if self.is_barefunction:
+                return False
+            if not self.is_descriptor:
+                return True
+
+        return self.first_parameter and self.first_parameter.name == 'self'
+
+    @cached_property
+    def is_classmethod(self):
+        """Test given argument is a classmethod or not.
+
+        :param ring.callable.Callable c: A callable object.
+        :rtype: bool
+        """
+        if isinstance(self.wrapped_object, classmethod):
+            return True
+        if six.PY34:
+            if self.is_barefunction:
+                return False
+            if not self.is_descriptor:
+                return False
+
+        return self.first_parameter and self.first_parameter.name == 'cls'
 
     def kwargify(self, args, kwargs):
         """Create a merged kwargs-like object with given args and kwargs."""
         merged = collections.OrderedDict()
 
-        _params = self.parameters_values
-        _params_len = len(_params)
+        parameters = self.parameters
+        parameters_len = len(parameters)
 
         consumed_i = 0
         consumed_names = set()
@@ -53,9 +114,9 @@ class Callable(inspect.Signature):
 
         # no .POSITIONAL_ONLY support
 
-        while i < _params_len and \
-                _params[i].kind == inspect.Parameter.POSITIONAL_OR_KEYWORD:
-            p = _params[i]
+        while i < parameters_len and \
+                parameters[i].kind == inspect.Parameter.POSITIONAL_OR_KEYWORD:
+            p = parameters[i]
             i += 1
 
             name = p.name
@@ -85,9 +146,9 @@ class Callable(inspect.Signature):
                 raise TypeError(message)
             merged[name] = value
 
-        if i < _params_len and \
-                _params[i].kind == inspect.Parameter.VAR_POSITIONAL:
-            p = _params[i]
+        if i < parameters_len and \
+                parameters[i].kind == inspect.Parameter.VAR_POSITIONAL:
+            p = parameters[i]
             i += 1
 
             merged[p.name] = args[consumed_i:]
@@ -97,9 +158,9 @@ class Callable(inspect.Signature):
                     "{}() takes {} positional arguments but {} were given"
                     .format(self.code.co_name, i, i + len(args) - consumed_i))
 
-        while i < _params_len and \
-                _params[i].kind == inspect.Parameter.KEYWORD_ONLY:
-            p = _params[i]
+        while i < parameters_len and \
+                parameters[i].kind == inspect.Parameter.KEYWORD_ONLY:
+            p = parameters[i]
             i += 1
 
             name = p.name
@@ -114,9 +175,9 @@ class Callable(inspect.Signature):
                     .format(self.code.co_name, p.name))
 
         var_kws = {k: v for k, v in kwargs.items() if k not in consumed_names}
-        if i < _params_len and \
-                _params[i].kind == inspect.Parameter.VAR_KEYWORD:
-            p = _params[i]
+        if i < parameters_len and \
+                parameters[i].kind == inspect.Parameter.VAR_KEYWORD:
+            p = parameters[i]
             i += 1
 
             merged[p.name] = var_kws
@@ -130,10 +191,11 @@ class Callable(inspect.Signature):
     @cached_property
     def identifier(self):
         return '.'.join(
-            (self.callable.__module__, qualname(self.callable)))
+            (self.wrapped_callable.__module__, qualname(self.wrapped_callable)))
 
     @cached_property
     def first_parameter(self):
-        if not self.parameters:
+        parameters = self.parameters
+        if not parameters:
             return None
-        return self.parameters_values[0]
+        return parameters[0]

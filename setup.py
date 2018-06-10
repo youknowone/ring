@@ -68,11 +68,12 @@ if sys.version_info[0] == 2:
 # backports - py34
 if sys.version_info[:2] <= (3, 4):
     install_requires.extend([
-        'typing',
+        'typing==3.6.4',
+        'singledispatch==3.4.0.3',
     ])
     if (3, 3) <= sys.version_info[:2]:
         install_requires.extend([
-            'asyncio',
+            'asyncio==3.4.3',
         ])
 
 

@@ -3,48 +3,24 @@
 
 """
 import abc
-import functools
 import types
 from typing import List
 
 import six
-from ._compat import lru_cache, qualname
+from ._compat import functools, qualname
 from .callable import Callable
 from .key import CallableKey
 from .wire import Wire
 from .coder import registry as default_registry
 
 __all__ = (
-    'is_method', 'is_classmethod', 'BaseRing', 'factory', 'NotFound',
+    'BaseRing', 'factory', 'NotFound',
     'BaseUserInterface', 'BaseStorage', 'CommonMixinStorage', 'StorageMixin')
 
 
 @six.add_metaclass(abc.ABCMeta)
 class BaseRing(object):
     """Abstract principal root class of Ring classes."""
-
-
-def is_method(c):
-    """Test given argument is a method or not.
-
-    :param ring.callable.Callable c: A callable object.
-    :rtype: bool
-
-    :note: The test is not based on python state but based on parameter name
-           `self`. The test result might be wrong.
-    """
-    if not c.first_parameter:
-        return False
-    return c.first_parameter.name == 'self'
-
-
-def is_classmethod(c):
-    """Test given argument is a classmethod or not.
-
-    :param ring.callable.Callable c: A callable object.
-    :rtype: bool
-    """
-    return isinstance(c.premitive, classmethod)
 
 
 def suggest_ignorable_keys(c, ignorable_keys):
@@ -57,20 +33,16 @@ def suggest_ignorable_keys(c, ignorable_keys):
 
 def suggest_key_prefix(c, key_prefix):
     if key_prefix is None:
-        cc = c.callable
-        if is_method(c):
-            key_prefix = \
-                '{0.__module__}.{{self.__class__.__qualname__}}.' \
-                '{1}'.format(cc, qualname(cc))
-            if not six.PY34:
-                key_prefix = key_prefix.replace('__qualname__', '__name__')
-        elif is_classmethod(c):
-            # cls is already a str object somehow
-            key_prefix = '{0.__module__}.{{cls}}.{1}'.format(
-                cc, qualname(cc))
-        else:
-            key_prefix = '{0.__module__}.{1}'.format(
-                cc, qualname(cc))
+        cc = c.wrapped_callable
+        key_prefix = '{0.__module__}.{1}'.format(cc, qualname(cc))
+        if six.PY2:
+            # A proper solution is `im_class` of the bound method
+            if c.is_method:
+                key_prefix = \
+                    '{0.__module__}.{{self.__class__.__name__}}.{0.__name__}' \
+                    .format(cc)
+            elif c.is_classmethod:
+                key_prefix = '{0.__module__}.{{cls}}.{0.__name__}'.format(cc)
     else:
         key_prefix = key_prefix.replace('{', '{{').replace('}', '}}')
     return key_prefix
@@ -100,7 +72,7 @@ def _coerce_ring_key(v):
     return v.__ring_key__()
 
 
-@lru_cache(maxsize=128)
+@functools.lru_cache(maxsize=128)
 def coerce_function(t):
     if hasattr(t, '__ring_key__'):
         return _coerce_ring_key
@@ -152,7 +124,7 @@ def create_key_builder(
     def compose_key(preargs, kwargs):
         full_kwargs = kwargs.copy()
         for i, prearg in enumerate(preargs):
-            full_kwargs[c.parameters_values[i].name] = preargs[i]
+            full_kwargs[c.parameters[i].name] = preargs[i]
         coerced_kwargs = {
             k: coerce(v) for k, v in full_kwargs.items() if k not in ignorable_keys}
         key = key_generator.build(coerced_kwargs)
@@ -281,7 +253,7 @@ class BaseUserInterface(object):
         :see: The class documentation for the parameter details.
         :return: The result of the original function.
         """
-        return self.ring.cwrapper.callable(*wire._preargs, **kwargs)
+        return self.ring.cwrapper.wrapped_callable(*wire._preargs, **kwargs)
 
     @abc.abstractmethod
     @interface_attrs(transform_args=transform_kwargs_only)
@@ -395,9 +367,9 @@ def create_bulk_key(interface, wire, args):
 
 def execute_bulk_item(wire, args):
     if isinstance(args, tuple):
-        return wire._ring.cwrapper.callable(*(wire._preargs + args))
+        return wire._ring.cwrapper.wrapped_callable(*(wire._preargs + args))
     elif isinstance(args, dict):
-        return wire._ring.cwrapper.callable(*wire._preargs, **args)
+        return wire._ring.cwrapper.wrapped_callable(*wire._preargs, **args)
     else:
         raise TypeError(
             "Each parameter of '_many' suffixed sub-functions must be an "
@@ -609,13 +581,13 @@ def factory(
                 super(RingWire, self).__init__(*args, **kwargs)
                 self._ring = ring
 
-                self.__func__ = ring.cwrapper.callable
+                self.__func__ = ring.cwrapper.wrapped_callable
                 self.encode = ring.coder.encode
                 self.decode = ring.coder.decode
                 self.storage = ring.storage
 
             if default_action is not None:
-                @functools.wraps(ring.cwrapper.callable)
+                @functools.wraps(ring.cwrapper.wrapped_callable)
                 def __call__(self, *args, **kwargs):
                     return self.run(default_action, *args, **kwargs)
             else:  # Empty block to test coverage
@@ -643,7 +615,7 @@ def factory(
                                 self, transform_rules, args, kwargs)
                         return attr(self, *args, **kwargs)
 
-                    c = self._ring.cwrapper.callable
+                    c = self._ring.cwrapper.wrapped_callable
                     functools.wraps(c)(impl_f)
                     impl_f.__name__ = '.'.join((c.__name__, name))
                     if six.PY34:

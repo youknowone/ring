@@ -1,7 +1,19 @@
 """:mod:`ring.wire` --- Universal method/function wrapper.
 ==========================================================
 """
-import functools
+from ._compat import functools
+import types
+
+
+@functools.singledispatch
+def descriptor_bind(descriptor, obj, type):
+    return obj
+
+
+@descriptor_bind.register(staticmethod)
+@descriptor_bind.register(classmethod)
+def descriptor_bind_(descriptor, obj, type):
+    return type
 
 
 class WiredProperty(object):
@@ -16,10 +28,7 @@ class WiredProperty(object):
         self.__func__ = func
 
     def __get__(self, obj, type=None):
-        if obj is None:
-            return self.__func__(type)
-        else:
-            return self.__func__(obj)
+        return self.__func__(obj, type)
 
     def _add_function(self, key):
         def _w(f):
@@ -45,46 +54,49 @@ class Wire(object):
     """
 
     @classmethod
-    def for_callable(cls, cwrapper):
+    def for_callable(cls, cw):
         """Wrap a function/method definition.
 
         :return: Wrapper object. The return type is up to given callable is
                  function or method.
         :rtype: ring.wire.Wire or ring.wire.WiredProperty
         """
-        from ring.func_base import is_method, is_classmethod
-
         _shared_attrs = {'attrs': {}}
 
-        c_is_method = is_method(cwrapper)
-        c_is_classmethod = is_classmethod(cwrapper)
-        if c_is_method or c_is_classmethod:
-            @WiredProperty
-            def _w(self):
-                wrapper_name_parts = ['__wire_', cwrapper.code.co_name]
-                if c_is_classmethod:
-                    self_cls = self if type(self) == type else type(self)  # fragile
-                    wrapper_name_parts.extend(('_', self_cls.__name__))
-                    self = self_cls
+        if not cw.is_barefunction:
+            co = cw.wrapped_object
+
+            def __w(obj, type):
+                wrapper_name_parts = ['__wire_', cw.code.co_name]
+                if type and cw.is_descriptor:
+                    wrapper_name_parts.extend(('_', type.__name__))
                 wrapper_name = ''.join(wrapper_name_parts)
-                wrapper = getattr(self, wrapper_name, None)
+                bound_object = descriptor_bind(co, obj, type)
+                wrapper = getattr(bound_object, wrapper_name, None)
                 if wrapper is None:
-                    _wrapper = cls(cwrapper, _shared_attrs)
-                    _wrapper._preargs = (self,)
-                    wrapper = functools.wraps(cwrapper.callable)(_wrapper)
-                    setattr(self, wrapper_name, wrapper)
+                    boundmethod = co.__get__(obj, type)
+                    _wrapper = cls(cw, _shared_attrs)
+                    if isinstance(boundmethod, types.MethodType):
+                        _wrapper._preargs = (bound_object,)
+                    elif isinstance(boundmethod, types.FunctionType):
+                        _wrapper._preargs = ()
+                    else:  # pragma: no cover
+                        assert False
+                    wrapper = functools.wraps(boundmethod)(_wrapper)
+                    setattr(bound_object, wrapper_name, wrapper)
                     _wrapper._shared_attrs = _shared_attrs
                 return wrapper
+            _w = WiredProperty(__w)
 
             _w._dynamic_attrs = _shared_attrs['attrs']
         else:
-            _w = cls(cwrapper, _shared_attrs)
+            _w = cls(cw, _shared_attrs)
             _w._preargs = ()
 
-        _w.cwrapper = cwrapper
+        _w.cwrapper = cw
         _w._shared_attrs = _shared_attrs
 
-        functools.wraps(cwrapper.callable)(_w)
+        functools.wraps(cw.wrapped_callable)(_w)
         return _w
 
     def __init__(self, cwrapper, shared_attrs):
