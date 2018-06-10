@@ -87,7 +87,7 @@ class Wire(object):
         else:
             _w = cls(cw, None, _shared_attrs)
 
-        _w.cwrapper = cw
+        _w._callable = cw
         _w._shared_attrs = _shared_attrs
 
         functools.wraps(cw.wrapped_callable)(_w)
@@ -99,15 +99,15 @@ class Wire(object):
             return ()
         else:
             return (descriptor_bind(
-                self.cwrapper.wrapped_object, *self._binding), )
+                self._callable.wrapped_object, *self._binding), )
 
-    def __init__(self, cwrapper, binding, shared_attrs):
-        self.cwrapper = cwrapper
+    def __init__(self, callable, binding, shared_attrs):
+        self._callable = callable
         self._binding = binding
         if binding:
-            self.__func__ = cwrapper.wrapped_object.__get__(*binding)
+            self.__func__ = callable.wrapped_object.__get__(*binding)
         else:
-            self.__func__ = cwrapper.wrapped_object
+            self.__func__ = callable.wrapped_object
         self._shared_attrs = shared_attrs
 
     @property

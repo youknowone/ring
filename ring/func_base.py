@@ -561,7 +561,7 @@ def factory(
             encoding=key_encoding, key_refactor=key_refactor)
 
         class RingCore(BaseRing):
-            cwrapper = cw
+            callable = cw
             compose_key = staticmethod(key_builder)
 
             def __init__(self):
@@ -586,7 +586,7 @@ def factory(
                 self.storage = ring.storage
 
             if default_action is not None:
-                @functools.wraps(ring.cwrapper.wrapped_callable)
+                @functools.wraps(ring.callable.wrapped_callable)
                 def __call__(self, *args, **kwargs):
                     return self.run(default_action, *args, **kwargs)
             else:  # Empty block to test coverage
@@ -614,7 +614,7 @@ def factory(
                                 self, transform_rules, args, kwargs)
                         return attr(self, *args, **kwargs)
 
-                    cc = ring.cwrapper.wrapped_callable
+                    cc = self._callable.wrapped_callable
                     functools.wraps(cc)(impl_f)
                     impl_f.__name__ = '.'.join((cc.__name__, name))
                     if six.PY34:
@@ -645,7 +645,7 @@ def factory(
                     bound_args = range(len(self._bound_objects))
                 else:
                     bound_args = ()
-                full_kwargs = self.cwrapper.kwargify(
+                full_kwargs = self._callable.kwargify(
                     args, kwargs, bound_args=bound_args)
                 return full_kwargs
 
@@ -653,7 +653,7 @@ def factory(
                 attr = getattr(self, action)
                 return attr(*args, **kwargs)
 
-        wire = RingWire.for_callable(ring.cwrapper)
+        wire = RingWire.for_callable(ring.callable)
         if on_manufactured is not None:
             on_manufactured(wire_frame=wire, ring=ring)
 

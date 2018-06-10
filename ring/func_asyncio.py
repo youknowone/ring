@@ -19,11 +19,11 @@ type_dict = dict
 
 
 def factory_doctor(wire_frame, ring) -> None:
-    cwrapper = ring.cwrapper
-    if not cwrapper.is_coroutine:
+    callable = ring.callable
+    if not callable.is_coroutine:
         raise TypeError(
             "The function for cache '{}' must be an async function.".format(
-                cwrapper.code.co_name))
+                callable.code.co_name))
 
 
 class CommonMixinStorage(fbase.BaseStorage):  # Working only as mixin
