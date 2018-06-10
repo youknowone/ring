@@ -7,7 +7,7 @@ import types
 from typing import List
 
 import six
-from ._compat import functools, qualname
+from ._compat import functools
 from .callable import Callable
 from .key import CallableKey
 from .wire import Wire
@@ -33,9 +33,9 @@ def suggest_ignorable_keys(c, ignorable_keys):
 
 def suggest_key_prefix(c, key_prefix):
     if key_prefix is None:
-        cc = c.wrapped_callable
-        key_prefix = '{0.__module__}.{1}'.format(cc, qualname(cc))
+        key_prefix = c.identifier
         if six.PY2:
+            cc = c.wrapped_callable
             # A proper solution is `im_class` of the bound method
             if c.is_method:
                 key_prefix = \
@@ -235,7 +235,8 @@ class BaseUserInterface(object):
     def __init__(self, ring):
         self.ring = ring
 
-    @interface_attrs(transform_args=transform_kwargs_only, return_annotation=str)
+    @interface_attrs(
+        transform_args=transform_kwargs_only, return_annotation=str)
     def key(self, wire, **kwargs):
         """Create and return the composed key for storage.
 
@@ -253,7 +254,7 @@ class BaseUserInterface(object):
         :see: The class documentation for the parameter details.
         :return: The result of the original function.
         """
-        return self.ring.cwrapper.wrapped_callable(*wire._preargs, **kwargs)
+        return wire.__func__(**kwargs)
 
     @abc.abstractmethod
     @interface_attrs(transform_args=transform_kwargs_only)
@@ -367,9 +368,9 @@ def create_bulk_key(interface, wire, args):
 
 def execute_bulk_item(wire, args):
     if isinstance(args, tuple):
-        return wire._ring.cwrapper.wrapped_callable(*(wire._preargs + args))
+        return wire.__func__(*args)
     elif isinstance(args, dict):
-        return wire._ring.cwrapper.wrapped_callable(*wire._preargs, **args)
+        return wire.__func__(**args)
     else:
         raise TypeError(
             "Each parameter of '_many' suffixed sub-functions must be an "
@@ -581,7 +582,6 @@ def factory(
                 super(RingWire, self).__init__(*args, **kwargs)
                 self._ring = ring
 
-                self.__func__ = ring.cwrapper.wrapped_callable
                 self.encode = ring.coder.encode
                 self.decode = ring.coder.decode
                 self.storage = ring.storage
@@ -615,11 +615,11 @@ def factory(
                                 self, transform_rules, args, kwargs)
                         return attr(self, *args, **kwargs)
 
-                    c = self._ring.cwrapper.wrapped_callable
-                    functools.wraps(c)(impl_f)
-                    impl_f.__name__ = '.'.join((c.__name__, name))
+                    cc = ring.cwrapper.wrapped_callable
+                    functools.wraps(cc)(impl_f)
+                    impl_f.__name__ = '.'.join((cc.__name__, name))
                     if six.PY34:
-                        impl_f.__qualname__ = '.'.join((c.__qualname__, name))
+                        impl_f.__qualname__ = '.'.join((cc.__qualname__, name))
 
                     annotations = getattr(
                         impl_f, '__annotations__', {})

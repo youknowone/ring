@@ -9,8 +9,7 @@ class DoubleCacheUserInterface(BaseUserInterface):
 
     @asyncio.coroutine
     def execute(self, wire, **kwargs):
-        result = yield from self.ring.cwrapper.wrapped_callable(
-            *wire._preargs, **kwargs)
+        result = yield from wire.__func__(**kwargs)
         return result
 
     def key2(self, wire, **kwargs):

@@ -27,8 +27,7 @@ class Callable(object):
 
     @cached_property
     def signature(self):
-        signature = inspect.signature(self.wrapped_callable)
-        return signature
+        return inspect.signature(self.wrapped_callable)
 
     @cached_property
     def parameters(self):

@@ -1,8 +1,8 @@
 """:mod:`ring.wire` --- Universal method/function wrapper.
 ==========================================================
 """
-from ._compat import functools
 import types
+from ._compat import functools
 
 
 @functools.singledispatch
@@ -31,11 +31,10 @@ class WiredProperty(object):
         return self.__func__(obj, type)
 
     def _add_function(self, key):
-        def _w(f):
-            setattr(self, key, f)
+        def _decorator(f):
             self._dynamic_attrs[key] = f
             return f
-        return _w
+        return _decorator
 
 
 class Wire(object):
@@ -75,7 +74,7 @@ class Wire(object):
                 wrapper = getattr(bound_object, wrapper_name, None)
                 if wrapper is None:
                     boundmethod = co.__get__(obj, type)
-                    _wrapper = cls(cw, _shared_attrs)
+                    _wrapper = cls(cw, (obj, type), _shared_attrs)
                     if isinstance(boundmethod, types.MethodType):
                         _wrapper._preargs = (bound_object,)
                     elif isinstance(boundmethod, types.FunctionType):
@@ -90,7 +89,7 @@ class Wire(object):
 
             _w._dynamic_attrs = _shared_attrs['attrs']
         else:
-            _w = cls(cw, _shared_attrs)
+            _w = cls(cw, None, _shared_attrs)
             _w._preargs = ()
 
         _w.cwrapper = cw
@@ -99,18 +98,18 @@ class Wire(object):
         functools.wraps(cw.wrapped_callable)(_w)
         return _w
 
-    def __init__(self, cwrapper, shared_attrs):
+    def __init__(self, cwrapper, binding, shared_attrs):
         self.cwrapper = cwrapper
+        self._binding = binding
+        if binding:
+            self.__func__ = cwrapper.wrapped_object.__get__(*binding)
+        else:
+            self.__func__ = cwrapper.wrapped_object
         self._shared_attrs = shared_attrs
 
     @property
     def _dynamic_attrs(self):
         return self._shared_attrs.get('attrs', ())
-
-    def _reargs(self, args):
-        if self._preargs:
-            args = self._preargs + args
-        return args
 
     def merge_args(self, args, kwargs):
         """Create a fake kwargs object by merging actual arguments.
@@ -130,11 +129,14 @@ class Wire(object):
         except AttributeError:
             pass
 
-        attr = self._dynamic_attrs.get(name)
-        if callable(attr):
+        if name in self._dynamic_attrs:
+            attr = self._dynamic_attrs.get(name)
+            if self._binding:
+                attr = attr.__get__(*self._binding)
+
             def impl_f(*args, **kwargs):
-                args = self._reargs(args)
-                return attr(*args, **kwargs)
+                return attr(self, *args, **kwargs)
+
             setattr(self, name, impl_f)
 
         return self.__getattribute__(name)

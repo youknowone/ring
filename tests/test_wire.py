@@ -23,11 +23,11 @@ def test_wire():
             return self.v
 
         @f._add_function('call')
-        def f_call(self):
-            return self.f.cwrapper.wrapped_callable(self)
+        def f_call(self, wire):
+            return wire.__func__()
 
         @f._add_function('key')
-        def f_key(self):
+        def f_key(self, wire):
             return 'key'
 
     a = A(10)
