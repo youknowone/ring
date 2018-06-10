@@ -121,10 +121,10 @@ def create_key_builder(
     key_generator = CallableKey(
         c, format_prefix=key_prefix, ignorable_keys=ignorable_keys)
 
-    def compose_key(preargs, kwargs):
+    def compose_key(bound_args, kwargs):
         full_kwargs = kwargs.copy()
-        for i, prearg in enumerate(preargs):
-            full_kwargs[c.parameters[i].name] = preargs[i]
+        for i, prearg in enumerate(bound_args):
+            full_kwargs[c.parameters[i].name] = bound_args[i]
         coerced_kwargs = {
             k: coerce(v) for k, v in full_kwargs.items() if k not in ignorable_keys}
         key = key_generator.build(coerced_kwargs)
@@ -189,7 +189,7 @@ def transform_kwargs_only(wire, rules, args, kwargs):
     prefix_count = rules.get('prefix_count', 0)
     wrapper_args = args[:prefix_count]
     function_args = args[prefix_count:]
-    full_kwargs = wire.merge_args(function_args, kwargs)
+    full_kwargs = wire._merge_args(function_args, kwargs)
     return wrapper_args, full_kwargs
 
 
@@ -244,8 +244,7 @@ class BaseUserInterface(object):
         :return: The composed key with given arguments.
         :rtype: str
         """
-        args = wire._preargs
-        return self.ring.compose_key(args, kwargs)
+        return self.ring.compose_key(wire._bound_objects, kwargs)
 
     @interface_attrs(transform_args=transform_kwargs_only)
     def execute(self, wire, **kwargs):
@@ -356,7 +355,7 @@ class BaseUserInterface(object):
 
 def create_bulk_key(interface, wire, args):
     if isinstance(args, tuple):
-        kwargs = wire.merge_args(args, {})
+        kwargs = wire._merge_args(args, {})
         return interface.key(wire, **kwargs)
     elif isinstance(args, dict):
         return interface.key(wire, **args)
@@ -635,6 +634,20 @@ def factory(
                     setattr(self, name, impl_f)
 
                 return self.__getattribute__(name)
+
+            def _merge_args(self, args, kwargs):
+                """Create a fake kwargs object by merging actual arguments.
+
+                The merging follows the signature of wrapped function and current
+                instance.
+                """
+                if type(self.__func__) is types.MethodType:  # noqa
+                    bound_args = range(len(self._bound_objects))
+                else:
+                    bound_args = ()
+                full_kwargs = self.cwrapper.kwargify(
+                    args, kwargs, bound_args=bound_args)
+                return full_kwargs
 
             def run(self, action, *args, **kwargs):
                 attr = getattr(self, action)

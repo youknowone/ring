@@ -100,7 +100,7 @@ class Callable(object):
 
         return self.first_parameter and self.first_parameter.name == 'cls'
 
-    def kwargify(self, args, kwargs):
+    def kwargify(self, args, kwargs, bound_args=()):
         """Create a merged kwargs-like object with given args and kwargs."""
         merged = collections.OrderedDict()
 
@@ -112,6 +112,10 @@ class Callable(object):
         i = 0
 
         # no .POSITIONAL_ONLY support
+
+        if bound_args:
+            while i in bound_args:
+                i += 1
 
         while i < parameters_len and \
                 parameters[i].kind == inspect.Parameter.POSITIONAL_OR_KEYWORD:

@@ -37,3 +37,7 @@ def test_wire():
     b = A(20)
     assert a.f.call() == 10, (a.f, a.f.call())
     assert b.f.call() == 20, (b.f, b.f.call())
+
+    assert isinstance(A.f, TestWire)
+    assert isinstance(a.f, TestWire)
+    assert A.f is not a.f

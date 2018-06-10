@@ -1,8 +1,8 @@
 """:mod:`ring.wire` --- Universal method/function wrapper.
 ==========================================================
 """
-import types
 from ._compat import functools
+from ._util import cached_property
 
 
 @functools.singledispatch
@@ -66,37 +66,40 @@ class Wire(object):
             co = cw.wrapped_object
 
             def __w(obj, type):
-                wrapper_name_parts = ['__wire_', cw.code.co_name]
-                if type and cw.is_descriptor:
+                owner = descriptor_bind(co, obj, type)
+                if owner is None:  # invalid binding but still wire it
+                    owner = obj if obj is not None else type
+                wrapper_name_parts = ['__wire_', cw.wrapped_callable.__name__]
+                if owner is type:
                     wrapper_name_parts.extend(('_', type.__name__))
                 wrapper_name = ''.join(wrapper_name_parts)
-                bound_object = descriptor_bind(co, obj, type)
-                wrapper = getattr(bound_object, wrapper_name, None)
+                wrapper = getattr(owner, wrapper_name, None)
                 if wrapper is None:
                     boundmethod = co.__get__(obj, type)
-                    _wrapper = cls(cw, (obj, type), _shared_attrs)
-                    if isinstance(boundmethod, types.MethodType):
-                        _wrapper._preargs = (bound_object,)
-                    elif isinstance(boundmethod, types.FunctionType):
-                        _wrapper._preargs = ()
-                    else:  # pragma: no cover
-                        assert False
-                    wrapper = functools.wraps(boundmethod)(_wrapper)
-                    setattr(bound_object, wrapper_name, wrapper)
-                    _wrapper._shared_attrs = _shared_attrs
+                    wire = cls(cw, (obj, type), _shared_attrs)
+                    wrapper = functools.wraps(boundmethod)(wire)
+                    setattr(owner, wrapper_name, wrapper)
+                    wire._shared_attrs = _shared_attrs
                 return wrapper
-            _w = WiredProperty(__w)
 
+            _w = WiredProperty(__w)
             _w._dynamic_attrs = _shared_attrs['attrs']
         else:
             _w = cls(cw, None, _shared_attrs)
-            _w._preargs = ()
 
         _w.cwrapper = cw
         _w._shared_attrs = _shared_attrs
 
         functools.wraps(cw.wrapped_callable)(_w)
         return _w
+
+    @cached_property
+    def _bound_objects(self):
+        if self._binding is None:
+            return ()
+        else:
+            return (descriptor_bind(
+                self.cwrapper.wrapped_object, *self._binding), )
 
     def __init__(self, cwrapper, binding, shared_attrs):
         self.cwrapper = cwrapper
@@ -110,18 +113,6 @@ class Wire(object):
     @property
     def _dynamic_attrs(self):
         return self._shared_attrs.get('attrs', ())
-
-    def merge_args(self, args, kwargs):
-        """Create a fake kwargs object by merging actual arguments.
-
-        The merging follows the signature of wrapped function and current
-        instance.
-        """
-        args = self._reargs(args)
-        full_kwargs = self.cwrapper.kwargify(args, kwargs)
-        if self._preargs:
-            full_kwargs.pop(self.cwrapper.first_parameter.name)
-        return full_kwargs
 
     def __getattr__(self, name):
         try:
