@@ -14,7 +14,7 @@ _inspect_iscoroutinefunction = getattr(
 
 
 class Callable(object):
-    """A wrapper of :class:`inspect.Signature` including more information of callable."""
+    """A wrapper object including more information of callables."""
 
     def __init__(self, f):
         self.wrapped_object = f
@@ -72,8 +72,8 @@ class Callable(object):
         :param ring.callable.Callable c: A callable object.
         :rtype: bool
 
-        :note: The test is not based on python state but based on parameter name
-               `self`. The test result might be wrong.
+        :note: The test is not based on python state but based on parameter
+            name `self`. The test result might be wrong.
         """
         if six.PY34:
             if self.is_barefunction:
@@ -193,8 +193,8 @@ class Callable(object):
 
     @cached_property
     def identifier(self):
-        return '.'.join(
-            (self.wrapped_callable.__module__, qualname(self.wrapped_callable)))
+        return '.'.join((
+            self.wrapped_callable.__module__, qualname(self.wrapped_callable)))
 
     @cached_property
     def first_parameter(self):

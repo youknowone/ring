@@ -259,7 +259,7 @@ def test_func_dict():
     assert 30102 == f.update(1, b=2)
     f.touch(1, b=2)
 
-    f._ring.storage.now = lambda: time.time() + 100  # expirable duration
+    f._rope.storage.now = lambda: time.time() + 100  # expirable duration
     assert f.get(1, b=2) is None
 
 

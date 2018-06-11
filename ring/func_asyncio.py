@@ -1,4 +1,4 @@
-""":mod:`ring.func_asyncio` --- a collection of :mod:`asyncio` factory functions.
+""":mod:`ring.func_asyncio` --- collection of :mod:`asyncio` factory functions.
 
 This module includes building blocks and storage implementations of **Ring**
 factories for :mod:`asyncio`.
@@ -18,8 +18,8 @@ inspect_iscoroutinefunction = getattr(
 type_dict = dict
 
 
-def factory_doctor(wire_frame, ring) -> None:
-    callable = ring.callable
+def factory_doctor(wire_rope) -> None:
+    callable = wire_rope.callable
     if not callable.is_coroutine:
         raise TypeError(
             "The function for cache '{}' must be an async function.".format(
@@ -206,7 +206,7 @@ class BulkStorageMixin(object):
         """Get and return values for the given key."""
         values = yield from self.get_many_values(keys)
         results = [
-            self.ring.coder.decode(v) if v is not fbase.NotFound else miss_value
+            self.ring.coder.decode(v) if v is not fbase.NotFound else miss_value  # noqa
             for v in values]
         return results
 
@@ -315,7 +315,8 @@ class AiomcacheStorage(
         raise NotImplementedError("aiomcache doesn't support delete_multi.")
 
 
-class AioredisStorage(CommonMixinStorage, fbase.StorageMixin, BulkStorageMixin):
+class AioredisStorage(
+        CommonMixinStorage, fbase.StorageMixin, BulkStorageMixin):
     """Storage implementation for :class:`aioredis.Redis`."""
 
     @asyncio.coroutine
@@ -403,12 +404,12 @@ def aiomcache(
     Expected client package is aiomcache_.
 
     aiomcache expect `Memcached` client or dev package is installed on your
-    machine. If you are new to Memcached, check how to install it and the python
-    package on your platform.
+    machine. If you are new to Memcached, check how to install it and the
+    python package on your platform.
 
     :param aiomcache.Client client: aiomcache client object.
-    :param object key_refactor: The default key refactor may hash the cache key
-        when it doesn't meet memcached key restriction.
+    :param object key_refactor: The default key refactor may hash the cache
+        key when it doesn't meet memcached key restriction.
 
     :see: :func:`ring.func_asyncio.CacheUserInterface` for single access
         sub-functions.
@@ -442,8 +443,8 @@ def aioredis(
     Expected client package is aioredis_.
 
     aioredis expect `Redis` client or dev package is installed on your
-    machine. If you are new to Memcached, check how to install it and the python
-    package on your platform.
+    machine. If you are new to Memcached, check how to install it and the
+    python package on your platform.
 
     Note that aioredis>=1.0.0 only supported.
 
