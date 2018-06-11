@@ -4,14 +4,13 @@ This module includes building blocks and storage implementations of **Ring**
 factories.
 """
 from typing import Any, Optional, List
-import functools
 import time
 import re
 import hashlib
 
 from . import func_base as fbase
 
-__all__ = ('dict', 'memcache', 'redis_py', 'redis', 'disk', )
+__all__ = ('dict', 'shelve', 'memcache', 'redis_py', 'redis', 'disk', )
 
 
 class CacheUserInterface(fbase.BaseUserInterface):
@@ -241,6 +240,17 @@ class PersistentDictStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
         return key in self.backend
 
 
+class ShelveStorage(PersistentDictStorage):
+
+    def set_value(self, key, value, expire):
+        super(ShelveStorage, self).set_value(key, value, expire)
+        self.backend.sync()
+
+    def delete_value(self, key):
+        super(ShelveStorage, self).delete_value(key)
+        self.backend.sync()
+
+
 class MemcacheStorage(
         fbase.CommonMixinStorage, fbase.StorageMixin, BulkStorageMixin):
 
@@ -319,21 +329,6 @@ class DiskStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
         self.backend.delete(key)
 
 
-class ShelveStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
-
-    def get_value(self, key):
-        value = self.backend.get(key)
-        if value is None:
-            raise fbase.NotFound
-        return value
-
-    def set_value(self, key, value, expire):
-        self.backend.set(key, value, expire)
-
-    def delete_value(self, key):
-        self.backend.delete(key)
-
-
 def dict(
         obj, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
         default_action='get_or_update', coder_registry=None,
@@ -374,7 +369,25 @@ def dict(
         ignorable_keys=ignorable_keys)
 
 
-shelve = functools.partial(dict, expire=None)
+def shelve(
+        shelf, key_prefix=None, coder=None, ignorable_keys=None,
+        default_action='get_or_update', coder_registry=None,
+        user_interface=CacheUserInterface, storage_class=ShelveStorage):
+    """Python :mod:`shelve` based cache.
+
+    :param shelve.Shelf shelf: Cache storage. See :func:`shelve.open` to get
+        a shelf.
+
+    :see: :mod:`shelve` for the backend.
+    :see: :func:`ring.func_sync.CacheUserInterface` for sub-functions.
+    """
+    expire = None
+    return fbase.factory(
+        shelf, key_prefix=key_prefix, on_manufactured=None,
+        user_interface=user_interface, storage_class=storage_class,
+        default_action=default_action, coder_registry=coder_registry,
+        miss_value=None, expire_default=expire, coder=coder,
+        ignorable_keys=ignorable_keys)
 
 
 def memcache(

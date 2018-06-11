@@ -32,6 +32,21 @@ def storage_dict():
     storage.ring = ring.dict
     storage.is_binary = False
     storage.has_touch = True
+    storage.has_expire = True
+    return storage
+
+
+@pytest.fixture
+def storage_shelve():
+    try:
+        import shelve
+    except ImportError:
+        pytest.skip()
+    storage = shelve.open('test_ring')
+    storage.ring = ring.shelve
+    storage.is_binary = False
+    storage.has_touch = False
+    storage.has_expire = False
     return storage
 
 
@@ -47,6 +62,7 @@ def memcache_client(request):
         pytest.skip()
     client.is_binary = is_binary
     client.has_touch = has_touch
+    client.has_expire = True
     client.ring = ring.memcache
     return client
 
@@ -59,6 +75,7 @@ def redis_client(request):
     client.ring = ring.redis
     client.is_binary = True
     client.has_touch = True
+    client.has_expire = True
     return client
 
 
@@ -70,11 +87,13 @@ def disk_cache(request):
     client.ring = ring.disk
     client.is_binary = False
     client.has_touch = False
+    client.has_expire = True
     return client
 
 
 @pytest.fixture(params=[
     pytest.lazy_fixture('storage_dict'),
+    pytest.lazy_fixture('storage_shelve'),
     pytest.lazy_fixture('memcache_client'),
     pytest.lazy_fixture('redis_client'),
     pytest.lazy_fixture('disk_cache'),
@@ -90,10 +109,14 @@ def function(request, storage):
             r = str(r).encode('utf-8')
         return r
 
+    options = {'expire': 10}
+    if not storage.has_expire:
+        options = {}
+
     if request.param == 'function':
         base = [0]
 
-        @storage.ring(storage, key_prefix='', expire=10)
+        @storage.ring(storage, **options)
         def f(a, b):
             return resultify(base[0] + a * 100 + b)
 
@@ -108,16 +131,16 @@ def function(request, storage):
             def __ring_key__(self):
                 return 'a'
 
-            @storage.ring(storage, expire=10)
+            @storage.ring(storage, **options)
             def method(self, a, b):
                 return resultify(self.base[0] + a * 100 + b)
 
-            @storage.ring(storage, expire=10)
+            @storage.ring(storage, **options)
             @classmethod
             def cmethod(cls, a, b):
                 return resultify(cls.base[0] + a * 200 + b)
 
-            @storage.ring(storage, expire=10)
+            @storage.ring(storage, **options)
             @staticmethod
             def smethod(a, b):
                 return resultify(A.base[0] + a * 200 + b)
@@ -280,12 +303,18 @@ def test_disk(disk_cache):
 
 
 def test_common_value(storage):
+    options = {'expire': 10}
+    if not storage.has_expire:
+        options = {}
+
     base = [b'a']
 
-    @storage.ring(storage, key_prefix=str(storage), expire=5)
+    @storage.ring(storage, key_prefix=str(storage), **options)
     def ff():
         base[0] += b'b'
         return base[0]
+
+    ff.delete()
 
     b0 = base[0]
 
@@ -303,7 +332,7 @@ def test_common_value(storage):
     assert b1 == b2
 
     # py3 test in asyncio
-    @storage.ring(storage, key_prefix=str(storage), expire=5)
+    @storage.ring(storage, key_prefix=str(storage), **options)
     def complicated(a, *args, **kw):
         return b'42'
 
