@@ -31,6 +31,7 @@ def storage_dict():
     storage = StorageDict()
     storage.ring = ring.dict
     storage.is_binary = False
+    storage.has_has = True
     storage.has_touch = True
     storage.has_expire = True
     return storage
@@ -45,6 +46,7 @@ def storage_shelve():
     storage = shelve.open('test_ring')
     storage.ring = ring.shelve
     storage.is_binary = False
+    storage.has_has = True
     storage.has_touch = False
     storage.has_expire = False
     return storage
@@ -61,6 +63,7 @@ def memcache_client(request):
     if client is None:
         pytest.skip()
     client.is_binary = is_binary
+    client.has_has = False
     client.has_touch = has_touch
     client.has_expire = True
     client.ring = ring.memcache
@@ -74,6 +77,7 @@ def redis_client(request):
     client = request.param
     client.ring = ring.redis
     client.is_binary = True
+    client.has_has = True
     client.has_touch = True
     client.has_expire = True
     return client
@@ -86,6 +90,7 @@ def disk_cache(request):
     client = request.param
     client.ring = ring.disk
     client.is_binary = False
+    client.has_has = False
     client.has_touch = False
     client.has_expire = True
     return client
@@ -201,6 +206,10 @@ def test_common(function, storage):
 
     # test: 'update'
     assert r2 == function.update(1, 2)  # immediate update
+
+    if storage.has_has:
+        assert function.has(1, 2) is True
+        assert function.has(5, 9) is False
 
     if storage.has_touch:
         function.touch(1, 2)  # just a running test
