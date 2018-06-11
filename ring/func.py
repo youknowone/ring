@@ -4,7 +4,7 @@
 Ring object factory functions are aggregated in this module.
 """
 
-from .func_sync import dict, memcache, redis_py, redis, disk
+from .func_sync import dict, shelve, memcache, redis_py, redis, disk
 
 try:
     import asyncio
@@ -19,5 +19,5 @@ else:
     aioredis = None
 
 __all__ = (
-    'dict', 'memcache', 'redis_py', 'redis', 'disk',
+    'dict', 'shelve', 'memcache', 'redis_py', 'redis', 'disk',
     'aiodict', 'aiomcache', 'aioredis')
