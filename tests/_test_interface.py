@@ -156,7 +156,7 @@ def test_coder_func():
     assert f('10') == '10'
     raw_value = storage.get(f.key('10'))  # raw value
     value = f.decode(raw_value)
-    assert f.get('10') == value[1]
+    assert f.get('10') == value
 
 
 def test_coder_method():
@@ -190,4 +190,4 @@ def test_coder_method():
 
     raw_value = storage.get(u1.data.key())
     value = u1.data.decode(raw_value)
-    assert u1.data.get() == value[1]
+    assert u1.data.get() == value

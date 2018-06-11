@@ -238,7 +238,8 @@ def test_func_dict_without_expiration():
 
     assert f.get() is None
     assert f() == 0
-    f.touch()
+    with pytest.raises(AttributeError):
+        f.touch()
 
 
 def test_func_dict_expire():

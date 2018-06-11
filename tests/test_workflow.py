@@ -38,7 +38,7 @@ def test_workflow():
 
     # do you want to access to cache directly?
     key = u1.data.key()
-    assert u1.data() == cache[key][1]  # whenever you want!
+    assert u1.data() == cache[key]  # whenever you want!
 
     u1._data['name'] = 'User renamed'
     assert u1.data() == {'user_id': 42, 'name': 'User 1'}  # still cached
