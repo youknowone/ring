@@ -39,7 +39,7 @@ def test_action_dict():
     assert updated_data == data
 
     key = u1.data.run('key')
-    direct_data = cache[key][1]
+    direct_data = cache[key]
     assert data == direct_data
 
     with pytest.raises(TypeError):

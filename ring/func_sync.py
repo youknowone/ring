@@ -4,6 +4,7 @@ This module includes building blocks and storage implementations of **Ring**
 factories.
 """
 from typing import Any, Optional, List
+import functools
 import time
 import re
 import hashlib
@@ -174,7 +175,7 @@ class BulkStorageMixin(object):
         self.touch_many_values(keys, expire)
 
 
-class DictStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
+class ExpirableDictStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
 
     now = time.time
 
@@ -216,6 +217,28 @@ class DictStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
         else:
             expired_time = _now + expire
         self.backend[key] = expired_time, value
+
+
+class PersistentDictStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
+
+    def get_value(self, key):
+        try:
+            value = self.backend[key]
+        except KeyError:
+            raise fbase.NotFound
+        return value
+
+    def set_value(self, key, value, expire):
+        self.backend[key] = value
+
+    def delete_value(self, key):
+        try:
+            del self.backend[key]
+        except KeyError:
+            pass
+
+    def has_value(self, key):
+        return key in self.backend
 
 
 class MemcacheStorage(
@@ -282,6 +305,22 @@ class RedisStorage(
 
 
 class DiskStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
+
+    def get_value(self, key):
+        value = self.backend.get(key)
+        if value is None:
+            raise fbase.NotFound
+        return value
+
+    def set_value(self, key, value, expire):
+        self.backend.set(key, value, expire)
+
+    def delete_value(self, key):
+        self.backend.delete(key)
+
+
+class ShelveStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
+
     def get_value(self, key):
         value = self.backend.get(key)
         if value is None:
@@ -298,7 +337,7 @@ class DiskStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
 def dict(
         obj, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
         default_action='get_or_update', coder_registry=None,
-        user_interface=CacheUserInterface, storage_class=DictStorage):
+        user_interface=CacheUserInterface, storage_class=Ellipsis):
     """Basic Python :class:`dict` based cache.
 
     This backend is not designed for real products, but useful by
@@ -321,12 +360,21 @@ def dict(
 
     :see: :func:`ring.aiodict` for :mod:`asyncio` version.
     """
+    if storage_class is Ellipsis:
+        if expire is None:
+            storage_class = PersistentDictStorage
+        else:
+            storage_class = ExpirableDictStorage
+
     return fbase.factory(
         obj, key_prefix=key_prefix, on_manufactured=None,
         user_interface=user_interface, storage_class=storage_class,
         default_action=default_action, coder_registry=coder_registry,
         miss_value=None, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys)
+
+
+shelve = functools.partial(dict, expire=None)
 
 
 def memcache(
