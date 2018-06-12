@@ -32,7 +32,7 @@ def suggest_key_prefix(c, key_prefix):
         if six.PY2:
             cc = c.wrapped_callable
             # A proper solution is `im_class` of the bound method
-            if c.is_method:
+            if c.is_membermethod:
                 key_prefix = \
                     '{0.__module__}.{{self.__class__.__name__}}.{0.__name__}' \
                     .format(cc)

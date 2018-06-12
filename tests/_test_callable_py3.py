@@ -1,3 +1,4 @@
+import asyncio
 from typing import Any, Optional
 from ring.callable import Callable
 
@@ -31,3 +32,11 @@ def test_annotations():
 
     c = Callable(f)
     assert c.annotations == {'a': int, 'b': str, 'd': Any, 'return': Optional[float]}
+
+
+def test_code():
+    def f(a): pass  # noqa
+    assert Callable(f).code.co_name == 'f'
+
+    h = asyncio.coroutine(f)
+    assert Callable(h).code.co_name == 'f'

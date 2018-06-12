@@ -56,17 +56,15 @@ class Callable(object):
             method_name = cc.__qualname__.split('<locals>.')[-1]
             if method_name == cc.__name__:
                 return True
-            if method_name.endswith('<locals>.' + cc.__name__):
-                return True
             return False
         else:
             if self.is_descriptor:
                 return False
             # im_class does not exist at this point
-            return not (self.is_method or self.is_classmethod)
+            return not (self.is_membermethod or self.is_classmethod)
 
     @cached_property
-    def is_method(self):
+    def is_membermethod(self):
         """Test given argument is a method or not.
 
         :param ring.callable.Callable c: A callable object.
@@ -81,7 +79,8 @@ class Callable(object):
             if not self.is_descriptor:
                 return True
 
-        return self.first_parameter and self.first_parameter.name == 'self'
+        return self.first_parameter is not None \
+            and self.first_parameter.name == 'self'
 
     @cached_property
     def is_classmethod(self):
@@ -98,7 +97,8 @@ class Callable(object):
             if not self.is_descriptor:
                 return False
 
-        return self.first_parameter and self.first_parameter.name == 'cls'
+        return self.first_parameter is not None \
+            and self.first_parameter.name == 'cls'
 
     def kwargify(self, args, kwargs, bound_args=()):
         """Create a merged kwargs-like object with given args and kwargs."""
