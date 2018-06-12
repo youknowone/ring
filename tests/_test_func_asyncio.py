@@ -174,7 +174,7 @@ def test_func_dict():
     yield from f2(1, 2)
     yield from f2(1, 2)
 
-    f2._ring.storage.now = lambda: time.time() + 100  # expirable duration
+    f2._rope.storage.now = lambda: time.time() + 100  # expirable duration
     assert ((yield from f2.get(1, 2))) is None
 
 

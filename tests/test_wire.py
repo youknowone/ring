@@ -1,39 +1,42 @@
 
-from ring.wire import Wire
-from ring.key import Callable
+from ring.wire import Wire, WireRope
 
 
 def test_wire():
 
     class TestWire(Wire):
-        pass
+        x = 7
 
-    def wrapper(f):
-        c = Callable(f)
-        w = TestWire.for_callable(c)
-        return w
+        def y(self):
+            return self._bound_objects[0].v
+
+    class CallableWire(Wire):
+        def __call__(self):
+            return self._bound_objects[0].v
+
+    test_rope = WireRope(TestWire)
+    callable_rope = WireRope(CallableWire)
 
     class A(object):
 
         def __init__(self, v):
             self.v = v
 
-        @wrapper
+        @test_rope
         def f(self):
             return self.v
 
-        @f._add_function('call')
-        def f_call(self):
-            return self.f.cwrapper.callable(self)
-
-        @f._add_function('key')
-        def f_key(self):
-            return 'key'
+        @callable_rope
+        def g(self):
+            return self.v
 
     a = A(10)
-    assert a.f.call() == 10
-    assert a.f.key() == 'key'
-
     b = A(20)
-    assert a.f.call() == 10, (a.f, a.f.call())
-    assert b.f.call() == 20, (b.f, b.f.call())
+
+    assert a.f.x == 7
+    assert a.f.y() == 10
+    assert b.f.y() == 20
+    assert not callable(a.f)
+    assert a.g() == 10
+    assert b.g() == 20
+    assert callable(a.g)

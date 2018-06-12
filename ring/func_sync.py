@@ -1,4 +1,4 @@
-""":mod:`ring.func_sync` --- a collection of factory functions.
+""":mod:`ring.func_sync` --- collection of factory functions.
 
 This module includes building blocks and storage implementations of **Ring**
 factories.
@@ -152,7 +152,7 @@ class BulkStorageMixin(object):
     def get_many(self, keys, miss_value):
         values = self.get_many_values(keys)
         results = [
-            self.ring.coder.decode(v) if v is not fbase.NotFound else miss_value
+            self.ring.coder.decode(v) if v is not fbase.NotFound else miss_value  # noqa
             for v in values]
         return results
 

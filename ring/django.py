@@ -95,7 +95,7 @@ class CachePageUserInterface(fbase.BaseUserInterface):
         transform_args=transform_cache_page_args)
     def execute(self, wire, request, *args, **kwargs):
         middleware = self.middleware
-        view_func = self.ring.cwrapper.callable
+        view_func = wire.__func__
         try:
             response = view_func(request, *args, **kwargs)
         except Exception as e:
@@ -120,9 +120,9 @@ class CachePageUserInterface(fbase.BaseUserInterface):
             return result
         # no 'precess_view' in CacheMiddleware
         # if hasattr(middleware, 'process_view'):
-        #     result = middleware.process_view(request, view_func, args, kwargs)
-        #     if result is not None:
-        #         return result
+        #    result = middleware.process_view(request, view_func, args, kwargs)
+        #    if result is not None:
+        #        return result
         return self.ring.miss_value
 
     @fbase.interface_attrs(
@@ -204,7 +204,7 @@ def cache(
 
     .. _`Django's cache framework: Setting up the cache`: https://docs.djangoproject.com/en/2.0/topics/cache/#setting-up-the-cache
     .. _`Django's cache framework: The low-level cache API`: https://docs.djangoproject.com/en/2.0/topics/cache/#the-low-level-cache-api
-    """
+    """  # noqa
     backend = promote_backend(backend)
     return fbase.factory(
         backend, key_prefix=key_prefix, on_manufactured=None,
@@ -216,10 +216,12 @@ def cache(
 
 def cache_page(
         timeout, cache=None, key_prefix=None,  # original parameters
-        user_interface=CachePageUserInterface, storage_class=fbase.BaseStorage):
+        user_interface=CachePageUserInterface,
+        storage_class=fbase.BaseStorage):
     """The drop-in-replacement of Django's per-view cache.
 
-    Use this decorator instead of :func:`django.views.decorators.cache.cache_page`.
+    Use this decorator instead of
+    :func:`django.views.decorators.cache.cache_page`.
     The decorated view function itself is compatible. Ring decorated function
     additionally have ring-styled sub-functions. In the common cases, `delete`
     and `update` are helpful.
@@ -267,7 +269,7 @@ def cache_page(
     :see: `Django's cache framework: The per-view cache <https://docs.djangoproject.com/en/2.0/topics/cache/#the-per-view-cache>`_
 
     :see: :func:`django.views.decorators.cache.cache_page`.
-    """
+    """  # noqa
     middleware_class = CacheMiddleware
     middleware = middleware_class(
         cache_timeout=timeout, cache_alias=cache, key_prefix=key_prefix)
