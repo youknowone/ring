@@ -17,7 +17,7 @@ install:
 - pip install flake8 pytest-cov '.[tests]'
 script:
 - flake8 --ignore=E501,E999 ring tests setup.py
-- py.test --cov=ring -vv tests/
+- pytest --cov=ring -vv tests/
 after_success:
 - bash <(curl -s https://codecov.io/bash)
 matrix:

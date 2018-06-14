@@ -7,10 +7,10 @@ import types
 from typing import List
 
 import six
+from wirerope import Wire, WireRope, RopeCore
 from ._compat import functools
 from .callable import Callable
 from .key import CallableKey
-from .wire import Wire, WireRope, RopeCore
 from .coder import registry as default_registry
 
 __all__ = (

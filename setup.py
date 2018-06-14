@@ -14,7 +14,8 @@ def get_version():
 
 
 install_requires = [
-    'prettyexc>=0.6.0',
+    'six>=1.11.0',
+    'wirerope>=0.1.0',
 ]
 tests_require = [
     'pytest>=3.0.2', 'pytest-cov', 'pytest-lazy-fixture', 'mock', 'patch',
@@ -61,19 +62,18 @@ else:
 # backports - py2
 if sys.version_info[0] == 2:
     install_requires.extend([
-        'inspect2==0.1.0',
-        'functools32==3.2.3-2',
+        'inspect2>=0.1.0',
+        'functools32>=3.2.3-2',
     ])
 
 # backports - py34
 if sys.version_info[:2] <= (3, 4):
     install_requires.extend([
-        'typing==3.6.4',
-        'singledispatch==3.4.0.3',
+        'typing>=3.6.4',
     ])
     if (3, 3) <= sys.version_info[:2]:
         install_requires.extend([
-            'asyncio==3.4.3',
+            'asyncio>=3.4.3',
         ])
 
 
