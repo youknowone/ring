@@ -11,7 +11,13 @@
         :members:
         :undoc-members:
 
-    .. autoclass:: ring.func_sync.DictStorage
+    .. autoclass:: ring.func_sync.ExpirableDictStorage
+        :members:
+        :undoc-members:
+    .. autoclass:: ring.func_sync.PersistentDictStorage
+        :members:
+        :undoc-members:
+    .. autoclass:: ring.func_sync.ShelveStorage
         :members:
         :undoc-members:
     .. autoclass:: ring.func_sync.MemcacheStorage

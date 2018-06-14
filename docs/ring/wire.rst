@@ -1,2 +1,0 @@
-.. automodule:: ring.wire
-    :members:

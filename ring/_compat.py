@@ -6,9 +6,6 @@ import functools
 if not hasattr(functools, 'lru_cache'):
     import functools32
     functools.lru_cache = functools32.lru_cache
-if not hasattr(functools, 'singledispatch'):
-    import singledispatch
-    functools.singledispatch = singledispatch.singledispatch
 
 if six.PY3:
     import inspect
