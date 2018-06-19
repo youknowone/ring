@@ -7,16 +7,84 @@ from typing import Any, Optional, List
 import asyncio
 import inspect
 import itertools
-import time
-from . import func_base as fbase
-from . import func_sync
+import functools
+from . import func_base as fbase, func_sync as fsync
 
-__all__ = ('dict', 'aiodict', 'aiomcache', 'aioredis', )
+__all__ = ('aiomcache', 'aioredis', )
 
 inspect_iscoroutinefunction = getattr(
     inspect, 'iscoroutinefunction', lambda f: False)
 
-type_dict = dict
+
+def convert_storage(storage_class):
+    storage_bases = (fbase.CommonMixinStorage, BulkStorageMixin)
+    async_storage_class = type(
+        'Async' + storage_class.__name__, (storage_class,), {})
+
+    count = 0
+    for storage_base in storage_bases:
+        if issubclass(storage_class, storage_base):
+            count += 1
+            for name in storage_base.__dict__.keys():
+                async_attr = asyncio.coroutine(getattr(storage_class, name))
+                setattr(async_storage_class, name, async_attr)
+    if count == 0:
+        raise TypeError(
+            "'storage_class' is not subclassing any known storage base")
+
+    return async_storage_class
+
+
+class NonAsyncioFactoryProxyBase(fbase.FactoryProxyBase):
+
+    def __init__(self, *args, **kwargs):
+        self.force_asyncio = kwargs.pop('force_asyncio', False)
+        super().__init__(*args, **kwargs)
+
+    def __call__(self, func):
+        is_coroutine = fbase.asyncio_binary_classifier(func) == 1
+        if is_coroutine and not self.force_asyncio:
+            raise TypeError(
+                "'{f.__name__}' function is a asyncio coroutine but the ring "
+                "factory does not support asyncio. This may result the "
+                "storage operation blocking asyncio event loop which may "
+                "slows down the program. To force to allow it, pass "
+                "keyword parameter 'force_asyncio=True' to the ring factory.")
+        return super().__call__(func)
+
+
+def create_factory_proxy(factory_table, *, allow_asyncio):
+    if allow_asyncio:
+        proxy_base = fbase.FactoryProxyBase
+    else:
+        proxy_base = NonAsyncioFactoryProxyBase
+    classifier = fbase.asyncio_binary_classifier
+    proxy_class = type('_FactoryProxy', (proxy_base,), {})
+    proxy_class.classifier = staticmethod(classifier)
+    proxy_class.factory_table = staticmethod(factory_table)
+    proxy_class.__call__ = functools.wraps(factory_table[0])(proxy_class.__call__)
+    return proxy_class
+
+
+def create_from(_storage_class):
+
+    def factory(
+            obj, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
+            user_interface=CacheUserInterface, storage_class=None,
+            **kwargs):
+
+        if storage_class is None:
+            storage_class = convert_storage(_storage_class)
+
+        return fbase.factory(
+            obj, key_prefix=key_prefix, on_manufactured=factory_doctor,
+            user_interface=user_interface,
+            storage_class=convert_storage(storage_class),
+            miss_value=None, expire_default=expire, coder=coder,
+            ignorable_keys=ignorable_keys,
+            **kwargs)
+
+    return factory
 
 
 def factory_doctor(wire_rope) -> None:
@@ -233,25 +301,6 @@ class BulkStorageMixin(object):
         return self.touch_many_values(keys, expire)
 
 
-def convert_storage(storage_class):
-    storage_bases = (fbase.CommonMixinStorage, BulkStorageMixin)
-    async_storage_class = type(
-        'Async' + storage_class.__name__, (storage_class,), {})
-
-    count = 0
-    for storage_base in storage_bases:
-        if issubclass(storage_class, storage_base):
-            count += 1
-            for name in storage_base.__dict__.keys():
-                async_attr = asyncio.coroutine(getattr(storage_class, name))
-                setattr(async_storage_class, name, async_attr)
-    if count == 0:
-        raise TypeError(
-            "'storage_class' is not subclassing any known storage base")
-
-    return async_storage_class
-
-
 class AiomcacheStorage(
         CommonMixinStorage, fbase.StorageMixin, BulkStorageMixin):
     """Storage implementation for :class:`aiomcache.Client`."""
@@ -329,36 +378,15 @@ def dict(
         obj, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
         user_interface=CacheUserInterface, storage_class=None,
         **kwargs):
-    """Basic Python :class:`dict` based cache.
 
-    This backend is not designed for real products, but useful by keeping
-    below in mind:
-
-    - :func:`functools.lru_cache` is the standard library for the most of
-      local cache.
-    - Expired objects will never be removed from the dict. If the function has
-      unlimited input combinations, never use dict.
-    - It is designed to "simulate" cache backends, not to provide an actual
-      cache backend. If a caching function is a fast job, this backend even
-      can drop the performance.
-
-    Still, it doesn't mean you can't use this backend for products. Take
-    advantage of it when your demands fit.
-
-    :param dict obj: Cache storage.
-
-    :see: :func:`ring.func_asyncio.CacheUserInterface` for sub-functions.
-
-    :see: :func:`ring.dict` for non-asyncio version.
-    """
     if storage_class is None:
         if expire is None:
-            storage_class = func_sync.PersistentDictStorage
+            storage_class = fsync.PersistentDictStorage
         else:
-            storage_class = func_sync.ExpirableDictStorage
+            storage_class = fsync.ExpirableDictStorage
 
     return fbase.factory(
-        obj, key_prefix=key_prefix, on_manufactured=factory_doctor,
+        obj, key_prefix=key_prefix, on_manufactured=None,
         user_interface=user_interface,
         storage_class=convert_storage(storage_class),
         miss_value=None, expire_default=expire, coder=coder,

@@ -662,7 +662,6 @@ def factory(
 
                 return self.__getattribute__(name)
 
-
         wire_rope = WireRope(_RingWire, RingCore)
         strand = wire_rope(f)
         strand.miss_value = miss_value
@@ -787,3 +786,29 @@ class StorageMixin(object):
     def touch_value(self, key, expire):
         """Touch value for the given key. (optional)"""
         raise AttributeError
+
+
+def asyncio_binary_classifier(f):
+    c = Callable(f)
+    return int(bool(c.is_coroutine))
+
+
+class FactoryProxyBase(object):
+
+    classifier = None  # must be set in descendant
+    factory_table = None  # must be set in descendant
+
+    def __init__(self, *args, **kwargs):
+        self.pargs = args, kwargs
+        self.rings = {}
+
+    def __call__(self, func):
+        key = self.classifier(func)
+        if key not in self.rings:
+            factory = self.factory_table[key]
+            args, kwargs = self.pargs
+            ring = factory(*args, **kwargs)
+            self.rings[key] = factory
+        else:
+            ring = self.rings[key]
+        return ring(func)

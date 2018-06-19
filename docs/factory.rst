@@ -23,10 +23,10 @@ backend descriptions.
 
 .. autosummary::
     ring.dict
+    ring.shelve
     ring.memcache
     ring.redis
     ring.disk
-    ring.aiodict
     ring.aiomcache
     ring.aioredis
 

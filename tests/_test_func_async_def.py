@@ -5,8 +5,8 @@ import ring
 
 
 @pytest.mark.asyncio
-async def test_async_def_vanilla_function(storage_dict):
-    storage = await storage_dict
+async def test_async_def_vanilla_function(aiomcache_client):
+    storage = await aiomcache_client
 
     with pytest.raises(TypeError):
         @storage.ring(storage)
@@ -25,12 +25,12 @@ async def test_async_def_func_method():
         def __str__(self):
             return 'A'
 
-        @ring.aiodict(cache)
+        @ring.dict(cache)
         async def method(self, a, b):
             x = await async_func(100)
             return base + a * x + b
 
-        @ring.aiodict(cache)
+        @ring.dict(cache)
         @classmethod
         async def cmethod(cls, a, b):
             x = await async_func(200)
@@ -68,7 +68,7 @@ async def test_annotation(field, expected):
     def f(a: int, b: str) -> float:
         pass
 
-    @ring.aiodict({})
+    @ring.dict({})
     async def g(a: int, b: str) -> float:
         pass
 

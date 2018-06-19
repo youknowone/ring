@@ -190,7 +190,7 @@ They follow similar convention but requiring `await` for IO jobs.
 
     import ring
 
-    @ring.aiodict({})
+    @ring.dict({})
     async def f():
         ...
 

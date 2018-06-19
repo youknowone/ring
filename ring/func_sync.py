@@ -353,7 +353,7 @@ def dict(
 
     :see: :func:`ring.func_sync.CacheUserInterface` for sub-functions.
 
-    :see: :func:`ring.aiodict` for :mod:`asyncio` version.
+    :see: :func:`ring.dict` for :mod:`asyncio` version.
     """
     if storage_class is None:
         if expire is None:
