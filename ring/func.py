@@ -12,7 +12,7 @@ except ImportError:
     asyncio = False
 
 if asyncio:
-    from .func_asyncio import aiodict, aiomcache, aioredis
+    from .func_asyncio import dict as aiodict, aiomcache, aioredis
 else:
     aiodict = None
     aiomcache = None

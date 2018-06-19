@@ -114,9 +114,9 @@ def function(request, storage):
             r = str(r).encode('utf-8')
         return r
 
-    options = {'expire': 10}
-    if not storage.has_expire:
-        options = {}
+    options = {'wire_slots': ('base',)}
+    if storage.has_expire:
+        options['expire'] = 10
 
     if request.param == 'function':
         base = [0]

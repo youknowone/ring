@@ -487,55 +487,14 @@ class AbstractBulkUserInterfaceMixin(object):
 
 class RingWire(Wire):
 
+    __slots__ = ('encode', 'decode', 'storage')
+
     def __init__(self, rope, *args, **kwargs):
         super(RingWire, self).__init__(rope, *args, **kwargs)
 
         self.encode = rope.coder.encode
         self.decode = rope.coder.decode
         self.storage = rope.storage
-
-    def __getattr__(self, name):
-        try:
-            return super(RingWire, self).__getattr__(name)
-        except AttributeError:
-            pass
-        try:
-            return self.__getattribute__(name)
-        except AttributeError:
-            pass
-
-        attr = getattr(self._rope.user_interface, name)
-        if callable(attr):
-            transform_args = getattr(
-                attr, 'transform_args', None)
-
-            def impl_f(*args, **kwargs):
-                if transform_args:
-                    transform_func, transform_rules = transform_args
-                    args, kwargs = transform_func(
-                        self, transform_rules, args, kwargs)
-                return attr(self, *args, **kwargs)
-
-            cc = self._callable.wrapped_callable
-            functools.wraps(cc)(impl_f)
-            impl_f.__name__ = '.'.join((cc.__name__, name))
-            if six.PY34:
-                impl_f.__qualname__ = '.'.join((cc.__qualname__, name))
-
-            annotations = getattr(
-                impl_f, '__annotations__', {})
-            annotations_override = getattr(
-                attr, '__annotations_override__', {})
-            for field, override in annotations_override.items():
-                if isinstance(override, types.FunctionType):
-                    new_annotation = override(annotations)
-                else:
-                    new_annotation = override
-                annotations[field] = new_annotation
-
-            setattr(self, name, impl_f)
-
-        return self.__getattribute__(name)
 
     def _merge_args(self, args, kwargs):
         """Create a fake kwargs object by merging actual arguments.
@@ -562,10 +521,12 @@ def factory(
         expire_default,  # default expiration
         # building blocks
         coder, miss_value, user_interface, storage_class,
-        default_action='get_or_update',
-        coder_registry=None,
+        default_action=Ellipsis,
+        coder_registry=Ellipsis,
         # callback
         on_manufactured=None,
+        # optimization
+        wire_slots=Ellipsis,
         # key builder related parameters
         ignorable_keys=None, key_encoding=None, key_refactor=None):
     """Create a decorator which turns a function into ring wire or wire bridge.
@@ -611,7 +572,11 @@ def factory(
     :return: The factory decorator to create new ring wire or wire bridge.
     :rtype: (Callable)->ring.wire.RopeCore
     """
-    if coder_registry is None:
+    if wire_slots is Ellipsis:
+        wire_slots = ()
+    if default_action is Ellipsis:
+        default_action = 'get_or_update'
+    if coder_registry is Ellipsis:
         coder_registry = default_registry
     raw_coder = coder
     ring_coder = coder_registry.get_or_coderize(raw_coder)
@@ -641,15 +606,62 @@ def factory(
                     self.callable, _key_prefix, _ignorable_keys,
                     encoding=key_encoding, key_refactor=key_refactor)
 
-        if default_action is not None:
-            func = f if type(f) is types.FunctionType else f.__func__  # noqa
+        func = f if type(f) is types.FunctionType else f.__func__  # noqa
+        interface_keys = tuple(k for k in dir(user_interface) if k[0] != '_')
 
-            class _RingWire(RingWire):
+        class _RingWire(RingWire):
+            if wire_slots is not False:
+                assert isinstance(wire_slots, tuple)
+                __slots__ = interface_keys + wire_slots
+
+            if default_action:
                 @functools.wraps(func)
                 def __call__(self, *args, **kwargs):
                     return self.run(self._rope.default_action, *args, **kwargs)
-        else:
-            _RingWire = RingWire
+
+            def __getattr__(self, name):
+                try:
+                    return super(RingWire, self).__getattr__(name)
+                except AttributeError:
+                    pass
+                try:
+                    return self.__getattribute__(name)
+                except AttributeError:
+                    pass
+
+                attr = getattr(self._rope.user_interface, name)
+                if callable(attr):
+                    transform_args = getattr(
+                        attr, 'transform_args', None)
+
+                    def impl_f(*args, **kwargs):
+                        if transform_args:
+                            transform_func, transform_rules = transform_args
+                            args, kwargs = transform_func(
+                                self, transform_rules, args, kwargs)
+                        return attr(self, *args, **kwargs)
+
+                    cc = self._callable.wrapped_callable
+                    functools.wraps(cc)(impl_f)
+                    impl_f.__name__ = '.'.join((cc.__name__, name))
+                    if six.PY34:
+                        impl_f.__qualname__ = '.'.join((cc.__qualname__, name))
+
+                    annotations = getattr(
+                        impl_f, '__annotations__', {})
+                    annotations_override = getattr(
+                        attr, '__annotations_override__', {})
+                    for field, override in annotations_override.items():
+                        if isinstance(override, types.FunctionType):
+                            new_annotation = override(annotations)
+                        else:
+                            new_annotation = override
+                        annotations[field] = new_annotation
+
+                    setattr(self, name, impl_f)
+
+                return self.__getattribute__(name)
+
 
         wire_rope = WireRope(_RingWire, RingCore)
         strand = wire_rope(f)
@@ -704,6 +716,11 @@ class BaseStorage(object):
     @abc.abstractmethod
     def delete(self, key):  # pragma: no cover
         """Delete data by given key."""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def has(self, key):  # pragma: no cover
+        """Check data exists for given key."""
         raise NotImplementedError
 
     @abc.abstractmethod

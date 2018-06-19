@@ -331,8 +331,8 @@ class DiskStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
 
 def dict(
         obj, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
-        default_action='get_or_update', coder_registry=None,
-        user_interface=CacheUserInterface, storage_class=Ellipsis):
+        user_interface=CacheUserInterface, storage_class=None,
+        **kwargs):
     """Basic Python :class:`dict` based cache.
 
     This backend is not designed for real products, but useful by
@@ -355,7 +355,7 @@ def dict(
 
     :see: :func:`ring.aiodict` for :mod:`asyncio` version.
     """
-    if storage_class is Ellipsis:
+    if storage_class is None:
         if expire is None:
             storage_class = PersistentDictStorage
         else:
@@ -364,15 +364,15 @@ def dict(
     return fbase.factory(
         obj, key_prefix=key_prefix, on_manufactured=None,
         user_interface=user_interface, storage_class=storage_class,
-        default_action=default_action, coder_registry=coder_registry,
         miss_value=None, expire_default=expire, coder=coder,
-        ignorable_keys=ignorable_keys)
+        ignorable_keys=ignorable_keys,
+        **kwargs)
 
 
 def shelve(
         shelf, key_prefix=None, coder=None, ignorable_keys=None,
-        default_action='get_or_update', coder_registry=None,
-        user_interface=CacheUserInterface, storage_class=ShelveStorage):
+        user_interface=CacheUserInterface, storage_class=ShelveStorage,
+        **kwargs):
     """Python :mod:`shelve` based cache.
 
     :param shelve.Shelf shelf: Cache storage. See :func:`shelve.open` to get
@@ -385,16 +385,16 @@ def shelve(
     return fbase.factory(
         shelf, key_prefix=key_prefix, on_manufactured=None,
         user_interface=user_interface, storage_class=storage_class,
-        default_action=default_action, coder_registry=coder_registry,
         miss_value=None, expire_default=expire, coder=coder,
-        ignorable_keys=ignorable_keys)
+        ignorable_keys=ignorable_keys,
+        **kwargs)
 
 
 def memcache(
         client, key_prefix=None, expire=0, coder=None, ignorable_keys=None,
-        default_action='get_or_update', coder_registry=None,
         user_interface=(CacheUserInterface, BulkInterfaceMixin),
-        storage_class=MemcacheStorage):
+        storage_class=MemcacheStorage,
+        **kwargs):
     """Common Memcached_ interface.
 
     This backend is common interface for various memcached client libraries
@@ -442,18 +442,16 @@ def memcache(
     return fbase.factory(
         client, key_prefix=key_prefix, on_manufactured=None,
         user_interface=user_interface, storage_class=storage_class,
-        default_action=default_action, coder_registry=coder_registry,
         miss_value=miss_value, expire_default=expire, coder=coder,
-        ignorable_keys=ignorable_keys,
-
-        key_refactor=key_refactor)
+        ignorable_keys=ignorable_keys, key_refactor=key_refactor,
+        **kwargs)
 
 
 def redis_py(
         client, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
-        default_action='get_or_update', coder_registry=None,
         user_interface=(CacheUserInterface, BulkInterfaceMixin),
-        storage_class=RedisStorage):
+        storage_class=RedisStorage,
+        **kwargs):
     """Redis_ interface.
 
     This backend depends on `redis-py`_.
@@ -481,9 +479,9 @@ def redis_py(
     return fbase.factory(
         client, key_prefix=key_prefix, on_manufactured=None,
         user_interface=user_interface, storage_class=storage_class,
-        default_action=default_action, coder_registry=coder_registry,
         miss_value=None, expire_default=expire, coder=coder,
-        ignorable_keys=ignorable_keys)
+        ignorable_keys=ignorable_keys,
+        **kwargs)
 
 
 redis = redis_py  #: Alias for redis_py for now.
@@ -491,8 +489,8 @@ redis = redis_py  #: Alias for redis_py for now.
 
 def disk(
         obj, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
-        default_action='get_or_update', coder_registry=None,
-        user_interface=CacheUserInterface, storage_class=DiskStorage):
+        user_interface=CacheUserInterface, storage_class=DiskStorage,
+        **kwargs):
     """diskcache_ interface.
 
     .. _diskcache: https://pypi.org/project/diskcache/
@@ -504,15 +502,16 @@ def disk(
     return fbase.factory(
         obj, key_prefix=key_prefix, on_manufactured=None,
         user_interface=user_interface, storage_class=storage_class,
-        default_action=default_action, coder_registry=coder_registry,
         miss_value=None, expire_default=expire, coder=coder,
-        ignorable_keys=ignorable_keys)
+        ignorable_keys=ignorable_keys,
+        **kwargs)
 
 
 def arcus(
         client, key_prefix=None, expire=0, coder=None, ignorable_keys=None,
-        default_action='get_or_update', coder_registry=None,
-        user_interface=CacheUserInterface):  # pragma: no cover
+        default_action='get_or_update',
+        user_interface=CacheUserInterface,
+        **kwargs):  # pragma: no cover
     """Arcus support. deprecated."""
     class Storage(fbase.CommonMixinStorage, fbase.StorageMixin):
         def get_value(self, key):
@@ -546,7 +545,8 @@ def arcus(
     return fbase.factory(
         client, key_prefix=key_prefix, on_manufactured=None,
         user_interface=user_interface, storage_class=Storage,
-        default_action=default_action, coder_registry=coder_registry,
+        default_action=default_action,
         miss_value=None, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys,
-        key_refactor=key_refactor)
+        key_refactor=key_refactor,
+        **kwargs)

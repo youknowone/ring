@@ -163,6 +163,8 @@ def test_func_dict():
     assert r == 102
     r = yield from f1.has(1, 2)
     assert r is True
+    with pytest.raises(AttributeError):
+        yield from f1.touch(1, 2)
 
     cache = {}
 
@@ -173,22 +175,10 @@ def test_func_dict():
 
     yield from f2(1, 2)
     yield from f2(1, 2)
+    yield from f2.touch(1, 2)
 
     f2._rope.storage.now = lambda: time.time() + 100  # expirable duration
     assert ((yield from f2.get(1, 2))) is None
-
-
-@pytest.mark.asyncio
-@asyncio.coroutine
-def test_func_without_expiration():
-    @ring.aiodict({})
-    @asyncio.coroutine
-    def f():
-        return 0
-
-    yield from f.get()
-    assert (yield from f()) == 0
-    yield from f.touch()
 
 
 @pytest.mark.asyncio
