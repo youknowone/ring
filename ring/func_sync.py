@@ -1,4 +1,5 @@
 """:mod:`ring.func_sync` --- collection of factory functions.
+=============================================================
 
 This module includes building blocks and storage implementations of **Ring**
 factories.
@@ -10,7 +11,7 @@ import hashlib
 
 from . import func_base as fbase
 
-__all__ = ('dict', 'shelve', 'memcache', 'redis_py', 'redis', 'disk', )
+__all__ = ('dict', 'shelve', 'memcache', 'redis_py', 'disk', )
 
 
 class CacheUserInterface(fbase.BaseUserInterface):
@@ -482,9 +483,6 @@ def redis_py(
         miss_value=None, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys,
         **kwargs)
-
-
-redis = redis_py  #: Alias for redis_py for now.
 
 
 def disk(

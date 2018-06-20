@@ -21,7 +21,7 @@ def storage_dict():
 @asyncio.coroutine
 def aiomcache_client():
     client = aiomcache.Client('127.0.0.1', 11211)
-    client.ring = ring.func.aiomcache
+    client.ring = ring.func.asyncio.aiomcache
     return client
 
 
@@ -36,7 +36,7 @@ def aioredis_pool():
         global _aioredis_pool
         _aioredis_pool = yield from aioredis.create_redis_pool(
             ('localhost', 6379), minsize=2, maxsize=2)
-        _aioredis_pool.ring = ring.func.aioredis
+        _aioredis_pool.ring = ring.redis
         return _aioredis_pool
 
     else:

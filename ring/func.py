@@ -4,34 +4,35 @@
 Ring object factory functions are aggregated in this module.
 """
 
-from .func_sync import dict, shelve, memcache, redis_py, redis, disk
-from . import func_sync
+from . import func_sync as sync
 
 try:
-    import asyncio
+    import asyncio as asyncio_mod
 except ImportError:
-    asyncio = False
-
-if asyncio:
-    from .func_asyncio import aiomcache, aioredis
-    from . import func_asyncio
+    asyncio_mod = False
 else:
-    aiodict = None
-    aiomcache = None
-    aioredis = None
+    from . import func_asyncio as asyncio
+
 
 __all__ = (
-    'dict', 'shelve', 'memcache', 'redis_py', 'redis', 'disk',
-    'aiomcache', 'aioredis')
+    'dict', 'shelve', 'disk', 'memcache', 'redis')
 
 
-if asyncio:
-    dict = func_asyncio.create_factory_proxy(
-        (dict, func_asyncio.dict),
-        allow_asyncio=True)
-    shelve = func_asyncio.create_factory_proxy(
-        (shelve, func_asyncio.create_from(func_sync.ShelveStorage)),
-        allow_asyncio=False)
-    disk = func_asyncio.create_factory_proxy(
-        (disk, func_asyncio.create_from(func_sync.DiskStorage)),
-        allow_asyncio=False)
+if asyncio_mod:
+    dict = asyncio.create_asyncio_factory_proxy(
+        (sync.dict, asyncio.dict),
+        support_asyncio=True)
+    shelve = asyncio.create_asyncio_factory_proxy(
+        (sync.shelve, asyncio.create_factory_from(sync.ShelveStorage)),
+        support_asyncio=False)
+    disk = asyncio.create_asyncio_factory_proxy(
+        (sync.disk, asyncio.create_factory_from(sync.DiskStorage)),
+        support_asyncio=False)
+    memcache = asyncio.create_asyncio_factory_proxy(
+        (sync.memcache, asyncio.aiomcache),
+        support_asyncio=True)
+    redis = asyncio.create_asyncio_factory_proxy(
+        (sync.redis_py, asyncio.aioredis),
+        support_asyncio=True)
+else:
+    from .func_sync import dict, shelve, disk, memcache, redis_py as redis

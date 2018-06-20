@@ -1,4 +1,5 @@
 """:mod:`ring.func_asyncio` --- collection of :mod:`asyncio` factory functions.
+===============================================================================
 
 This module includes building blocks and storage implementations of **Ring**
 factories for :mod:`asyncio`.
@@ -7,7 +8,6 @@ from typing import Any, Optional, List
 import asyncio
 import inspect
 import itertools
-import functools
 from . import func_base as fbase, func_sync as fsync
 
 __all__ = ('aiomcache', 'aioredis', )
@@ -53,20 +53,16 @@ class NonAsyncioFactoryProxyBase(fbase.FactoryProxyBase):
         return super().__call__(func)
 
 
-def create_factory_proxy(factory_table, *, allow_asyncio):
-    if allow_asyncio:
+def create_asyncio_factory_proxy(factory_table, *, support_asyncio):
+    if support_asyncio:
         proxy_base = fbase.FactoryProxyBase
     else:
         proxy_base = NonAsyncioFactoryProxyBase
     classifier = fbase.asyncio_binary_classifier
-    proxy_class = type('_FactoryProxy', (proxy_base,), {})
-    proxy_class.classifier = staticmethod(classifier)
-    proxy_class.factory_table = staticmethod(factory_table)
-    proxy_class.__call__ = functools.wraps(factory_table[0])(proxy_class.__call__)
-    return proxy_class
+    return fbase.create_factory_proxy(proxy_base, classifier, factory_table)
 
 
-def create_from(_storage_class):
+def create_factory_from(_storage_class):
 
     def factory(
             obj, key_prefix=None, expire=None, coder=None, ignorable_keys=None,

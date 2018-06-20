@@ -6,6 +6,8 @@
    :caption: User interfaces
 
    ring/func
+   ring/func_sync
+   ring/func_asyncio
    ring/func_base
    ring/coder
    ring/django

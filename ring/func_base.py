@@ -1,4 +1,4 @@
-""":mod:`ring.func_base` --- The building blocks of :mod:`ring.func`.
+""":mod:`ring.func_base` --- The building blocks of **ring.func_\***.
 =====================================================================
 
 """
@@ -8,7 +8,7 @@ from typing import List
 
 import six
 from wirerope import Wire, WireRope, RopeCore
-from ._compat import functools
+from ._compat import functools, qualname
 from .callable import Callable
 from .key import CallableKey
 from .coder import registry as default_registry
@@ -793,7 +793,34 @@ def asyncio_binary_classifier(f):
     return int(bool(c.is_coroutine))
 
 
-class FactoryProxyBase(object):
+def create_factory_proxy(proxy_base, classifier, factory_table):
+    proxy_class = type(
+        'ring.create_factory_proxy.<locals>._FactoryProxy', (proxy_base,), {})
+    proxy_class.classifier = staticmethod(classifier)
+    proxy_class.factory_table = staticmethod(factory_table)
+    sample_factory = factory_table[0]
+    proxy_class.__call__ = functools.wraps(sample_factory)(proxy_class.__call__)
+    proxy_class.__doc__ = sample_factory.__doc__
+    return proxy_class
+
+
+class FactoryProxyMetaclass(type):
+
+    def __repr__(cls):
+        factory_table_body = ', '.join(
+            '{i}: {factory.__module__}.{factory.__name__}'.format(
+                i=i, factory=factory)
+            for i, factory in enumerate(cls.factory_table))
+        factory_table = '{' + factory_table_body + '}'
+        f = '<{cls.__base__.__name__} subclass with (' \
+            'factory_table={factory_table}, ' \
+            'classifier={cls.classifier.__module__}.{classifier})>'
+        return f.format(
+            cls=cls,
+            factory_table=factory_table, classifier=qualname(cls.classifier))
+
+
+class FactoryProxyBase(six.with_metaclass(FactoryProxyMetaclass, object)):
 
     classifier = None  # must be set in descendant
     factory_table = None  # must be set in descendant
@@ -812,3 +839,8 @@ class FactoryProxyBase(object):
         else:
             ring = self.rings[key]
         return ring(func)
+
+    def __repr__(self):
+        return u'{cls.__name__}(*{args}, **{kwargs})'.format(
+            cls=type(self),
+            args=repr(self.pargs[0]), kwargs=repr(self.pargs[1]))
