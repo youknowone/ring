@@ -3,19 +3,19 @@
 
 Ring object factory functions are aggregated in this module.
 """
-
-from . import func_sync as sync
+from __future__ import absolute_import
+from ring.func import sync
 
 try:
     import asyncio as asyncio_mod
 except ImportError:
     asyncio_mod = False
 else:
-    from . import func_asyncio as asyncio
+    from . import asyncio
 
 
 __all__ = (
-    'dict', 'shelve', 'disk', 'memcache', 'redis')
+    'dict', 'memcache', 'redis', 'shelve', 'disk')
 
 
 if asyncio_mod:
@@ -26,7 +26,7 @@ if asyncio_mod:
         (sync.shelve, asyncio.create_factory_from(sync.ShelveStorage)),
         support_asyncio=False)
     disk = asyncio.create_asyncio_factory_proxy(
-        (sync.disk, asyncio.create_factory_from(sync.DiskStorage)),
+        (sync.diskcache, asyncio.create_factory_from(sync.DiskCacheStorage)),
         support_asyncio=False)
     memcache = asyncio.create_asyncio_factory_proxy(
         (sync.memcache, asyncio.aiomcache),
@@ -35,4 +35,4 @@ if asyncio_mod:
         (sync.redis_py, asyncio.aioredis),
         support_asyncio=True)
 else:
-    from .func_sync import dict, shelve, disk, memcache, redis_py as redis
+    from .sync import dict, shelve, diskcache as disk, memcache, redis_py as redis

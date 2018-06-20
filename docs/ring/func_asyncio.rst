@@ -1,18 +1,23 @@
-.. automodule:: ring.func_asyncio
+.. automodule:: ring.func.asyncio
+    :members:
 
-    .. autofunction:: ring.func_asyncio.convert_storage
+.. autofunction:: ring.func.asyncio.dict
 
-    .. autoclass:: ring.func_asyncio.CacheUserInterface
-    .. autoclass:: ring.func_asyncio.BulkInterfaceMixin
-        :members:
-        :undoc-members:
-    .. autoclass:: ring.func_asyncio.BulkStorageMixin
-        :members:
-        :undoc-members:
+.. autofunction:: ring.func.asyncio.create_asyncio_factory_proxy
+.. autofunction:: ring.func.asyncio.convert_storage
+.. autofunction:: ring.func.asyncio.create_factory_from
 
-    .. autoclass:: ring.func_asyncio.AiomcacheStorage
-        :members:
-        :undoc-members:
-    .. autoclass:: ring.func_asyncio.AioredisStorage
-        :members:
-        :undoc-members:
+.. autoclass:: ring.func.asyncio.CacheUserInterface
+.. autoclass:: ring.func.asyncio.BulkInterfaceMixin
+    :members:
+    :undoc-members:
+.. autoclass:: ring.func.asyncio.BulkStorageMixin
+    :members:
+    :undoc-members:
+
+.. autoclass:: ring.func.asyncio.AiomcacheStorage
+    :members:
+    :undoc-members:
+.. autoclass:: ring.func.asyncio.AioredisStorage
+    :members:
+    :undoc-members:

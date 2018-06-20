@@ -1,29 +1,29 @@
-.. automodule:: ring.func_sync
+.. automodule:: ring.func.sync
+    :members:
 
-    .. autoclass:: ring.func_sync.CacheUserInterface
-    .. autoclass:: ring.func_sync.BulkInterfaceMixin
-        :members:
-        :undoc-members:
-    .. autoclass:: ring.func_sync.BulkStorageMixin
-        :members:
-        :undoc-members:
+.. autoclass:: ring.func.sync.CacheUserInterface
+.. autoclass:: ring.func.sync.BulkInterfaceMixin
+    :members:
+    :undoc-members:
+.. autoclass:: ring.func.sync.BulkStorageMixin
+    :members:
+    :undoc-members:
 
-    .. autoclass:: ring.func_sync.ExpirableDictStorage
-        :members:
-        :undoc-members:
-    .. autoclass:: ring.func_sync.PersistentDictStorage
-        :members:
-        :undoc-members:
-    .. autoclass:: ring.func_sync.ShelveStorage
-        :members:
-        :undoc-members:
-    .. autoclass:: ring.func_sync.MemcacheStorage
-        :members:
-        :undoc-members:
-    .. autoclass:: ring.func_sync.RedisStorage
-        :members:
-        :undoc-members:
-    .. autoclass:: ring.func_sync.DiskStorage
-        :members:
-        :undoc-members:
-
+.. autoclass:: ring.func.sync.ExpirableDictStorage
+    :members:
+    :undoc-members:
+.. autoclass:: ring.func.sync.PersistentDictStorage
+    :members:
+    :undoc-members:
+.. autoclass:: ring.func.sync.ShelveStorage
+    :members:
+    :undoc-members:
+.. autoclass:: ring.func.sync.DiskCacheStorage
+    :members:
+    :undoc-members:
+.. autoclass:: ring.func.sync.MemcacheStorage
+    :members:
+    :undoc-members:
+.. autoclass:: ring.func.sync.RedisStorage
+    :members:
+    :undoc-members:

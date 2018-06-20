@@ -23,9 +23,9 @@ backend descriptions.
 
 .. autosummary::
     ring.dict
-    ring.shelve
     ring.memcache
     ring.redis
+    ring.shelve
     ring.disk
     ring.aiomcache
     ring.aioredis
@@ -52,7 +52,7 @@ the other one `cache` for low-level interface.
 Common factory parameters
 -------------------------
 
-:see: :func:`ring.func_base.factory` for generic factory definition.
+:see: :func:`ring.func.base.factory` for generic factory definition.
 
 
 Creating factory shortcuts

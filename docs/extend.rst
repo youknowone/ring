@@ -23,7 +23,7 @@ Creating new factory functions
 To create a new factory, basic understanding of factory bases is required.
 Let's see one by one with examples.
 
-General factory: :func:`ring.func_base.factory`
+General factory: :func:`ring.func.base.factory`
 
 
 Creating simple shortcuts
@@ -36,7 +36,7 @@ New storage interface
 +++++++++++++++++++++
 
 The most important component is the ``storage_interface`` parameter,
-which is expected to inherit :class:`ring.func_base.BaseStorage`.
+which is expected to inherit :class:`ring.func.base.BaseStorage`.
 The abstract class defines common basic operations of storage.
 
 (TBD)

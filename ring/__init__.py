@@ -9,7 +9,7 @@ from ring.func import (
     dict, shelve, disk, memcache, redis)
 try:
     import asyncio
-    from ring.func_asyncio import aiomcache, aioredis
+    from ring.func.asyncio import aiomcache, aioredis
 except ImportError:
     pass
 else:

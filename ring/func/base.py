@@ -1,4 +1,4 @@
-""":mod:`ring.func_base` --- The building blocks of **ring.func_\***.
+""":mod:`ring.func.base` --- The building blocks of **ring.func.\***.
 =====================================================================
 
 """
@@ -8,10 +8,10 @@ from typing import List
 
 import six
 from wirerope import Wire, WireRope, RopeCore
-from ._compat import functools, qualname
-from .callable import Callable
-from .key import CallableKey
-from .coder import registry as default_registry
+from .._compat import functools, qualname
+from ..callable import Callable
+from ..key import CallableKey
+from ..coder import registry as default_registry
 
 __all__ = (
     'factory', 'NotFound',
@@ -167,7 +167,7 @@ def transform_kwargs_only(wire, rules, args, kwargs):
     argument handling.
 
     This function is the argument of `transform_args` parameter of
-    :func:`ring.func_base.interface_attrs` decorator for ordinary
+    :func:`ring.func.base.interface_attrs` decorator for ordinary
     single-access methods.
 
     :param int rules.prefix_count: The number of prefix parameters. When it is
@@ -179,7 +179,7 @@ def transform_kwargs_only(wire, rules, args, kwargs):
     :return: The fully keyword-annotated arguments.
     :rtype: dict
 
-    :see: the source code of :class:`ring.func_base.BaseUserInterface` about
+    :see: the source code of :class:`ring.func.base.BaseUserInterface` about
         actual usage.
     """
     prefix_count = rules.get('prefix_count', 0)
@@ -203,29 +203,29 @@ class BaseUserInterface(object):
     the composed user interface object and creates actual sub-function
     into the ring wire.
 
-    The parameter *transform_args* in :func:`ring.func_base.interface_attrs`
+    The parameter *transform_args* in :func:`ring.func.base.interface_attrs`
     defines the figure of method parameters. For the **BaseUserInterface**,
     every method's *transform_args* is
-    :func:`ring.func_base.transform_kwargs_only` which force to pass uniform
+    :func:`ring.func.base.transform_kwargs_only` which force to pass uniform
     keyword arguments to the interface methods.
     Other mix-ins or subclasses may have different *transform_args*.
 
     The first parameter of interface method *always* is a **RingWire** object.
     The other parameters are composed by *transform_args*.
 
-    :see: :func:`ring.func_base.transform_kwargs_only` for the specific
+    :see: :func:`ring.func.base.transform_kwargs_only` for the specific
         argument transformation rule for each methods.
 
     The parameters below describe common methods' parameters.
 
-    :param ring.func_base.factory...RingWire wire: The corresponding ring
+    :param ring.func.base.RingWire wire: The corresponding ring
         wire object.
     :param Dict[str,Any] kwargs: Fully keyword-annotated arguments. When
         actual function arguments are passed to each sub-function of the
         wire, they are merged as the form of keyword arguments. This gives
         the consistent interface for arguments handling. Note that it only
         describes the methods' *transform_args* attribute is
-        :func:`ring.func_base.transform_kwargs_only`
+        :func:`ring.func.base.transform_kwargs_only`
     """
 
     def __init__(self, ring):
@@ -257,7 +257,7 @@ class BaseUserInterface(object):
         """Try to get and return the storage value of the corresponding key.
 
         :see: The class documentation for the parameter details.
-        :see: :meth:`ring.func_base.BaseUserInterface.key` for the key.
+        :see: :meth:`ring.func.base.BaseUserInterface.key` for the key.
         :return: The storage value for the corresponding key if it exists;
             Otherwise the `miss_value` of **Ring** object.
         """
@@ -268,7 +268,7 @@ class BaseUserInterface(object):
     def set(self, wire, value, **kwargs):  # pragma: no cover
         """Set the storage value of the corresponding key as the given `value`.
 
-        :see: :meth:`ring.func_base.BaseUserInterface.key` for the key.
+        :see: :meth:`ring.func.base.BaseUserInterface.key` for the key.
 
         :see: The class documentation for common parameter details.
         :param Any value: The value to save in the storage.
@@ -282,11 +282,11 @@ class BaseUserInterface(object):
         """Execute the original function and `set` the result as the value.
 
         This action is comprehensible as a concatnation of
-        :meth:`ring.func_base.BaseUserInterface.execute` and
-        :meth:`ring.func_base.BaseUserInterface.set`.
+        :meth:`ring.func.base.BaseUserInterface.execute` and
+        :meth:`ring.func.base.BaseUserInterface.set`.
 
-        :see: :meth:`ring.func_base.BaseUserInterface.key` for the key.
-        :see: :meth:`ring.func_base.BaseUserInterface.execute` for the
+        :see: :meth:`ring.func.base.BaseUserInterface.key` for the key.
+        :see: :meth:`ring.func.base.BaseUserInterface.execute` for the
             execution.
 
         :see: The class documentation for the parameter details.
@@ -299,8 +299,8 @@ class BaseUserInterface(object):
     def get_or_update(self, wire, **kwargs):  # pragma: no cover
         """Try to get and return the storage value; Otherwise, update and so.
 
-        :see: :meth:`ring.func_base.BaseUserInterface.get` for get.
-        :see: :meth:`ring.func_base.BaseUserInterface.update` for update.
+        :see: :meth:`ring.func.base.BaseUserInterface.get` for get.
+        :see: :meth:`ring.func.base.BaseUserInterface.update` for update.
 
         :see: The class documentation for the parameter details.
         :return: The storage value for the corresponding key if it exists;
@@ -313,7 +313,7 @@ class BaseUserInterface(object):
     def delete(self, wire, **kwargs):  # pragma: no cover
         """Delete the storage value of the corresponding key.
 
-        :see: :meth:`ring.func_base.BaseUserInterface.key` for the key.
+        :see: :meth:`ring.func.base.BaseUserInterface.key` for the key.
 
         :see: The class documentation for the parameter details.
         :rtype: None
@@ -326,7 +326,7 @@ class BaseUserInterface(object):
 
         This is an optional function.
 
-        :see: :meth:`ring.func_base.BaseUserInterface.key` for the key.
+        :see: :meth:`ring.func.base.BaseUserInterface.key` for the key.
 
         :see: The class documentation for the parameter details.
         :return: Whether the storage has a value of the corresponding key.
@@ -341,7 +341,7 @@ class BaseUserInterface(object):
         This is an optional function.
 
         :note: `Touch` means resetting the expiration.
-        :see: :meth:`ring.func_base.BaseUserInterface.key` for the key.
+        :see: :meth:`ring.func.base.BaseUserInterface.key` for the key.
 
         :see: The class documentation for the parameter details.
         :rtype: bool
@@ -376,11 +376,11 @@ class AbstractBulkUserInterfaceMixin(object):
     """Bulk access interface mixin.
 
     Every method in this mixin is optional. The methods have each
-    corresponding function in :class:`ring.func_base.BaseUserInterface`.
+    corresponding function in :class:`ring.func.base.BaseUserInterface`.
 
     The parameters below describe common methods' parameters.
 
-    :param ring.func_base.factory...RingWire wire: The corresponding ring
+    :param ring.func.base.RingWire wire: The corresponding ring
         wire object.
     :param Iterable[Union[tuple,dict]] args_list: A sequence of arguments of
         the original function. While **args_list** is a list of **args**,
@@ -532,8 +532,8 @@ def factory(
     """Create a decorator which turns a function into ring wire or wire bridge.
 
     This is the base factory function that every internal **Ring** factories
-    are based on. See the source code of :mod:`ring.func_sync` or
-    :mod:`ring.func_asyncio` for actual usages and sample code.
+    are based on. See the source code of :mod:`ring.func.sync` or
+    :mod:`ring.func.asyncio` for actual usages and sample code.
 
     :param Any storage_backend: Actual storage backend instance.
     :param Optional[str] key_prefix: Specify storage key prefix when a
@@ -690,8 +690,8 @@ class BaseStorage(object):
     """Base storage interface.
 
     To add a new storage interface, regard to use
-    :class:`ring.func_base.CommonMixinStorage` and a subclass of
-    :class:`ring.func_base.StorageMixin`.
+    :class:`ring.func.base.CommonMixinStorage` and a subclass of
+    :class:`ring.func.base.StorageMixin`.
 
     When subclassing this interface, remember `get` and `set` methods must
     include coder works. The methods marked as :func:`abc.abstractmethod`

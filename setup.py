@@ -96,6 +96,7 @@ setup(
     url='https://github.com/youknowone/ring',
     packages=(
         'ring',
+        'ring/func',
     ),
     package_data={},
     install_requires=install_requires,

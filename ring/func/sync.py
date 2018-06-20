@@ -1,4 +1,4 @@
-""":mod:`ring.func_sync` --- collection of factory functions.
+""":mod:`ring.func.sync` --- collection of factory functions.
 =============================================================
 
 This module includes building blocks and storage implementations of **Ring**
@@ -9,15 +9,15 @@ import time
 import re
 import hashlib
 
-from . import func_base as fbase
+from . import base as fbase
 
-__all__ = ('dict', 'shelve', 'memcache', 'redis_py', 'disk', )
+__all__ = ('dict', 'memcache', 'redis_py', 'shelve', 'diskcache', )
 
 
 class CacheUserInterface(fbase.BaseUserInterface):
     """General cache user interface provider.
 
-    :see: :class:`ring.func_base.BaseUserInterface` for class and methods
+    :see: :class:`ring.func.base.BaseUserInterface` for class and methods
         details.
     """
 
@@ -79,7 +79,7 @@ class BulkInterfaceMixin(fbase.AbstractBulkUserInterfaceMixin):
     """Bulk access interface mixin.
 
     Any corresponding storage class must be a subclass of
-    :class:`ring.func_sync.BulkStorageMixin`.
+    :class:`ring.func.sync.BulkStorageMixin`.
     """
 
     @fbase.interface_attrs(
@@ -315,7 +315,7 @@ class RedisStorage(
                 self.backend.expire(key, expire)
 
 
-class DiskStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
+class DiskCacheStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
 
     def get_value(self, key):
         value = self.backend.get(key)
@@ -352,7 +352,7 @@ def dict(
 
     :param dict obj: Cache storage. Any :class:`dict` compatible object.
 
-    :see: :func:`ring.func_sync.CacheUserInterface` for sub-functions.
+    :see: :func:`ring.func.sync.CacheUserInterface` for sub-functions.
 
     :see: :func:`ring.dict` for :mod:`asyncio` version.
     """
@@ -380,7 +380,7 @@ def shelve(
         a shelf.
 
     :see: :mod:`shelve` for the backend.
-    :see: :func:`ring.func_sync.CacheUserInterface` for sub-functions.
+    :see: :func:`ring.func.sync.CacheUserInterface` for sub-functions.
     """
     expire = None
     return fbase.factory(
@@ -430,9 +430,9 @@ def memcache(
     :param object key_refactor: The default key refactor may hash the cache
         key when it doesn't meet memcached key restriction.
 
-    :see: :func:`ring.func_sync.CacheUserInterface` for single access
+    :see: :func:`ring.func.sync.CacheUserInterface` for single access
         sub-functions.
-    :see: :func:`ring.func_sync.BulkInterfaceMixin` for bulk access
+    :see: :func:`ring.func.sync.BulkInterfaceMixin` for bulk access
         sub-functions.
 
     :see: :func:`ring.aiomcache` for :mod:`asyncio` version.
@@ -466,9 +466,9 @@ def redis_py(
 
     :param redis.StrictRedis client: Redis client object.
 
-    :see: :func:`ring.func_sync.CacheUserInterface` for single access
+    :see: :func:`ring.func.sync.CacheUserInterface` for single access
         sub-functions.
-    :see: :func:`ring.func_sync.BulkInterfaceMixin` for bulk access
+    :see: :func:`ring.func.sync.BulkInterfaceMixin` for bulk access
         sub-functions.
 
     :see: :func:`ring.aioredis` for :mod:`asyncio` version.
@@ -485,9 +485,9 @@ def redis_py(
         **kwargs)
 
 
-def disk(
+def diskcache(
         obj, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
-        user_interface=CacheUserInterface, storage_class=DiskStorage,
+        user_interface=CacheUserInterface, storage_class=DiskCacheStorage,
         **kwargs):
     """diskcache_ interface.
 
@@ -495,7 +495,7 @@ def disk(
 
     :param diskcache.Cache obj: diskcache Cache object.
 
-    :see: :func:`ring.func_sync.CacheUserInterface` for sub-functions.
+    :see: :func:`ring.func.sync.CacheUserInterface` for sub-functions.
     """
     return fbase.factory(
         obj, key_prefix=key_prefix, on_manufactured=None,

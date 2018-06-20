@@ -11,8 +11,8 @@ from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
 from django.utils.cache import get_cache_key
 from django.middleware.cache import CacheMiddleware
-from . import func_base as fbase
-from .func_sync import CacheUserInterface
+from .func import base as fbase
+from .func.sync import CacheUserInterface
 
 
 __all__ = ('cache', 'cache_page')
@@ -243,7 +243,10 @@ def cache_page(
             article_list.delete((request, 'article_list'))  # DELETE!
             return ...
 
-        # Comparison: This is how django originally invalidate it
+    Compare to how django originally invalidate it.
+
+    .. code-block:: python
+
         def article_post_django(request):
             articles = ...
 
