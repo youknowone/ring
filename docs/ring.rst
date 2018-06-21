@@ -14,7 +14,7 @@
 
 .. automodule:: ring
 
-    .. function:: ring.dict(...)
+    .. function:: dict(...)
 
         Proxy to select synchronous or :mod:`asyncio` versions of **Ring**
         factory.
@@ -23,7 +23,7 @@
         :note: :mod:`asyncio` version is based on synchronous version. It is
             composed using :func:`ring.func.asyncio.convert_storage`.
 
-    .. function:: ring.memcache(...)
+    .. function:: memcache(...)
 
         Proxy to select synchronous or :mod:`asyncio` versions of **Ring**
         factory.
@@ -31,7 +31,7 @@
         :see: :func:`ring.func.sync.memcache` for synchronous version.
         :see: :func:`ring.func.asyncio.aiomcache` for :mod:`asyncio` version.
 
-    .. function:: ring.redis(...)
+    .. function:: redis(...)
 
         Proxy to select synchronous or :mod:`asyncio` versions of **Ring**
         factory.
@@ -39,7 +39,7 @@
         :see: :func:`ring.func.sync.redis_py` for synchronous version.
         :see: :func:`ring.func.asyncio.aioredis` for :mod:`asyncio` version.
 
-    .. function:: ring.shelve(...)
+    .. function:: shelve(...)
 
         Proxy to select synchronous or :mod:`asyncio` versions of **Ring**
         factory.
@@ -53,7 +53,7 @@
             pass `force_asyncio=True` as a keyword parameter.
             parameter.
 
-    .. function:: ring.disk(...)
+    .. function:: disk(...)
 
         Proxy to select synchronous or :mod:`asyncio` versions of **Ring**
         factory.

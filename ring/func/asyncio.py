@@ -26,10 +26,10 @@ class NonAsyncioFactoryProxyBase(fbase.FactoryProxyBase):
         is_coroutine = fbase.asyncio_binary_classifier(func) == 1
         if is_coroutine and not self.force_asyncio:
             raise TypeError(
-                "'{f.__name__}' function is a asyncio coroutine but the ring "
-                "factory does not support asyncio. This may result the "
+                "'{f.__name__}' function is an asyncio coroutine but the ring "
+                "factory does not support asyncio. This may result in the "
                 "storage operation blocking asyncio event loop which may "
-                "slows down the program. To force to allow it, pass "
+                "slow down the program. To force to allow it, pass "
                 "keyword parameter 'force_asyncio=True' to the ring factory.")
         return super().__call__(func)
 
