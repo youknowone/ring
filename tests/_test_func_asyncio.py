@@ -1,11 +1,12 @@
 import asyncio
 import time
+import shelve
 
 import aiomcache
+import diskcache
 import ring
 
 import pytest
-
 from tests.test_func_sync import StorageDict
 
 
@@ -49,6 +50,28 @@ def aioredis_pool():
     pytest.lazy_fixture('aioredis_pool'),
 ])
 def gen_storage(request):
+    return request.param
+
+
+@pytest.fixture()
+def storage_shelve():
+    storage = shelve.open('/tmp/ring-test/shelvea')
+    storage.ring = ring.shelve
+    return storage
+
+
+@pytest.fixture()
+def storage_disk(request):
+    client = diskcache.Cache('/tmp/ring-test/diskcache')
+    client.ring = ring.disk
+    return client
+
+
+@pytest.fixture(params=[
+    pytest.lazy_fixture('storage_shelve'),
+    pytest.lazy_fixture('storage_disk'),
+])
+def synchronous_storage(request):
     return request.param
 
 
@@ -350,3 +373,25 @@ def test_func_method(storage_dict):
     assert ((yield from A.cmethod(1, 2))) == 10202
 
     assert obj.cmethod.key(3, 4) == A.cmethod.key(3, 4)
+
+
+@pytest.mark.asyncio
+@asyncio.coroutine
+def test_forced_sync(synchronous_storage):
+    storage = synchronous_storage
+
+    with pytest.raises(TypeError):
+        @storage.ring(storage)
+        @asyncio.coroutine
+        def g():
+            return 1
+
+    @storage.ring(storage, force_asyncio=True)
+    @asyncio.coroutine
+    def f(a):
+        return a
+
+    yield from f.delete('a')
+    assert None is ((yield from f.get('a')))
+    assert 'a' is ((yield from f('a')))
+    assert 'a' is ((yield from f.get('a')))

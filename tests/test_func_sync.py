@@ -1,5 +1,6 @@
 import sys
 import time
+import shelve
 import ring
 import pymemcache.client
 import memcache
@@ -39,17 +40,26 @@ def storage_dict():
 
 @pytest.fixture
 def storage_shelve():
-    try:
-        import shelve
-    except ImportError:
-        pytest.skip()
-    storage = shelve.open('test_ring')
+    storage = shelve.open('/tmp/ring-test/shelve{}'.format(sys.version_info[0]))
     storage.ring = ring.shelve
     storage.is_binary = False
     storage.has_has = True
     storage.has_touch = False
     storage.has_expire = False
     return storage
+
+
+@pytest.fixture(scope='session', params=[
+    diskcache.Cache('/tmp/ring-test/diskcache')
+])
+def disk_cache(request):
+    client = request.param
+    client.ring = ring.disk
+    client.is_binary = False
+    client.has_has = False
+    client.has_touch = False
+    client.has_expire = True
+    return client
 
 
 @pytest.fixture(scope='session', ids=['python-memcached', 'pymemcache', 'pylibmc'], params=[
@@ -79,19 +89,6 @@ def redis_client(request):
     client.is_binary = True
     client.has_has = True
     client.has_touch = True
-    client.has_expire = True
-    return client
-
-
-@pytest.fixture(scope='session', params=[
-    diskcache.Cache('/tmp/ring-test')
-])
-def disk_cache(request):
-    client = request.param
-    client.ring = ring.disk
-    client.is_binary = False
-    client.has_has = False
-    client.has_touch = False
     client.has_expire = True
     return client
 

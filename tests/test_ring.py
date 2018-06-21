@@ -53,6 +53,30 @@ def test_ring_key(value):
     assert simple(value) == value  # cache hit
 
 
+def test_proxy_repr():
+
+    @ring.dict({})
+    def f():
+        pass
+
+    assert repr(ring.dict)
+    assert repr(ring.dict({}))
+    assert repr(f)
+
+
+def test_proxy_cache():
+
+    dring = ring.dict({})
+
+    @dring
+    def f1():
+        pass
+
+    @dring
+    def f2():
+        pass
+
+
 def test_package_version():
     parts = ring.__version__.split('.')
     assert len(parts) == 3
