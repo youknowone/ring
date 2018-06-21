@@ -1,8 +1,8 @@
 
 import asyncio
 import pytest
-import ring.func_sync
-from ring.func_base import BaseUserInterface, NotFound, factory
+import ring.func.sync
+from ring.func.base import BaseUserInterface, NotFound, factory
 
 
 class DoubleCacheUserInterface(BaseUserInterface):
@@ -81,11 +81,13 @@ class DoubleCacheUserInterface(BaseUserInterface):
 def doublecache(
         client, key_prefix, expire=0, coder=None, ignorable_keys=None,
         user_interface=DoubleCacheUserInterface):
-    from ring.func_asyncio import DictStorage
+    from ring.func.sync import ExpirableDictStorage
+    from ring.func.asyncio import convert_storage
 
     return factory(
         client, key_prefix=key_prefix, on_manufactured=None,
-        user_interface=user_interface, storage_class=DictStorage,
+        user_interface=user_interface,
+        storage_class=convert_storage(ExpirableDictStorage),
         miss_value=None, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys)
 

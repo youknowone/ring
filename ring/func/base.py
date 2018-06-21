@@ -1,4 +1,4 @@
-""":mod:`ring.func_base` --- The building blocks of :mod:`ring.func`.
+""":mod:`ring.func.base` --- The building blocks of **ring.func.\***.
 =====================================================================
 
 """
@@ -8,10 +8,10 @@ from typing import List
 
 import six
 from wirerope import Wire, WireRope, RopeCore
-from ._compat import functools
-from .callable import Callable
-from .key import CallableKey
-from .coder import registry as default_registry
+from .._compat import functools, qualname
+from ..callable import Callable
+from ..key import CallableKey
+from ..coder import registry as default_registry
 
 __all__ = (
     'factory', 'NotFound',
@@ -167,7 +167,7 @@ def transform_kwargs_only(wire, rules, args, kwargs):
     argument handling.
 
     This function is the argument of `transform_args` parameter of
-    :func:`ring.func_base.interface_attrs` decorator for ordinary
+    :func:`ring.func.base.interface_attrs` decorator for ordinary
     single-access methods.
 
     :param int rules.prefix_count: The number of prefix parameters. When it is
@@ -179,7 +179,7 @@ def transform_kwargs_only(wire, rules, args, kwargs):
     :return: The fully keyword-annotated arguments.
     :rtype: dict
 
-    :see: the source code of :class:`ring.func_base.BaseUserInterface` about
+    :see: the source code of :class:`ring.func.base.BaseUserInterface` about
         actual usage.
     """
     prefix_count = rules.get('prefix_count', 0)
@@ -203,29 +203,29 @@ class BaseUserInterface(object):
     the composed user interface object and creates actual sub-function
     into the ring wire.
 
-    The parameter *transform_args* in :func:`ring.func_base.interface_attrs`
+    The parameter *transform_args* in :func:`ring.func.base.interface_attrs`
     defines the figure of method parameters. For the **BaseUserInterface**,
     every method's *transform_args* is
-    :func:`ring.func_base.transform_kwargs_only` which force to pass uniform
+    :func:`ring.func.base.transform_kwargs_only` which force to pass uniform
     keyword arguments to the interface methods.
     Other mix-ins or subclasses may have different *transform_args*.
 
     The first parameter of interface method *always* is a **RingWire** object.
     The other parameters are composed by *transform_args*.
 
-    :see: :func:`ring.func_base.transform_kwargs_only` for the specific
+    :see: :func:`ring.func.base.transform_kwargs_only` for the specific
         argument transformation rule for each methods.
 
     The parameters below describe common methods' parameters.
 
-    :param ring.func_base.factory...RingWire wire: The corresponding ring
+    :param ring.func.base.RingWire wire: The corresponding ring
         wire object.
     :param Dict[str,Any] kwargs: Fully keyword-annotated arguments. When
         actual function arguments are passed to each sub-function of the
         wire, they are merged as the form of keyword arguments. This gives
         the consistent interface for arguments handling. Note that it only
         describes the methods' *transform_args* attribute is
-        :func:`ring.func_base.transform_kwargs_only`
+        :func:`ring.func.base.transform_kwargs_only`
     """
 
     def __init__(self, ring):
@@ -257,7 +257,7 @@ class BaseUserInterface(object):
         """Try to get and return the storage value of the corresponding key.
 
         :see: The class documentation for the parameter details.
-        :see: :meth:`ring.func_base.BaseUserInterface.key` for the key.
+        :see: :meth:`ring.func.base.BaseUserInterface.key` for the key.
         :return: The storage value for the corresponding key if it exists;
             Otherwise the `miss_value` of **Ring** object.
         """
@@ -268,7 +268,7 @@ class BaseUserInterface(object):
     def set(self, wire, value, **kwargs):  # pragma: no cover
         """Set the storage value of the corresponding key as the given `value`.
 
-        :see: :meth:`ring.func_base.BaseUserInterface.key` for the key.
+        :see: :meth:`ring.func.base.BaseUserInterface.key` for the key.
 
         :see: The class documentation for common parameter details.
         :param Any value: The value to save in the storage.
@@ -282,11 +282,11 @@ class BaseUserInterface(object):
         """Execute the original function and `set` the result as the value.
 
         This action is comprehensible as a concatnation of
-        :meth:`ring.func_base.BaseUserInterface.execute` and
-        :meth:`ring.func_base.BaseUserInterface.set`.
+        :meth:`ring.func.base.BaseUserInterface.execute` and
+        :meth:`ring.func.base.BaseUserInterface.set`.
 
-        :see: :meth:`ring.func_base.BaseUserInterface.key` for the key.
-        :see: :meth:`ring.func_base.BaseUserInterface.execute` for the
+        :see: :meth:`ring.func.base.BaseUserInterface.key` for the key.
+        :see: :meth:`ring.func.base.BaseUserInterface.execute` for the
             execution.
 
         :see: The class documentation for the parameter details.
@@ -299,8 +299,8 @@ class BaseUserInterface(object):
     def get_or_update(self, wire, **kwargs):  # pragma: no cover
         """Try to get and return the storage value; Otherwise, update and so.
 
-        :see: :meth:`ring.func_base.BaseUserInterface.get` for get.
-        :see: :meth:`ring.func_base.BaseUserInterface.update` for update.
+        :see: :meth:`ring.func.base.BaseUserInterface.get` for get.
+        :see: :meth:`ring.func.base.BaseUserInterface.update` for update.
 
         :see: The class documentation for the parameter details.
         :return: The storage value for the corresponding key if it exists;
@@ -313,7 +313,7 @@ class BaseUserInterface(object):
     def delete(self, wire, **kwargs):  # pragma: no cover
         """Delete the storage value of the corresponding key.
 
-        :see: :meth:`ring.func_base.BaseUserInterface.key` for the key.
+        :see: :meth:`ring.func.base.BaseUserInterface.key` for the key.
 
         :see: The class documentation for the parameter details.
         :rtype: None
@@ -326,7 +326,7 @@ class BaseUserInterface(object):
 
         This is an optional function.
 
-        :see: :meth:`ring.func_base.BaseUserInterface.key` for the key.
+        :see: :meth:`ring.func.base.BaseUserInterface.key` for the key.
 
         :see: The class documentation for the parameter details.
         :return: Whether the storage has a value of the corresponding key.
@@ -341,7 +341,7 @@ class BaseUserInterface(object):
         This is an optional function.
 
         :note: `Touch` means resetting the expiration.
-        :see: :meth:`ring.func_base.BaseUserInterface.key` for the key.
+        :see: :meth:`ring.func.base.BaseUserInterface.key` for the key.
 
         :see: The class documentation for the parameter details.
         :rtype: bool
@@ -376,11 +376,11 @@ class AbstractBulkUserInterfaceMixin(object):
     """Bulk access interface mixin.
 
     Every method in this mixin is optional. The methods have each
-    corresponding function in :class:`ring.func_base.BaseUserInterface`.
+    corresponding function in :class:`ring.func.base.BaseUserInterface`.
 
     The parameters below describe common methods' parameters.
 
-    :param ring.func_base.factory...RingWire wire: The corresponding ring
+    :param ring.func.base.RingWire wire: The corresponding ring
         wire object.
     :param Iterable[Union[tuple,dict]] args_list: A sequence of arguments of
         the original function. While **args_list** is a list of **args**,
@@ -487,55 +487,14 @@ class AbstractBulkUserInterfaceMixin(object):
 
 class RingWire(Wire):
 
+    __slots__ = ('encode', 'decode', 'storage')
+
     def __init__(self, rope, *args, **kwargs):
         super(RingWire, self).__init__(rope, *args, **kwargs)
 
         self.encode = rope.coder.encode
         self.decode = rope.coder.decode
         self.storage = rope.storage
-
-    def __getattr__(self, name):
-        try:
-            return super(RingWire, self).__getattr__(name)
-        except AttributeError:
-            pass
-        try:
-            return self.__getattribute__(name)
-        except AttributeError:
-            pass
-
-        attr = getattr(self._rope.user_interface, name)
-        if callable(attr):
-            transform_args = getattr(
-                attr, 'transform_args', None)
-
-            def impl_f(*args, **kwargs):
-                if transform_args:
-                    transform_func, transform_rules = transform_args
-                    args, kwargs = transform_func(
-                        self, transform_rules, args, kwargs)
-                return attr(self, *args, **kwargs)
-
-            cc = self._callable.wrapped_callable
-            functools.wraps(cc)(impl_f)
-            impl_f.__name__ = '.'.join((cc.__name__, name))
-            if six.PY34:
-                impl_f.__qualname__ = '.'.join((cc.__qualname__, name))
-
-            annotations = getattr(
-                impl_f, '__annotations__', {})
-            annotations_override = getattr(
-                attr, '__annotations_override__', {})
-            for field, override in annotations_override.items():
-                if isinstance(override, types.FunctionType):
-                    new_annotation = override(annotations)
-                else:
-                    new_annotation = override
-                annotations[field] = new_annotation
-
-            setattr(self, name, impl_f)
-
-        return self.__getattribute__(name)
 
     def _merge_args(self, args, kwargs):
         """Create a fake kwargs object by merging actual arguments.
@@ -562,17 +521,19 @@ def factory(
         expire_default,  # default expiration
         # building blocks
         coder, miss_value, user_interface, storage_class,
-        default_action='get_or_update',
-        coder_registry=None,
+        default_action=Ellipsis,
+        coder_registry=Ellipsis,
         # callback
         on_manufactured=None,
+        # optimization
+        wire_slots=Ellipsis,
         # key builder related parameters
         ignorable_keys=None, key_encoding=None, key_refactor=None):
     """Create a decorator which turns a function into ring wire or wire bridge.
 
     This is the base factory function that every internal **Ring** factories
-    are based on. See the source code of :mod:`ring.func_sync` or
-    :mod:`ring.func_asyncio` for actual usages and sample code.
+    are based on. See the source code of :mod:`ring.func.sync` or
+    :mod:`ring.func.asyncio` for actual usages and sample code.
 
     :param Any storage_backend: Actual storage backend instance.
     :param Optional[str] key_prefix: Specify storage key prefix when a
@@ -611,7 +572,11 @@ def factory(
     :return: The factory decorator to create new ring wire or wire bridge.
     :rtype: (Callable)->ring.wire.RopeCore
     """
-    if coder_registry is None:
+    if wire_slots is Ellipsis:
+        wire_slots = ()
+    if default_action is Ellipsis:
+        default_action = 'get_or_update'
+    if coder_registry is Ellipsis:
         coder_registry = default_registry
     raw_coder = coder
     ring_coder = coder_registry.get_or_coderize(raw_coder)
@@ -641,15 +606,61 @@ def factory(
                     self.callable, _key_prefix, _ignorable_keys,
                     encoding=key_encoding, key_refactor=key_refactor)
 
-        if default_action is not None:
-            func = f if type(f) is types.FunctionType else f.__func__  # noqa
+        func = f if type(f) is types.FunctionType else f.__func__  # noqa
+        interface_keys = tuple(k for k in dir(user_interface) if k[0] != '_')
 
-            class _RingWire(RingWire):
+        class _RingWire(RingWire):
+            if wire_slots is not False:
+                assert isinstance(wire_slots, tuple)
+                __slots__ = interface_keys + wire_slots
+
+            if default_action:
                 @functools.wraps(func)
                 def __call__(self, *args, **kwargs):
                     return self.run(self._rope.default_action, *args, **kwargs)
-        else:
-            _RingWire = RingWire
+
+            def __getattr__(self, name):
+                try:
+                    return super(RingWire, self).__getattr__(name)
+                except AttributeError:
+                    pass
+                try:
+                    return self.__getattribute__(name)
+                except AttributeError:
+                    pass
+
+                attr = getattr(self._rope.user_interface, name)
+                if callable(attr):
+                    transform_args = getattr(
+                        attr, 'transform_args', None)
+
+                    def impl_f(*args, **kwargs):
+                        if transform_args:
+                            transform_func, transform_rules = transform_args
+                            args, kwargs = transform_func(
+                                self, transform_rules, args, kwargs)
+                        return attr(self, *args, **kwargs)
+
+                    cc = self._callable.wrapped_callable
+                    functools.wraps(cc)(impl_f)
+                    impl_f.__name__ = '.'.join((cc.__name__, name))
+                    if six.PY34:
+                        impl_f.__qualname__ = '.'.join((cc.__qualname__, name))
+
+                    annotations = getattr(
+                        impl_f, '__annotations__', {})
+                    annotations_override = getattr(
+                        attr, '__annotations_override__', {})
+                    for field, override in annotations_override.items():
+                        if isinstance(override, types.FunctionType):
+                            new_annotation = override(annotations)
+                        else:
+                            new_annotation = override
+                        annotations[field] = new_annotation
+
+                    setattr(self, name, impl_f)
+
+                return self.__getattribute__(name)
 
         wire_rope = WireRope(_RingWire, RingCore)
         strand = wire_rope(f)
@@ -679,8 +690,8 @@ class BaseStorage(object):
     """Base storage interface.
 
     To add a new storage interface, regard to use
-    :class:`ring.func_base.CommonMixinStorage` and a subclass of
-    :class:`ring.func_base.StorageMixin`.
+    :class:`ring.func.base.CommonMixinStorage` and a subclass of
+    :class:`ring.func.base.StorageMixin`.
 
     When subclassing this interface, remember `get` and `set` methods must
     include coder works. The methods marked as :func:`abc.abstractmethod`
@@ -704,6 +715,11 @@ class BaseStorage(object):
     @abc.abstractmethod
     def delete(self, key):  # pragma: no cover
         """Delete data by given key."""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def has(self, key):  # pragma: no cover
+        """Check data exists for given key."""
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -770,3 +786,61 @@ class StorageMixin(object):
     def touch_value(self, key, expire):
         """Touch value for the given key. (optional)"""
         raise AttributeError
+
+
+def asyncio_binary_classifier(f):
+    c = Callable(f)
+    return int(bool(c.is_coroutine))
+
+
+def create_factory_proxy(proxy_base, classifier, factory_table):
+    proxy_class = type(
+        'ring.create_factory_proxy.<locals>._FactoryProxy', (proxy_base,), {})
+    proxy_class.classifier = staticmethod(classifier)
+    proxy_class.factory_table = staticmethod(factory_table)
+    sample_factory = factory_table[0]
+    proxy_class.__call__ = functools.wraps(sample_factory)(proxy_class.__call__)
+    proxy_class.__doc__ = sample_factory.__doc__
+    return proxy_class
+
+
+class FactoryProxyMetaclass(type):
+
+    def __repr__(cls):
+        factory_table_body = ', '.join(
+            '{i}: {factory.__module__}.{factory.__name__}'.format(
+                i=i, factory=factory)
+            for i, factory in enumerate(cls.factory_table))
+        factory_table = '{' + factory_table_body + '}'
+        f = '<{cls.__base__.__name__} subclass with (' \
+            'factory_table={factory_table}, ' \
+            'classifier={cls.classifier.__module__}.{classifier})>'
+        return f.format(
+            cls=cls,
+            factory_table=factory_table, classifier=qualname(cls.classifier))
+
+
+class FactoryProxyBase(six.with_metaclass(FactoryProxyMetaclass, object)):
+
+    classifier = None  # must be set in descendant
+    factory_table = None  # must be set in descendant
+
+    def __init__(self, *args, **kwargs):
+        self.pargs = args, kwargs
+        self.rings = {}
+
+    def __call__(self, func):
+        key = self.classifier(func)
+        if key not in self.rings:
+            factory = self.factory_table[key]
+            args, kwargs = self.pargs
+            ring = factory(*args, **kwargs)
+            self.rings[key] = factory
+        else:
+            ring = self.rings[key]
+        return ring(func)
+
+    def __repr__(self):
+        return u'{cls.__name__}(*{args}, **{kwargs})'.format(
+            cls=type(self),
+            args=repr(self.pargs[0]), kwargs=repr(self.pargs[1]))

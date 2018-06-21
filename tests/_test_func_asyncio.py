@@ -1,11 +1,12 @@
 import asyncio
 import time
+import shelve
 
 import aiomcache
+import diskcache
 import ring
 
 import pytest
-
 from tests.test_func_sync import StorageDict
 
 
@@ -13,7 +14,7 @@ from tests.test_func_sync import StorageDict
 @asyncio.coroutine
 def storage_dict():
     storage = StorageDict()
-    storage.ring = ring.aiodict
+    storage.ring = ring.dict
     return storage
 
 
@@ -21,7 +22,7 @@ def storage_dict():
 @asyncio.coroutine
 def aiomcache_client():
     client = aiomcache.Client('127.0.0.1', 11211)
-    client.ring = ring.func.aiomcache
+    client.ring = ring.func.asyncio.aiomcache
     return client
 
 
@@ -36,7 +37,7 @@ def aioredis_pool():
         global _aioredis_pool
         _aioredis_pool = yield from aioredis.create_redis_pool(
             ('localhost', 6379), minsize=2, maxsize=2)
-        _aioredis_pool.ring = ring.func.aioredis
+        _aioredis_pool.ring = ring.redis
         return _aioredis_pool
 
     else:
@@ -52,10 +53,32 @@ def gen_storage(request):
     return request.param
 
 
+@pytest.fixture()
+def storage_shelve():
+    storage = shelve.open('/tmp/ring-test/shelvea')
+    storage.ring = ring.shelve
+    return storage
+
+
+@pytest.fixture()
+def storage_disk(request):
+    client = diskcache.Cache('/tmp/ring-test/diskcache')
+    client.ring = ring.disk
+    return client
+
+
+@pytest.fixture(params=[
+    pytest.lazy_fixture('storage_shelve'),
+    pytest.lazy_fixture('storage_disk'),
+])
+def synchronous_storage(request):
+    return request.param
+
+
 @pytest.mark.asyncio
 @asyncio.coroutine
-def test_vanilla_function(storage_dict):
-    storage = yield from storage_dict
+def test_vanilla_function(aiomcache_client):
+    storage = yield from aiomcache_client
 
     with pytest.raises(TypeError):
         @storage.ring(storage)
@@ -150,7 +173,7 @@ def test_complicated_key(gen_storage):
 def test_func_dict():
     cache = {}
 
-    @ring.aiodict(cache)
+    @ring.dict(cache)
     @asyncio.coroutine
     def f1(a, b):
         return a * 100 + b
@@ -163,32 +186,22 @@ def test_func_dict():
     assert r == 102
     r = yield from f1.has(1, 2)
     assert r is True
+    with pytest.raises(AttributeError):
+        yield from f1.touch(1, 2)
 
     cache = {}
 
-    @ring.aiodict(cache, expire=1)
+    @ring.dict(cache, expire=1)
     @asyncio.coroutine
     def f2(a, b):
         return a * 100 + b
 
     yield from f2(1, 2)
     yield from f2(1, 2)
+    yield from f2.touch(1, 2)
 
     f2._rope.storage.now = lambda: time.time() + 100  # expirable duration
     assert ((yield from f2.get(1, 2))) is None
-
-
-@pytest.mark.asyncio
-@asyncio.coroutine
-def test_func_without_expiration():
-    @ring.aiodict({})
-    @asyncio.coroutine
-    def f():
-        return 0
-
-    yield from f.get()
-    assert (yield from f()) == 0
-    yield from f.touch()
 
 
 @pytest.mark.asyncio
@@ -336,12 +349,12 @@ def test_func_method(storage_dict):
         def __ring_key__(self):
             return 'A'
 
-        @ring.aiodict(storage)
+        @ring.dict(storage)
         @asyncio.coroutine
         def method(self, a, b):
             return base + a * 100 + b
 
-        @ring.aiodict(storage)
+        @ring.dict(storage)
         @classmethod
         @asyncio.coroutine
         def cmethod(cls, a, b):
@@ -360,3 +373,25 @@ def test_func_method(storage_dict):
     assert ((yield from A.cmethod(1, 2))) == 10202
 
     assert obj.cmethod.key(3, 4) == A.cmethod.key(3, 4)
+
+
+@pytest.mark.asyncio
+@asyncio.coroutine
+def test_forced_sync(synchronous_storage):
+    storage = synchronous_storage
+
+    with pytest.raises(TypeError):
+        @storage.ring(storage)
+        @asyncio.coroutine
+        def g():
+            return 1
+
+    @storage.ring(storage, force_asyncio=True)
+    @asyncio.coroutine
+    def f(a):
+        return a
+
+    yield from f.delete('a')
+    assert None is ((yield from f.get('a')))
+    assert 'a' is ((yield from f('a')))
+    assert 'a' is ((yield from f.get('a')))

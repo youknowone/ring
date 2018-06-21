@@ -233,7 +233,7 @@ Ring approaches backend transparent way
 
 High-level interface providers like **Ring** cannot expose full features of
 the backends. Various storages have various features by their design. **Ring**
-covers common features but does not cover others. :class:`ring.func_base.Ring`
+covers common features but does not cover others. :class:`ring.func.base.Ring`
 objects serve data extractors instead.
 
 .. code-block:: python
@@ -283,9 +283,9 @@ Ring comes with configurable commands and storage actions
 ---------------------------------------------------------
 
 
-:see: :class:`ring.func_base.BaseStorage`
-:see: :class:`ring.func_sync.CacheUserInterface`
-:see: :class:`ring.func_asyncio.CacheUserInterface`
+:see: :class:`ring.func.base.BaseStorage`
+:see: :class:`ring.func.sync.CacheUserInterface`
+:see: :class:`ring.func.asyncio.CacheUserInterface`
 
 .. _python-memcached: https://pypi.org/project/python-memcached/
 .. _Django: https://www.djangoproject.com/

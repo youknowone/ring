@@ -6,8 +6,14 @@ Common ring decorators are aliased in this level as shortcuts.
 import ring.coder  # noqa
 from ring.__version__ import __version__  # noqa
 from ring.func import (
-    dict, shelve, memcache, redis, disk,
-    aiodict, aiomcache, aioredis)
+    dict, shelve, disk, memcache, redis)
+try:
+    import asyncio
+    from ring.func.asyncio import aiomcache, aioredis
+except ImportError:
+    pass
+else:
+    del asyncio
 try:
     import ring.django  # noqa
 except ImportError:  # pragma: no cover
@@ -16,4 +22,4 @@ except ImportError:  # pragma: no cover
 
 __all__ = (
     'dict', 'shelve', 'memcache', 'redis', 'disk',
-    'aiodict', 'aiomcache', 'aioredis')
+    'aiomcache', 'aioredis')

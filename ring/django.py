@@ -11,8 +11,8 @@ from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
 from django.utils.cache import get_cache_key
 from django.middleware.cache import CacheMiddleware
-from . import func_base as fbase
-from .func_sync import CacheUserInterface
+from .func import base as fbase
+from .func.sync import CacheUserInterface
 
 
 __all__ = ('cache', 'cache_page')
@@ -191,7 +191,6 @@ class CachePageUserInterface(fbase.BaseUserInterface):
 def cache(
         backend=django_cache.cache, key_prefix=None, expire=None, coder=None,
         ignorable_keys=None,
-        default_action='get_or_update', coder_registry=None,
         user_interface=CacheUserInterface, storage_class=LowLevelCacheStorage):
     """A typical ring-style cache based on Django's low-level cache API.
 
@@ -209,7 +208,6 @@ def cache(
     return fbase.factory(
         backend, key_prefix=key_prefix, on_manufactured=None,
         user_interface=user_interface, storage_class=storage_class,
-        default_action=default_action, coder_registry=coder_registry,
         miss_value=None, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys)
 
@@ -245,7 +243,10 @@ def cache_page(
             article_list.delete((request, 'article_list'))  # DELETE!
             return ...
 
-        # Comparison: This is how django originally invalidate it
+    Compare to how django originally invalidate it.
+
+    .. code-block:: python
+
         def article_post_django(request):
             articles = ...
 

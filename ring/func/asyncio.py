@@ -1,4 +1,5 @@
-""":mod:`ring.func_asyncio` --- collection of :mod:`asyncio` factory functions.
+""":mod:`ring.func.asyncio` --- collection of :mod:`asyncio` factory functions.
+===============================================================================
 
 This module includes building blocks and storage implementations of **Ring**
 factories for :mod:`asyncio`.
@@ -7,15 +8,79 @@ from typing import Any, Optional, List
 import asyncio
 import inspect
 import itertools
-import time
-from . import func_base as fbase
+from . import base as fbase, sync as fsync
 
-__all__ = ('dict', 'aiodict', 'aiomcache', 'aioredis', )
+__all__ = ('aiomcache', 'aioredis', )
 
 inspect_iscoroutinefunction = getattr(
     inspect, 'iscoroutinefunction', lambda f: False)
 
-type_dict = dict
+
+class NonAsyncioFactoryProxyBase(fbase.FactoryProxyBase):
+
+    def __init__(self, *args, **kwargs):
+        self.force_asyncio = kwargs.pop('force_asyncio', False)
+        super().__init__(*args, **kwargs)
+
+    def __call__(self, func):
+        is_coroutine = fbase.asyncio_binary_classifier(func) == 1
+        if is_coroutine and not self.force_asyncio:
+            raise TypeError(
+                "'{f.__name__}' function is a asyncio coroutine but the ring "
+                "factory does not support asyncio. This may result the "
+                "storage operation blocking asyncio event loop which may "
+                "slows down the program. To force to allow it, pass "
+                "keyword parameter 'force_asyncio=True' to the ring factory.")
+        return super().__call__(func)
+
+
+def create_asyncio_factory_proxy(factory_table, *, support_asyncio):
+    if support_asyncio:
+        proxy_base = fbase.FactoryProxyBase
+    else:
+        proxy_base = NonAsyncioFactoryProxyBase
+    classifier = fbase.asyncio_binary_classifier
+    return fbase.create_factory_proxy(proxy_base, classifier, factory_table)
+
+
+def convert_storage(storage_class):
+    storage_bases = (fbase.CommonMixinStorage, BulkStorageMixin)
+    async_storage_class = type(
+        'Async' + storage_class.__name__, (storage_class,), {})
+
+    count = 0
+    for storage_base in storage_bases:
+        if issubclass(storage_class, storage_base):
+            count += 1
+            for name in storage_base.__dict__.keys():
+                async_attr = asyncio.coroutine(getattr(storage_class, name))
+                setattr(async_storage_class, name, async_attr)
+    if count == 0:
+        raise TypeError(
+            "'storage_class' is not subclassing any known storage base")
+
+    return async_storage_class
+
+
+def create_factory_from(_storage_class):
+
+    def factory(
+            obj, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
+            user_interface=CacheUserInterface, storage_class=None,
+            **kwargs):
+
+        if storage_class is None:
+            storage_class = convert_storage(_storage_class)
+
+        return fbase.factory(
+            obj, key_prefix=key_prefix, on_manufactured=factory_doctor,
+            user_interface=user_interface,
+            storage_class=convert_storage(storage_class),
+            miss_value=None, expire_default=expire, coder=coder,
+            ignorable_keys=ignorable_keys,
+            **kwargs)
+
+    return factory
 
 
 def factory_doctor(wire_rope) -> None:
@@ -63,7 +128,7 @@ class CommonMixinStorage(fbase.BaseStorage):  # Working only as mixin
 class CacheUserInterface(fbase.BaseUserInterface):
     """General cache user interface provider for :mod:`asyncio`.
 
-    :see: :class:`ring.func_base.BaseUserInterface` for class and methods
+    :see: :class:`ring.func.base.BaseUserInterface` for class and methods
         details.
     """
 
@@ -128,7 +193,7 @@ class BulkInterfaceMixin(fbase.AbstractBulkUserInterfaceMixin):
     """Bulk access interface mixin.
 
     Any corresponding storage class must be a subclass of
-    :class:`ring.func_asyncio.BulkStorageMixin`.
+    :class:`ring.func.asyncio.BulkStorageMixin`.
     """
 
     @fbase.interface_attrs(
@@ -232,57 +297,6 @@ class BulkStorageMixin(object):
         return self.touch_many_values(keys, expire)
 
 
-class DictStorage(CommonMixinStorage, fbase.StorageMixin):
-
-    now = time.time
-
-    @asyncio.coroutine
-    def get_value(self, key):
-        _now = self.now()
-        try:
-            expired_time, value = self.backend[key]
-        except KeyError:
-            raise fbase.NotFound from KeyError
-        if expired_time is not None and expired_time < _now:
-            raise fbase.NotFound
-        return value
-
-    @asyncio.coroutine
-    def set_value(self, key, value, expire):
-        _now = self.now()
-
-        if expire is None:
-            expired_time = None
-        else:
-            expired_time = _now + expire
-        self.backend[key] = expired_time, value
-
-    @asyncio.coroutine
-    def delete_value(self, key):
-        try:
-            del self.backend[key]
-        except KeyError:
-            pass
-
-    @asyncio.coroutine
-    def has_value(self, key):
-        return key in self.backend
-
-    @asyncio.coroutine
-    def touch_value(self, key, expire):
-        _now = self.now()
-
-        try:
-            expired_time, value = self.backend[key]
-        except KeyError:
-            return
-        if expire is None:
-            expired_time = None
-        else:
-            expired_time = _now + expire
-        self.backend[key] = expired_time, value
-
-
 class AiomcacheStorage(
         CommonMixinStorage, fbase.StorageMixin, BulkStorageMixin):
     """Storage implementation for :class:`aiomcache.Client`."""
@@ -358,47 +372,33 @@ class AioredisStorage(
 
 def dict(
         obj, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
-        default_action='get_or_update', coder_registry=None,
-        user_interface=CacheUserInterface, storage_class=DictStorage):
-    """Basic Python :class:`dict` based cache.
+        user_interface=CacheUserInterface, storage_class=None,
+        **kwargs):
+    """:class:`dict` interface for :mod:`asyncio`.
 
-    This backend is not designed for real products, but useful by keeping
-    below in mind:
-
-    - :func:`functools.lru_cache` is the standard library for the most of
-      local cache.
-    - Expired objects will never be removed from the dict. If the function has
-      unlimited input combinations, never use dict.
-    - It is designed to "simulate" cache backends, not to provide an actual
-      cache backend. If a caching function is a fast job, this backend even
-      can drop the performance.
-
-    Still, it doesn't mean you can't use this backend for products. Take
-    advantage of it when your demands fit.
-
-    :param dict obj: Cache storage.
-
-    :see: :func:`ring.func_asyncio.CacheUserInterface` for sub-functions.
-
-    :see: :func:`ring.dict` for non-asyncio version.
+    :see: :func:`ring.func.sync.dict` for common description.
     """
+
+    if storage_class is None:
+        if expire is None:
+            storage_class = fsync.PersistentDictStorage
+        else:
+            storage_class = fsync.ExpirableDictStorage
+
     return fbase.factory(
-        obj, key_prefix=key_prefix, on_manufactured=factory_doctor,
-        user_interface=user_interface, storage_class=storage_class,
-        default_action=default_action, coder_registry=coder_registry,
+        obj, key_prefix=key_prefix, on_manufactured=None,
+        user_interface=user_interface,
+        storage_class=convert_storage(storage_class),
         miss_value=None, expire_default=expire, coder=coder,
-        ignorable_keys=ignorable_keys)
-
-
-#: alias of `dict`
-aiodict = dict
+        ignorable_keys=ignorable_keys,
+        **kwargs)
 
 
 def aiomcache(
         client, key_prefix=None, expire=0, coder=None, ignorable_keys=None,
-        default_action='get_or_update', coder_registry=None,
         user_interface=(CacheUserInterface, BulkInterfaceMixin),
-        storage_class=AiomcacheStorage, key_encoding='utf-8'):
+        storage_class=AiomcacheStorage, key_encoding='utf-8',
+        **kwargs):
     """Memcached_ interface for :mod:`asyncio`.
 
     Expected client package is aiomcache_.
@@ -411,14 +411,14 @@ def aiomcache(
     :param object key_refactor: The default key refactor may hash the cache
         key when it doesn't meet memcached key restriction.
 
-    :see: :func:`ring.func_asyncio.CacheUserInterface` for single access
+    :see: :func:`ring.func.asyncio.CacheUserInterface` for single access
         sub-functions.
-    :see: :func:`ring.func_asyncio.BulkInterfaceMixin` for bulk access
+    :see: :func:`ring.func.asyncio.BulkInterfaceMixin` for bulk access
         sub-functions.
 
-    :see: :func:`ring.memcache` for non-asyncio version.
+    :see: :func:`ring.func.sync.memcache` for non-asyncio version.
 
-    .. _Memcache: http://memcached.org/
+    .. _Memcached: http://memcached.org/
     .. _aiomcache: https://pypi.org/project/aiomcache/
     """
     from ring._memcache import key_refactor
@@ -426,18 +426,18 @@ def aiomcache(
     return fbase.factory(
         client, key_prefix=key_prefix, on_manufactured=factory_doctor,
         user_interface=user_interface, storage_class=storage_class,
-        default_action=default_action, coder_registry=coder_registry,
         miss_value=None, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys,
         key_encoding=key_encoding,
-        key_refactor=key_refactor)
+        key_refactor=key_refactor,
+        **kwargs)
 
 
 def aioredis(
         redis, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
-        default_action='get_or_update', coder_registry=None,
         user_interface=(CacheUserInterface, BulkInterfaceMixin),
-        storage_class=AioredisStorage):
+        storage_class=AioredisStorage,
+        **kwargs):
     """Redis interface for :mod:`asyncio`.
 
     Expected client package is aioredis_.
@@ -454,9 +454,9 @@ def aioredis(
     :param aioredis.Redis client: aioredis interface object. See
         :func:`aioredis.create_redis` or :func:`aioredis.create_redis_pool`.
 
-    :see: :func:`ring.func_asyncio.CacheUserInterface` for single access
+    :see: :func:`ring.func.asyncio.CacheUserInterface` for single access
         sub-functions.
-    :see: :func:`ring.func_asyncio.BulkInterfaceMixin` for bulk access
+    :see: :func:`ring.func.asyncio.BulkInterfaceMixin` for bulk access
         sub-functions.
 
     :see: :func:`ring.redis` for non-asyncio version.
@@ -464,6 +464,6 @@ def aioredis(
     return fbase.factory(
         redis, key_prefix=key_prefix, on_manufactured=factory_doctor,
         user_interface=user_interface, storage_class=storage_class,
-        default_action=default_action, coder_registry=coder_registry,
         miss_value=None, expire_default=expire, coder=coder,
-        ignorable_keys=ignorable_keys)
+        ignorable_keys=ignorable_keys,
+        **kwargs)
