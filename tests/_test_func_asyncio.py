@@ -1,5 +1,6 @@
 import asyncio
 import time
+import sys
 import shelve
 
 import aiomcache
@@ -11,35 +12,24 @@ from tests.test_func_sync import StorageDict
 
 
 @pytest.fixture()
-@asyncio.coroutine
 def storage_dict():
     storage = StorageDict()
-    storage.ring = ring.dict
-    return storage
+    return storage, ring.dict
 
 
 @pytest.fixture()
-@asyncio.coroutine
 def aiomcache_client():
     client = aiomcache.Client('127.0.0.1', 11211)
-    client.ring = ring.func.asyncio.aiomcache
-    return client
+    return client, ring.func.asyncio.aiomcache
 
 
 @pytest.fixture()
-@asyncio.coroutine
 def aioredis_pool():
-    import sys
-
     if sys.version_info >= (3, 5):
         import aioredis
-
-        global _aioredis_pool
-        _aioredis_pool = yield from aioredis.create_redis_pool(
+        pool_coroutine = aioredis.create_redis_pool(
             ('localhost', 6379), minsize=2, maxsize=2)
-        _aioredis_pool.ring = ring.redis
-        return _aioredis_pool
-
+        return pool_coroutine, ring.aioredis
     else:
         pytest.skip()
 
@@ -49,57 +39,76 @@ def aioredis_pool():
     pytest.lazy_fixture('aiomcache_client'),
     pytest.lazy_fixture('aioredis_pool'),
 ])
-def gen_storage(request):
+def storage_and_ring(request):
     return request.param
 
 
 @pytest.fixture()
 def storage_shelve():
     storage = shelve.open('/tmp/ring-test/shelvea')
-    storage.ring = ring.shelve
-    return storage
+    return storage, ring.shelve
 
 
 @pytest.fixture()
 def storage_disk(request):
     client = diskcache.Cache('/tmp/ring-test/diskcache')
-    client.ring = ring.disk
-    return client
+    return client, ring.disk
 
 
 @pytest.fixture(params=[
     pytest.lazy_fixture('storage_shelve'),
     pytest.lazy_fixture('storage_disk'),
 ])
-def synchronous_storage(request):
+def synchronous_storage_and_ring(request):
     return request.param
 
 
 @pytest.mark.asyncio
 @asyncio.coroutine
+def test_singleton_proxy():
+
+    @asyncio.coroutine
+    def client():
+        return object()
+
+    assert ((yield from client())) is not ((yield from client()))
+
+    proxy = ring.func.asyncio.SingletonCoroutineProxy(client())
+    assert ((yield from proxy)) is ((yield from proxy))
+
+
+@pytest.mark.asyncio
+@asyncio.coroutine
 def test_vanilla_function(aiomcache_client):
-    storage = yield from aiomcache_client
+    storage, storage_ring = aiomcache_client
 
     with pytest.raises(TypeError):
-        @storage.ring(storage)
+        @storage_ring(storage)
         def vanilla_function():
             pass
 
 
 @pytest.mark.asyncio
 @asyncio.coroutine
-def test_common(gen_storage):
-    storage = yield from gen_storage
+def test_common(storage_and_ring):
+    storage, storage_ring = storage_and_ring
     base = [0]
 
-    @storage.ring(storage, 'ring-test !@#', 5)
+    @storage_ring(storage, 'ring-test !@#', 5)
     @asyncio.coroutine
     def f(a, b):
         return str(base[0] + a * 100 + b).encode()
 
     # `f` is a callable with argument `a` and `b`
     # test f is correct
-    assert f.storage.backend is storage
+    if asyncio.iscoroutine(storage):
+        s1 = yield from f.storage.backend
+        with pytest.raises(RuntimeError):
+            yield from storage
+        s2 = yield from f.storage.backend
+        assert s1 is s2
+    else:
+        assert f.storage.backend is storage
     assert f.key(a=0, b=0)  # f takes a, b
     assert base[0] is not None  # f has attr base for test
     assert ((yield from f.execute(a=1, b=2))) != ((yield from f.execute(a=1, b=3)))  # f is not singular
@@ -153,11 +162,10 @@ def test_common(gen_storage):
 
 @pytest.mark.asyncio
 @asyncio.coroutine
-def test_complicated_key(gen_storage):
+def test_complicated_key(storage_and_ring):
+    storage, storage_ring = storage_and_ring
 
-    storage = yield from gen_storage
-
-    @storage.ring(storage)
+    @storage_ring(storage)
     @asyncio.coroutine
     def complicated(a, *args, b, **kw):
         return b'42'
@@ -207,7 +215,7 @@ def test_func_dict():
 @pytest.mark.asyncio
 @asyncio.coroutine
 def test_many(aiomcache_client):
-    client = yield from aiomcache_client
+    client, _ = aiomcache_client
 
     @ring.aiomcache(client)
     @asyncio.coroutine
@@ -229,7 +237,7 @@ def test_many(aiomcache_client):
 @pytest.mark.asyncio
 @asyncio.coroutine
 def test_aiomcache(aiomcache_client):
-    client = yield from aiomcache_client
+    client, _ = aiomcache_client
 
     @ring.aiomcache(client)
     @asyncio.coroutine
@@ -269,7 +277,7 @@ def test_aiomcache(aiomcache_client):
 @pytest.mark.asyncio
 @asyncio.coroutine
 def test_aioredis(aioredis_pool, expire):
-    client = yield from aioredis_pool
+    client, _ = aioredis_pool
 
     @ring.aioredis(client, expire=expire)
     @asyncio.coroutine
@@ -343,7 +351,7 @@ def test_aioredis(aioredis_pool, expire):
 @pytest.mark.asyncio
 @asyncio.coroutine
 def test_func_method(storage_dict):
-    storage = yield from storage_dict
+    storage, _ = storage_dict
 
     class A(object):
         def __ring_key__(self):
@@ -377,16 +385,16 @@ def test_func_method(storage_dict):
 
 @pytest.mark.asyncio
 @asyncio.coroutine
-def test_forced_sync(synchronous_storage):
-    storage = synchronous_storage
+def test_forced_sync(synchronous_storage_and_ring):
+    storage, storage_ring = synchronous_storage_and_ring
 
     with pytest.raises(TypeError):
-        @storage.ring(storage)
+        @storage_ring(storage)
         @asyncio.coroutine
         def g():
             return 1
 
-    @storage.ring(storage, force_asyncio=True)
+    @storage_ring(storage, force_asyncio=True)
     @asyncio.coroutine
     def f(a):
         return a

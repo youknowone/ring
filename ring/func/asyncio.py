@@ -16,6 +16,28 @@ inspect_iscoroutinefunction = getattr(
     inspect, 'iscoroutinefunction', lambda f: False)
 
 
+class SingletonCoroutineProxy(object):
+
+    def __init__(self, awaitable):
+        if not asyncio.iscoroutine(awaitable):
+            raise TypeError(
+                "StorageProxy requires an awaitable object but '{}' found"
+                .format(type(awaitable)))
+        self.awaitable = awaitable
+        self.singleton = None
+
+    def __iter__(self):
+        if self.singleton is None:
+            if hasattr(self.awaitable, '__await__'):
+                awaitable = self.awaitable.__await__()
+            else:
+                awaitable = self.awaitable
+            self.singleton = yield from awaitable
+        return self.singleton
+
+    __await__ = __iter__
+
+
 class NonAsyncioFactoryProxyBase(fbase.FactoryProxyBase):
 
     def __init__(self, *args, **kwargs):
@@ -334,40 +356,59 @@ class AioredisStorage(
     """Storage implementation for :class:`aioredis.Redis`."""
 
     @asyncio.coroutine
+    def _get_backend(self):
+        if isinstance(self.backend, SingletonCoroutineProxy):
+            self.backend = yield from self.backend
+        return self.backend
+
+    @asyncio.coroutine
     def get_value(self, key):
-        value = yield from self.backend.get(key)
+        backend = yield from self._get_backend()
+        value = yield from backend.get(key)
         if value is None:
             raise fbase.NotFound
         return value
 
+    @asyncio.coroutine
     def set_value(self, key, value, expire):
-        return self.backend.set(key, value, expire=expire)
+        backend = yield from self._get_backend()
+        result = yield from backend.set(key, value, expire=expire)
+        return result
 
+    @asyncio.coroutine
     def delete_value(self, key):
-        return self.backend.delete(key)
+        backend = yield from self._get_backend()
+        result = yield from backend.delete(key)
+        return result
 
     @asyncio.coroutine
     def has_value(self, key):
-        result = yield from self.backend.exists(key)
+        backend = yield from self._get_backend()
+        result = yield from backend.exists(key)
         return bool(result)
 
+    @asyncio.coroutine
     def touch_value(self, key, expire):
         if expire is None:
             raise TypeError("'touch' is requested for persistent cache")
-        return self.backend.expire(key, expire)
+        backend = yield from self._get_backend()
+        result = yield from backend.expire(key, expire)
+        return result
 
     @asyncio.coroutine
     def get_many_values(self, keys):
-        values = yield from self.backend.mget(*keys)
+        backend = yield from self._get_backend()
+        values = yield from backend.mget(*keys)
         return [v if v is not None else fbase.NotFound for v in values]
 
     @asyncio.coroutine
     def set_many_values(self, keys, values, expire):
         params = itertools.chain.from_iterable(zip(keys, values))
-        yield from self.backend.mset(*params)
+        backend = yield from self._get_backend()
+        yield from backend.mset(*params)
         if expire is not None:
             asyncio.ensure_future(asyncio.gather(*(
-                self.backend.expire(key, expire) for key in keys)))
+                backend.expire(key, expire) for key in keys)))
 
 
 def dict(
@@ -461,6 +502,9 @@ def aioredis(
 
     :see: :func:`ring.redis` for non-asyncio version.
     """
+    if inspect.iscoroutine(redis):
+        redis = SingletonCoroutineProxy(redis)
+
     return fbase.factory(
         redis, key_prefix=key_prefix, on_manufactured=factory_doctor,
         user_interface=user_interface, storage_class=storage_class,

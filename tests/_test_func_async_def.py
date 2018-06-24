@@ -6,10 +6,10 @@ import ring
 
 @pytest.mark.asyncio
 async def test_async_def_vanilla_function(aiomcache_client):
-    storage = await aiomcache_client
+    storage, storage_ring = aiomcache_client
 
     with pytest.raises(TypeError):
-        @storage.ring(storage)
+        @storage_ring(storage)
         def vanilla_function():
             pass
 
