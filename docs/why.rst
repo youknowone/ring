@@ -103,7 +103,7 @@ service articles. New articles must be shown up in short time. This is how
 to control cache. We started from a neat per-view cache decorator - but now it
 turns into a storage approach which we demonstrated at first section.
 
-You can control them in a consistent level with **Ring**.
+You can control them at a consistent level with **Ring**.
 
 :see: :ref:`lifecycle` section for details.
 :see: :func:`ring.django.cache_page` which exactly solved the problem.
@@ -133,7 +133,7 @@ need to access the storages out of the original product, or even out of the
 Python world.
 
 *Ring* has a transparent interface for backends. Moving between high-level
-:class:`ring.ring_base.Ring` and low-level storage interfaces is
+:class:`ring.ring_base.Ring` and low-level storage interfaces are
 straightforward and smooth.
 
 :see: :ref:`transparency` section for details.
@@ -232,9 +232,9 @@ Ring approaches backend transparent way
 ---------------------------------------
 
 High-level interface providers like **Ring** cannot expose full features of
-the backends. Various storages have various features by their design. **Ring**
-covers common features but does not cover others. :class:`ring.func.base.Ring`
-objects serve data extractors instead.
+the backends. Various storages have their own features by their design.
+**Ring** covers common features but does not cover others.
+:class:`ring.func.base.Ring` objects serve data extractors instead.
 
 .. code-block:: python
 

@@ -222,7 +222,7 @@ class BaseUserInterface(object):
         wire object.
     :param Dict[str,Any] kwargs: Fully keyword-annotated arguments. When
         actual function arguments are passed to each sub-function of the
-        wire, they are merged as the form of keyword arguments. This gives
+        wire, they are merged into the form of keyword arguments. This gives
         the consistent interface for arguments handling. Note that it only
         describes the methods' *transform_args* attribute is
         :func:`ring.func.base.transform_kwargs_only`
@@ -244,7 +244,7 @@ class BaseUserInterface(object):
 
     @interface_attrs(transform_args=transform_kwargs_only)
     def execute(self, wire, **kwargs):
-        """Execute and return the result of original function.
+        """Execute and return the result of the original function.
 
         :see: The class documentation for the parameter details.
         :return: The result of the original function.
@@ -259,7 +259,7 @@ class BaseUserInterface(object):
         :see: The class documentation for the parameter details.
         :see: :meth:`ring.func.base.BaseUserInterface.key` for the key.
         :return: The storage value for the corresponding key if it exists;
-            Otherwise the `miss_value` of **Ring** object.
+            Otherwise, the `miss_value` of **Ring** object.
         """
         raise NotImplementedError
 
@@ -441,11 +441,11 @@ class AbstractBulkUserInterfaceMixin(object):
     def get_or_update_many(self, wire, *args_list):  # pragma: no cover
         """Try to get and returns the storage values.
 
-        :note: The semantic of this function may vary by the implementation.
+        :note: The semantics of this function may vary by the implementation.
         :see: The class documentation for the parameter details.
-        :return: A sequence of the storage values or the exceuted result of the
+        :return: A sequence of the storage values or the executed result of the
             original function for the corresponding keys. When a key exists
-            in the storage, the matching value is selected; Otherwise the
+            in the storage, the matching value is selected; Otherwise, the
             result of the original function is.
         """
         raise NotImplementedError
