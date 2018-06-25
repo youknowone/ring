@@ -52,7 +52,7 @@ def storage_shelve():
 @pytest.fixture(scope='session', params=[
     diskcache.Cache('/tmp/ring-test/diskcache')
 ])
-def disk_cache(request):
+def storage_diskcache(request):
     client = request.param
     client.ring = ring.disk
     client.is_binary = False
@@ -98,7 +98,7 @@ def redis_client(request):
     pytest.lazy_fixture('storage_shelve'),
     pytest.lazy_fixture('memcache_client'),
     pytest.lazy_fixture('redis_client'),
-    pytest.lazy_fixture('disk_cache'),
+    pytest.lazy_fixture('storage_diskcache'),
 ])
 def storage(request):
     return request.param
@@ -285,14 +285,14 @@ def test_func_dict_expire():
     assert f.get(1, 2) is None
 
 
-def test_disk(disk_cache):
+def test_diskcache(storage_diskcache):
     base = [0]
 
-    @ring.disk(disk_cache, 'ring-test')
+    @ring.disk(storage_diskcache, 'ring-test')
     def f(a, b):
         r = base[0] + a * 100 + b
         sr = str(r)
-        if disk_cache.is_binary:
+        if storage_diskcache.is_binary:
             sr = sr.encode('utf-8')
         return sr
 
@@ -302,7 +302,7 @@ def test_disk(disk_cache):
     base[0] = 10000
     assert None is f.get(8, b=6)
     assert 10806 == int(f(8, b=6))
-    assert 10806 == int(disk_cache.get(f.key(8, 6)))
+    assert 10806 == int(storage_diskcache.get(f.key(8, 6)))
 
     with pytest.raises(AttributeError):
         f.touch(0, 0)
