@@ -38,7 +38,7 @@ for later.
 First example
 -------------
 
-Let's start from a simple example: function cache with bytes data.
+Let's start with a simple example: function cache with bytes data.
 
 .. code-block:: python
 
@@ -129,12 +129,12 @@ method, classmethod, staticmethod
 Choosing backend
 ----------------
 
-Let's consider using actual cache storage instead :class:`dict`.
+Let's consider using actual cache storage instead of :class:`dict`.
 
 **Ring** includes common cache storage supports. `Memcached` is one of the
 popular cache storage. `Memcached` itself is out of the Python world. You must
 install and run it to let your python code connects there. Because `Memcached`
-is very popular, it is well-packaged in most of the platforms. Check how to
+is very popular, it is well-packaged on most of the platforms. Check how to
 install it on your platform.
 
 :note: ``apt install memcached`` for Debian/Ubuntu. ``yum install memcached``
@@ -142,8 +142,8 @@ install it on your platform.
 
 Once you installed it, do not forget to start it.
 
-In **Ring**, you can choose any compatible memcached package. If you are new
-to memcached, let's try pymemcache_ to install it easily.
+In **Ring**, you can choose any compatible Memcached package. If you are new
+to Memcached, let's try pymemcache_ to install it easily.
 
 .. sourcecode:: shell
 
@@ -256,8 +256,8 @@ Ring factories share common parameters to control Ring objects' behavior.
 Low-level access
 ----------------
 
-Do you wonder how your data is encoded? Which key is referring your code? You
-don't need to be suffered by looking inside of **Ring**.
+Do you wonder how your data is encoded? Which keys are mapped to the
+functions? You don't need to be suffered by looking inside of **Ring**.
 
 .. code-block:: python
 

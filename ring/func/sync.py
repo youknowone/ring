@@ -1,5 +1,5 @@
-""":mod:`ring.func.sync` --- collection of factory functions.
-=============================================================
+""":mod:`ring.func.sync` --- collection of synchronous factory functions.
+=========================================================================
 
 This module includes building blocks and storage implementations of **Ring**
 factories.
@@ -376,8 +376,12 @@ def shelve(
         **kwargs):
     """Python :mod:`shelve` based cache.
 
-    :param shelve.Shelf shelf: Cache storage. See :func:`shelve.open` to get
+    :param shelve.Shelf shelf: A shelf storage. See :mod:`shelve` to create
         a shelf.
+
+        >>> shelf = shelve.open('shelve')
+        >>> @ring.shelve(shelf, ...)
+        ...     ...
 
     :see: :mod:`shelve` for the backend.
     :see: :func:`ring.func.sync.CacheUserInterface` for sub-functions.
@@ -415,20 +419,32 @@ def memcache(
     libraries. Ring doesn't guarantee current/future behavior except for
     :class:`bytes`.
 
-    Examples of expected client for each memcached packages:
-
-    - pymemcache: ``pymemcache.client.Client(('127.0.0.1', 11211))``
-    - python-memcached or python3-memcached:
-      ``memcache.Client(["127.0.0.1:11211"])``
-    - pylibmc: ``pylibmc.Client(['127.0.0.1'])``
-
-    :note: `touch` feature availability depends on memcached library.
+    :note: `touch` feature availability depends on Memcached library.
 
     .. _Memcached: http://memcached.org/
 
-    :param object client: Memcached client object. See above for details.
+    :param object client: Memcached client object. See below for details.
+
+        - pymemcache: :class:`pymemcache.client.Client`
+
+        >>> client = pymemcache.client.Client(('127.0.0.1', 11211))
+        >>> @ring.memcache(client, ...)
+        ...     ...
+
+        - python-memcached or python3-memcached: :class:`memcache.Client`
+
+        >>> client = memcache.Client(["127.0.0.1:11211"])
+        >>> @ring.memcache(client, ...)
+        ...     ...
+
+        - pylibmc: :class:`pylibmc.Client`
+
+        >>> client = pylibmc.Client(['127.0.0.1'])
+        >>> @ring.memcache(client, ...)
+        ...     ...
+
     :param object key_refactor: The default key refactor may hash the cache
-        key when it doesn't meet memcached key restriction.
+        key when it doesn't meet Memcached key restriction.
 
     :see: :func:`ring.func.sync.CacheUserInterface` for single access
         sub-functions.
@@ -461,10 +477,15 @@ def redis_py(
     your machine. If you are new to Redis, check how to install Redis and the
     Python package on your platform.
 
-    Note that :class:`redis.StrictRedis` is expected, which is different to
+    Note that :class:`redis.StrictRedis` is expected, which is different from
     :class:`redis.Redis`.
 
-    :param redis.StrictRedis client: Redis client object.
+    :param redis.StrictRedis client: Redis client object. See
+        :class:`redis.StrictRedis`
+
+        >>> client = redis.StrictRedis()
+        >>> @ring.redis(client, ...)
+        ...     ...
 
     :see: :func:`ring.func.sync.CacheUserInterface` for single access
         sub-functions.
@@ -493,7 +514,12 @@ def diskcache(
 
     .. _diskcache: https://pypi.org/project/diskcache/
 
-    :param diskcache.Cache obj: diskcache Cache object.
+    :param diskcache.Cache obj: diskcache Cache object. See
+        :class:`diskcache.Cache`.
+
+        >>> storage = diskcache.Cache('cachedir')
+        >>> @ring.disk(storage, ...)
+        ...     ...
 
     :see: :func:`ring.func.sync.CacheUserInterface` for sub-functions.
     """

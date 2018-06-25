@@ -85,6 +85,7 @@ def convert_storage(storage_class):
 
 
 def create_factory_from(_storage_class):
+    """Create :mod:`asyncio` compatible factory from synchronous storage."""
 
     def factory(
             obj, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
@@ -357,9 +358,8 @@ class AioredisStorage(
 
     @asyncio.coroutine
     def _get_backend(self):
-        if isinstance(self.backend, SingletonCoroutineProxy):
-            self.backend = yield from self.backend
-        return self.backend
+        backend = yield from self.backend
+        return backend
 
     @asyncio.coroutine
     def get_value(self, key):
@@ -448,9 +448,12 @@ def aiomcache(
     machine. If you are new to Memcached, check how to install it and the
     python package on your platform.
 
-    :param aiomcache.Client client: aiomcache client object.
+    :param aiomcache.Client client: aiomcache client object. See
+        :func:`aiomcache.Client`.
+
+        >>> client = aiomcache.Client('127.0.0.1', 11211)
     :param object key_refactor: The default key refactor may hash the cache
-        key when it doesn't meet memcached key restriction.
+        key when it doesn't meet Memcached key restriction.
 
     :see: :func:`ring.func.asyncio.CacheUserInterface` for single access
         sub-functions.
@@ -492,8 +495,29 @@ def aioredis(
     .. _Redis: http://redis.io/
     .. _aioredis: https://pypi.org/project/aioredis/
 
-    :param aioredis.Redis client: aioredis interface object. See
-        :func:`aioredis.create_redis` or :func:`aioredis.create_redis_pool`.
+    :param Union[aioredis.Redis,Callable[...aioredis.Redis]] client: aioredis
+        interface object. See :func:`aioredis.create_redis` or
+        :func:`aioredis.create_redis_pool`. For convenience, a coroutine
+        returning one of these objects also is proper. It means next 2
+        examples working almost same:
+
+            >>> redis = await aioredis.create_redis(('127.0.0.1', 6379))
+            >>> @ring.aioredis(redis)
+            >>> async def by_object(...):
+            >>>     ...
+
+            >>> redis_coroutine = aioredis.create_redis(('127.0.0.1', 6379))
+            >>> @ring.aioredis(redis_coroutine)
+            >>> async def by_coroutine(...):
+            >>>     ...
+
+        Though they have slightly different behavior for `.storage.backend`:
+
+            >>> assert by_object.storage.backend is by_object
+
+            >>> assert by_coroutine.storage.backend is not redis_coroutine
+            >>> assert isinstance(
+            ...     await by_coroutine.storage.backend, aioredis.Redis)
 
     :see: :func:`ring.func.asyncio.CacheUserInterface` for single access
         sub-functions.

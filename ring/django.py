@@ -19,7 +19,7 @@ __all__ = ('cache', 'cache_page')
 
 
 def promote_backend(backend):
-    """Get string name to django cache backend."""
+    """Get string name to Django cache backend."""
     if isinstance(backend, (str, bytes)):
         backend = django_cache.caches[backend]
     return backend
@@ -243,7 +243,7 @@ def cache_page(
             article_list.delete((request, 'article_list'))  # DELETE!
             return ...
 
-    Compare to how django originally invalidate it.
+    Compare to how Django originally invalidate it.
 
     .. code-block:: python
 
@@ -261,7 +261,7 @@ def cache_page(
 
             return ...
 
-    Note that the first parameter of every sub-function originally is an
+    Note that the first parameter of every sub-function originally is a
     :class:`django.request.HttpRequest` object but a tuple here.
     The second item of the tuple provides a hint for the request path of
     `article_list`. Because Django expects the cache key varies by request

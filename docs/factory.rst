@@ -21,14 +21,25 @@ backend descriptions.
 
 **Ring** includes support for common cache storages:
 
+ - :func:`ring.dict`
+ - :func:`ring.memcache`
+ - :func:`ring.redis`
+ - :func:`ring.shelve`
+ - :func:`ring.disk`
+
+Which are shortcuts of concrete implementations and tools below:
+
 .. autosummary::
-    ring.dict
-    ring.memcache
-    ring.redis
-    ring.shelve
-    ring.disk
-    ring.aiomcache
-    ring.aioredis
+    ring.func.sync.dict
+    ring.func.sync.memcache
+    ring.func.sync.redis_py
+    ring.func.sync.shelve
+    ring.func.sync.diskcache
+    ring.func.asyncio.dict
+    ring.func.asyncio.aiomcache
+    ring.func.asyncio.aioredis
+    ring.func.asyncio.create_factory_from
+    ring.func.asyncio.create_asyncio_factory_proxy
 
 
 :see: :mod:`ring.func` for built-in backends.
@@ -39,7 +50,7 @@ Django extension
 
 Though **Django** itself is not a storage, it has its own cache API.
 **Ring** has a factory function for high-level interface `cache_page` and
-the other one `cache` for low-level interface.
+the other one `cache` for the low-level interface.
 
 .. autosummary::
     ring.django.cache_page
@@ -58,7 +69,7 @@ Common factory parameters
 Creating factory shortcuts
 --------------------------
 
-Usually each project has common patterns of programming including common cache
+Usually, each project has common patterns of programming including common cache
 pattern. Repeatedly passing common arguments must be boring. Python already
 has an answer - use :func:`functools.partial` to create shortcuts.
 
