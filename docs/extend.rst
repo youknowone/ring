@@ -29,7 +29,7 @@ General factory: :func:`ring.func.base.factory`
 Creating simple shortcuts
 +++++++++++++++++++++++++
 
-:see: :doc:`factory` for creating shortcuts of existing factories.
+:see: :ref:`factory.shortcut` to create shortcuts of existing factories.
 
 
 New storage interface
@@ -44,5 +44,6 @@ The abstract class defines common basic operations of storage.
 
 New sub-function semantics
 ++++++++++++++++++++++++++
+
 
 

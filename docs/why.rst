@@ -105,7 +105,7 @@ turns into a storage approach which we demonstrated at first section.
 
 You can control them at a consistent level with **Ring**.
 
-:see: :ref:`lifecycle` section for details.
+:see: :ref:`why.lifecycle` section for details.
 :see: :func:`ring.django.cache_page` which exactly solved the problem.
 
 
@@ -120,7 +120,7 @@ to drop the provided feature but to implement a new one.
 
 You can replace semantics of **Ring** commands and storage behaviors.
 
-:see: :ref:`strategy` section for details.
+:see: :ref:`why.strategy` section for details.
 
 
 Hidden backend
@@ -136,7 +136,7 @@ Python world.
 :class:`ring.ring_base.Ring` and low-level storage interfaces are
 straightforward and smooth.
 
-:see: :ref:`transparency` section for details.
+:see: :ref:`why.transparency` section for details.
 
 
 Data encoding
@@ -175,10 +175,10 @@ time.
 *Ring* has a configurable data-coding layer. Users can replace it by functions,
 by their needs and by injecting code.
 
-:see: :ref:`datacoding` section for details.
+:see: :ref:`why.datacoding` section for details.
 
 
-.. _lifecycle:
+.. _why.lifecycle:
 
 Ring controls cache life-cycle with sub-functions
 -------------------------------------------------
@@ -226,7 +226,7 @@ Function parameters are also supported in an expected manner:
     cached_function.delete(10, 20, 30)  # delete call
 
 
-.. _transparency:
+.. _why.transparency:
 
 Ring approaches backend transparent way
 ---------------------------------------
@@ -252,7 +252,7 @@ the backends. Various storages have their own features by their design.
 :see: :doc:`control` for details.
 
 
-.. _datacoding:
+.. _why.datacoding:
 
 Ring provides a configurable data-coding layer
 ----------------------------------------------
@@ -277,7 +277,7 @@ with `pylibmc`. Of course for other backends too.
        ``my_cache = functools.partial(ring.memcache, client, coder='pickle')``.
 
 
-.. _strategy:
+.. _why.strategy:
 
 Ring comes with configurable commands and storage actions
 ---------------------------------------------------------

@@ -66,6 +66,8 @@ Common factory parameters
 :see: :func:`ring.func.base.factory` for generic factory definition.
 
 
+.. _factory.shortcut:
+
 Creating factory shortcuts
 --------------------------
 
