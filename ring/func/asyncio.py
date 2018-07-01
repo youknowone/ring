@@ -120,13 +120,13 @@ class CommonMixinStorage(fbase.BaseStorage):  # Working only as mixin
     @asyncio.coroutine
     def get(self, key):
         value = yield from self.get_value(key)
-        return self.ring.coder.decode(value)
+        return self.rope.decode(value)
 
     @asyncio.coroutine
     def set(self, key, value, expire=...):
         if expire is ...:
-            expire = self.ring.expire_default
-        encoded = self.ring.coder.encode(value)
+            expire = self.rope.expire_default
+        encoded = self.rope.encode(value)
         result = yield from self.set_value(key, encoded, expire)
         return result
 
@@ -143,7 +143,7 @@ class CommonMixinStorage(fbase.BaseStorage):  # Working only as mixin
     @asyncio.coroutine
     def touch(self, key, expire=...):
         if expire is ...:
-            expire = self.ring.expire_default
+            expire = self.rope.expire_default
         result = yield from self.touch_value(key, expire)
         return result
 
@@ -162,9 +162,9 @@ class CacheUserInterface(fbase.BaseUserInterface):
     def get(self, wire, **kwargs):
         key = self.key(wire, **kwargs)
         try:
-            result = yield from self.ring.storage.get(key)
+            result = yield from self.rope.storage.get(key)
         except fbase.NotFound:
-            result = self.ring.miss_value
+            result = self.rope.miss_value
         return result
 
     @fbase.interface_attrs(transform_args=fbase.transform_kwargs_only)
@@ -172,7 +172,7 @@ class CacheUserInterface(fbase.BaseUserInterface):
     def update(self, wire, **kwargs):
         key = self.key(wire, **kwargs)
         result = yield from self.execute(wire, **kwargs)
-        yield from self.ring.storage.set(key, result)
+        yield from self.rope.storage.set(key, result)
         return result
 
     @fbase.interface_attrs(transform_args=fbase.transform_kwargs_only)
@@ -180,10 +180,10 @@ class CacheUserInterface(fbase.BaseUserInterface):
     def get_or_update(self, wire, **kwargs):
         key = self.key(wire, **kwargs)
         try:
-            result = yield from self.ring.storage.get(key)
+            result = yield from self.rope.storage.get(key)
         except fbase.NotFound:
             result = yield from self.execute(wire, **kwargs)
-            yield from self.ring.storage.set(key, result)
+            yield from self.rope.storage.set(key, result)
         return result
 
     @fbase.interface_attrs(
@@ -191,25 +191,25 @@ class CacheUserInterface(fbase.BaseUserInterface):
         return_annotation=None)
     def set(self, wire, _value, **kwargs):
         key = self.key(wire, **kwargs)
-        return self.ring.storage.set(key, _value)
+        return self.rope.storage.set(key, _value)
 
     @fbase.interface_attrs(
         transform_args=fbase.transform_kwargs_only, return_annotation=None)
     def delete(self, wire, **kwargs):
         key = self.key(wire, **kwargs)
-        return self.ring.storage.delete(key)
+        return self.rope.storage.delete(key)
 
     @fbase.interface_attrs(
         transform_args=fbase.transform_kwargs_only, return_annotation=bool)
     def has(self, wire, **kwargs):
         key = self.key(wire, **kwargs)
-        return self.ring.storage.has(key)
+        return self.rope.storage.has(key)
 
     @fbase.interface_attrs(
         transform_args=fbase.transform_kwargs_only, return_annotation=None)
     def touch(self, wire, **kwargs):
         key = self.key(wire, **kwargs)
-        return self.ring.storage.touch(key)
+        return self.rope.storage.touch(key)
 
 
 class BulkInterfaceMixin(fbase.AbstractBulkUserInterfaceMixin):
@@ -229,8 +229,8 @@ class BulkInterfaceMixin(fbase.AbstractBulkUserInterfaceMixin):
         return_annotation=lambda a: List[Optional[a.get('return', Any)]])
     def get_many(self, wire, *args_list):
         keys = self.key_many(wire, *args_list)
-        return self.ring.storage.get_many(
-            keys, miss_value=self.ring.miss_value)
+        return self.rope.storage.get_many(
+            keys, miss_value=self.rope.miss_value)
 
     @fbase.interface_attrs(
         return_annotation=lambda a: List[a.get('return', Any)])
@@ -238,7 +238,7 @@ class BulkInterfaceMixin(fbase.AbstractBulkUserInterfaceMixin):
     def update_many(self, wire, *args_list):
         keys = self.key_many(wire, *args_list)
         values = yield from self.execute_many(wire, *args_list)
-        yield from self.ring.storage.set_many(keys, values)
+        yield from self.rope.storage.set_many(keys, values)
         return values
 
     @fbase.interface_attrs(
@@ -247,7 +247,7 @@ class BulkInterfaceMixin(fbase.AbstractBulkUserInterfaceMixin):
     def get_or_update_many(self, wire, *args_list):
         keys = self.key_many(wire, *args_list)
         miss_value = object()
-        results = yield from self.ring.storage.get_many(
+        results = yield from self.rope.storage.get_many(
             keys, miss_value=miss_value)
 
         miss_indices = []
@@ -260,7 +260,7 @@ class BulkInterfaceMixin(fbase.AbstractBulkUserInterfaceMixin):
         new_results = yield from asyncio.gather(*(
             fbase.execute_bulk_item(wire, args_list[i]) for i in miss_indices))
         new_keys = [keys[i] for i in miss_indices]
-        yield from self.ring.storage.set_many(new_keys, new_results)
+        yield from self.rope.storage.set_many(new_keys, new_results)
 
         for new_i, old_i in enumerate(miss_indices):
             results[old_i] = new_results[new_i]
@@ -269,22 +269,22 @@ class BulkInterfaceMixin(fbase.AbstractBulkUserInterfaceMixin):
     @fbase.interface_attrs(return_annotation=None)
     def set_many(self, wire, args_list, value_list):
         keys = self.key_many(wire, *args_list)
-        return self.ring.storage.set_many(keys, value_list)
+        return self.rope.storage.set_many(keys, value_list)
 
     @fbase.interface_attrs(return_annotation=None)
     def delete_many(self, wire, *args_list):
         keys = self.key_many(wire, *args_list)
-        return self.ring.storage.delete_many(keys)
+        return self.rope.storage.delete_many(keys)
 
     @fbase.interface_attrs(return_annotation=None)
     def has_many(self, wire, *args_list):
         keys = self.key_many(wire, *args_list)
-        return self.ring.storage.has_many(keys)
+        return self.rope.storage.has_many(keys)
 
     @fbase.interface_attrs(return_annotation=None)
     def touch_many(self, wire, *args_list):
         keys = self.key_many(wire, *args_list)
-        return self.ring.storage.touch_many(keys)
+        return self.rope.storage.touch_many(keys)
 
 
 class BulkStorageMixin(object):
@@ -294,16 +294,16 @@ class BulkStorageMixin(object):
         """Get and return values for the given key."""
         values = yield from self.get_many_values(keys)
         results = [
-            self.ring.coder.decode(v) if v is not fbase.NotFound else miss_value  # noqa
+            self.rope.decode(v) if v is not fbase.NotFound else miss_value  # noqa
             for v in values]
         return results
 
     def set_many(self, keys, values, expire=Ellipsis):
         """Set values for the given keys."""
         if expire is Ellipsis:
-            expire = self.ring.expire_default
+            expire = self.rope.expire_default
         return self.set_many_values(
-            keys, [self.ring.coder.encode(v) for v in values], expire)
+            keys, [self.rope.encode(v) for v in values], expire)
 
     def delete_many(self, keys):
         """Delete values for the given keys."""
@@ -316,7 +316,7 @@ class BulkStorageMixin(object):
     def touch_many(self, keys, expire=Ellipsis):
         """Touch values for the given keys."""
         if expire is Ellipsis:
-            expire = self.ring.expire_default
+            expire = self.rope.expire_default
         return self.touch_many_values(keys, expire)
 
 

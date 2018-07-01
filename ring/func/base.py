@@ -116,7 +116,7 @@ def create_key_builder(
     key_generator = CallableKey(
         c, format_prefix=key_prefix, ignorable_keys=ignorable_keys)
 
-    def compose_key(bound_args, kwargs):
+    def compose_key(*bound_args, **kwargs):
         full_kwargs = kwargs.copy()
         for i, prearg in enumerate(bound_args):
             full_kwargs[c.parameters[i].name] = bound_args[i]
@@ -228,8 +228,8 @@ class BaseUserInterface(object):
         :func:`ring.func.base.transform_kwargs_only`
     """
 
-    def __init__(self, ring):
-        self.ring = ring
+    def __init__(self, rope):
+        self.rope = rope
 
     @interface_attrs(
         transform_args=transform_kwargs_only, return_annotation=str)
@@ -240,7 +240,7 @@ class BaseUserInterface(object):
         :return: The composed key with given arguments.
         :rtype: str
         """
-        return self.ring.compose_key(wire._bound_objects, kwargs)
+        return self.rope.compose_key(*wire._bound_objects, **kwargs)
 
     @interface_attrs(transform_args=transform_kwargs_only)
     def execute(self, wire, **kwargs):
@@ -487,14 +487,18 @@ class AbstractBulkUserInterfaceMixin(object):
 
 class RingWire(Wire):
 
-    __slots__ = ('encode', 'decode', 'storage')
+    __slots__ = ('storage', )
 
     def __init__(self, rope, *args, **kwargs):
         super(RingWire, self).__init__(rope, *args, **kwargs)
 
-        self.encode = rope.coder.encode
-        self.decode = rope.coder.decode
         self.storage = rope.storage
+
+    def encode(self, v):
+        return self._rope.encode(v)
+
+    def decode(self, v):
+        return self._rope.decode(v)
 
     def _merge_args(self, args, kwargs):
         """Create a fake kwargs object by merging actual arguments.
@@ -513,6 +517,21 @@ class RingWire(Wire):
     def run(self, action, *args, **kwargs):
         attr = getattr(self, action)
         return attr(*args, **kwargs)
+
+
+class PublicRing(object):
+
+    def __init__(self, rope):
+        self._rope = rope
+
+    def key(self, func):
+        self._rope.compose_key = func
+
+    def encode(self, func):
+        self._rope.encode = func
+
+    def decode(self, func):
+        self._rope.decode = func
 
 
 def factory(
@@ -605,6 +624,11 @@ def factory(
                 self.compose_key = create_key_builder(
                     self.callable, _key_prefix, _ignorable_keys,
                     encoding=key_encoding, key_refactor=key_refactor)
+                self.compose_key.ignorable_keys = _ignorable_keys
+                self.encode = self.coder.encode
+                self.decode = self.coder.decode
+
+                self.ring = PublicRing(self)
 
         func = f if type(f) is types.FunctionType else f.__func__  # noqa
         interface_keys = tuple(k for k in dir(user_interface) if k[0] != '_')
@@ -698,8 +722,8 @@ class BaseStorage(object):
     are mandatory; Otherwise not.
     """
 
-    def __init__(self, ring, backend):
-        self.ring = ring
+    def __init__(self, rope, backend):
+        self.rope = rope
         self.backend = backend
 
     @abc.abstractmethod
@@ -733,12 +757,12 @@ class CommonMixinStorage(BaseStorage):
 
     def get(self, key):
         value = self.get_value(key)
-        return self.ring.coder.decode(value)
+        return self.rope.decode(value)
 
     def set(self, key, value, expire=Ellipsis):
         if expire is Ellipsis:
-            expire = self.ring.expire_default
-        encoded = self.ring.coder.encode(value)
+            expire = self.rope.expire_default
+        encoded = self.rope.encode(value)
         result = self.set_value(key, encoded, expire)
         return result
 
@@ -752,7 +776,7 @@ class CommonMixinStorage(BaseStorage):
 
     def touch(self, key, expire=Ellipsis):
         if expire is Ellipsis:
-            expire = self.ring.expire_default
+            expire = self.rope.expire_default
         result = self.touch_value(key, expire)
         return result
 

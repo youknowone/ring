@@ -78,7 +78,7 @@ class CachePageUserInterface(fbase.BaseUserInterface):
 
     @property
     def middleware(self):
-        return self.ring.storage.backend
+        return self.rope.storage.backend
 
     @fbase.interface_attrs(
         transform_args=transform_cache_page_args,
@@ -123,7 +123,7 @@ class CachePageUserInterface(fbase.BaseUserInterface):
         #    result = middleware.process_view(request, view_func, args, kwargs)
         #    if result is not None:
         #        return result
-        return self.ring.miss_value
+        return self.rope.miss_value
 
     @fbase.interface_attrs(
         transform_args=transform_cache_page_args, return_annotation=None)

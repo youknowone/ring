@@ -23,13 +23,13 @@ class DoubleCacheUserInterface(BaseUserInterface):
         result = ...
         for key in [key1, key2]:
             try:
-                result = yield from self.ring.storage.get(key)
+                result = yield from self.rope.storage.get(key)
             except NotFound:
                 continue
             else:
                 break
         if result is ...:
-            result = self.ring.miss_value
+            result = self.rope.miss_value
         return result
 
     @asyncio.coroutine
@@ -37,8 +37,8 @@ class DoubleCacheUserInterface(BaseUserInterface):
         key = wire.key(**kwargs)
         key2 = wire.key2(**kwargs)
         result = yield from wire.execute(**kwargs)
-        yield from self.ring.storage.set(key, result)
-        yield from self.ring.storage.set(key2, result, None)
+        yield from self.rope.storage.set(key, result)
+        yield from self.rope.storage.set(key2, result, None)
         return result
 
     @asyncio.coroutine
@@ -46,36 +46,36 @@ class DoubleCacheUserInterface(BaseUserInterface):
         key = wire.key(**kwargs)
         key2 = wire.key2(**kwargs)
         try:
-            result = yield from self.ring.storage.get(key)
+            result = yield from self.rope.storage.get(key)
         except NotFound:
             try:
                 result = yield from wire.execute(**kwargs)
             except Exception:
                 try:
-                    result = yield from self.ring.storage.get(key2)
+                    result = yield from self.rope.storage.get(key2)
                 except NotFound:
                     pass
                 else:
                     return result
                 raise
             else:
-                yield from self.ring.storage.set(key, result)
-                yield from self.ring.storage.set(key2, result, None)
+                yield from self.rope.storage.set(key, result)
+                yield from self.rope.storage.set(key2, result, None)
         return result
 
     @asyncio.coroutine
     def delete(self, wire, **kwargs):
         key = wire.key(**kwargs)
         key2 = wire.key2(**kwargs)
-        yield from self.ring.storage.delete(key)
-        yield from self.ring.storage.delete(key2)
+        yield from self.rope.storage.delete(key)
+        yield from self.rope.storage.delete(key2)
 
     @asyncio.coroutine
     def touch(self, wire, **kwargs):
         key = wire.key(**kwargs)
         key2 = wire.key(**kwargs)
-        yield from self.ring.storage.touch(key)
-        yield from self.ring.storage.touch(key2)
+        yield from self.rope.storage.touch(key)
+        yield from self.rope.storage.touch(key2)
 
 
 def doublecache(
