@@ -607,14 +607,14 @@ def factory(
 
         _storage_class = storage_class
 
-        class RingCore(RopeCore):
+        class RingRope(RopeCore):
 
             coder = ring_coder
             user_interface_class = user_interface
             storage_class = _storage_class
 
             def __init__(self, *args, **kwargs):
-                super(RingCore, self).__init__(*args, **kwargs)
+                super(RingRope, self).__init__(*args, **kwargs)
                 self.user_interface = self.user_interface_class(self)
                 self.storage = self.storage_class(self, storage_backend)
 
@@ -686,7 +686,7 @@ def factory(
 
                 return self.__getattribute__(name)
 
-        wire_rope = WireRope(_RingWire, RingCore)
+        wire_rope = WireRope(_RingWire, RingRope)
         strand = wire_rope(f)
         strand.miss_value = miss_value
         strand.expire_default = expire_default

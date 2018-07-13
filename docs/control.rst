@@ -32,6 +32,9 @@ Meta controller
 Building blocks
 ---------------
 
+These components are defined in :class:`ring.func.base.RingRope` and shared by
+wires.
+
 .. data:: storage
 
     Cache storage where the cached data be saved.
@@ -116,6 +119,37 @@ Building blocks
         f.storage.set(f.key(), f.encode(result))
 
 
+Override behaviors
+------------------
+
+Each ring rope can override their own behaviors.
+
+.. function:: ring.key(...)
+
+    Override key composer. Parameters are the same as the original function.
+
+    >>> @ring.dict({})
+    >>> def f(a, b):
+    ...     return ...
+    ...
+    >>> assert f.key(1, 2) == '__main__.f:1:2'  # default key
+    >>>
+    >>> @f.ring.key
+    ... def f_key(a, b):
+    ...     return 'a{}b{}'.format(a, b)
+    ...
+    >>> assert f.key(1, 2) == 'a1b2'  # new key
+
+
+.. function:: ring.encode(value)
+
+    Override data encode function.
+
+.. function:: ring.decode(data)
+
+    Override data decode function.
+
+
 Cache behavior controller
 -------------------------
 
@@ -126,6 +160,11 @@ function, not to define what these functions actually do.
 To change behavior, inherit :class:`ring.sync.CacheUserInterface` or
 :class:`ring.asyncio.CacheUserInterface` then passes it to the `user_interface`
 parameter of **Ring** factories.
+
+
+.. function:: key([*args, **kwargs])
+
+    Create and return a cache key with given arguments.
 
 
 .. function:: get_or_update([*args, **kwargs])
@@ -149,11 +188,6 @@ parameter of **Ring** factories.
     Execute the original function with given arguments and return the result.
 
     This sub-function is exactly the same as calling the original function.
-
-
-.. function:: key([*args, **kwargs])
-
-    Create and return a cache key with given arguments.
 
 
 .. function:: get([*args, **kwargs])
