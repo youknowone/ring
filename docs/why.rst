@@ -142,12 +142,10 @@ straightforward and smooth.
 Data encoding
 ~~~~~~~~~~~~~
 
-Another issue is Python-specific. Python objects are full of Python metadata
-which are not a simple sequence of bytes. Then how do we easily handle them
-through cache? The common answer is standard library :mod:`pickle`. Most of
-Python objects can be dumped to and loaded from binary with it. This feature
-is beloved for a long time in the history of pickle. `python-memcached`_
-is a great example.
+How to save non-binary data? Python supports :mod:`pickle` as a standard
+library to convert python objects to binary. Some of the storage libraries
+like `python-memcached`_ implicitly run :mod:`pickle` to support saving and
+loading Python objects.
 
 .. code-block:: python
 
@@ -165,15 +163,18 @@ is a great example.
     assert original_data == loaded_data  # mostly True
 
 
-What's the problem? We don't have any choice. :mod:`pickle` is an amazing idea
-but not perfect. In these days, huge giant objects from complex libraries are
-roaming over the Python world. Some of them are not pickled well and these will
-not be decreased in future because they are modern Python's killer apps.
-By environments, to pickle or not to pickle, programmers controlled them over
-time.
+Unfortunately, :mod:`pickle` is not compatible out of the Python world and
+even some complex Python classes also generate massive :mod:`pickle` data for
+small information. For example, when you have non-Python code which accesses
+to the same data, :mod:`pickle` doesn't fit.
 
-*Ring* has a configurable data-coding layer. Users can replace it by functions,
-by their needs and by injecting code.
+In **Ring**, data encoder is not a fixed value. Choose a preferred way to encode
+data by each ring rope.
+
+:note: To be fair, you can pass `pickler` parameter to
+    :class:`memcached.Client` in `python-memcached` to change the behavior.
+    In **Ring**, you can reuse the same :class:`memcached.Client` to use
+    multiple coders.
 
 :see: :ref:`why.datacoding` section for details.
 
@@ -271,10 +272,34 @@ with `pylibmc`. Of course for other backends too.
         ...
 
 
-:see: :doc:`coder` for more informations.
-
-:note: Looks verbose? :func:`functools.partial` is your friend. Try
+:note: Does it look verbose? :func:`functools.partial` is your friend. Try
        ``my_cache = functools.partial(ring.memcache, client, coder='pickle')``.
+
+
+When you need a special coder for a function, overriding encode/decode for
+a specific function also is possible. For example, the next code works the
+same as the above.
+
+
+.. code-block:: python
+
+    client = pylibmc.Client(...)
+
+    @ring.memcache(client)
+    def f(a):
+        ...
+
+    @f.encode
+    def f_encode(value):
+        return pickle.dumps(value)
+
+    @f.decode
+    def f_decode(data):
+        return pickle.loads(data)
+
+
+:see: :doc:`coder` for more information about coders.
+:see: :ref:`control.override` for more information about dynamic coder override.
 
 
 .. _why.strategy:
