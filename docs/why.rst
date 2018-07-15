@@ -299,7 +299,6 @@ same as the above.
 
 
 :see: :doc:`coder` for more information about coders.
-:see: :ref:`control.override` for more information about dynamic coder override.
 
 
 .. _why.strategy:
