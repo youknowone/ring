@@ -8,13 +8,7 @@ Users can register new custom coders with aliases. Once a coder is registered
 to global registry, passing its alias to `coder` parameter of each factory
 is identical to passing the coder object to `coder` parameter.
 
-:note: `coder` parameter of factories only take actual
-       :class:`ring.coder.Coder` objects. On the other hands,
-       :meth:`ring.coder.Registry.register` take raw materials of
-       :class:`ring.coder.Coder` or :class:`ring.coder.CoderTuple`. See
-       :func:`ring.coder.coderize` for details.
-
-:see: :meth:`ring.coder.Registry.register`
+:see: :doc:`coder` for details
 
 
 Creating new factory functions

@@ -119,37 +119,6 @@ wires.
         f.storage.set(f.key(), f.encode(result))
 
 
-Override behaviors
-------------------
-
-Each ring rope can override their own behaviors.
-
-.. function:: ring.key(...)
-
-    Override key composer. Parameters are the same as the original function.
-
-    >>> @ring.dict({})
-    >>> def f(a, b):
-    ...     return ...
-    ...
-    >>> assert f.key(1, 2) == '__main__.f:1:2'  # default key
-    >>>
-    >>> @f.ring.key
-    ... def f_key(a, b):
-    ...     return 'a{}b{}'.format(a, b)
-    ...
-    >>> assert f.key(1, 2) == 'a1b2'  # new key
-
-
-.. function:: ring.encode(value)
-
-    Override data encode function.
-
-.. function:: ring.decode(data)
-
-    Override data decode function.
-
-
 Cache behavior controller
 -------------------------
 
@@ -339,3 +308,40 @@ corresponding variable-length positional parameter name.
 .. function:: touch_many(*args_list)
 
     `Many` version of **touch**.
+
+
+.. _control.override:
+
+Override behaviors
+------------------
+
+Each ring rope can override their own behaviors.
+
+.. function:: ring.key(...)
+
+    Override key composer. Parameters are the same as the original function.
+
+    >>> @ring.dict({})
+    >>> def f(a, b):
+    ...     return ...
+    ...
+    >>> assert f.key(1, 2) == '__main__.f:1:2'  # default key
+    >>>
+    >>> @f.ring.key
+    ... def f_key(a, b):
+    ...     return 'a{}b{}'.format(a, b)
+    ...
+    >>> assert f.key(1, 2) == 'a1b2'  # new key
+
+
+.. function:: ring.encode(value)
+
+    Override data encode function.
+
+    :see: :doc:`coder`
+
+.. function:: ring.decode(data)
+
+    Override data decode function.
+
+    :see: :doc:`coder`

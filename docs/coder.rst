@@ -33,8 +33,6 @@ storage. This is a demonstration without Ring.
 You see `encoding` and `decoding` steps. The pair of them is called `coder`
 in **Ring**.
 
-Coder is one of the configurable layers in **Ring**.
-
 
 Pre-registered coders
 ---------------------
@@ -48,7 +46,7 @@ modern Python world.
     ring.coder.JsonCoder
     ring.coder.pickle_coder
 
-:see: :mod:`ring.coder` for details.
+:see: :mod:`ring.coder` for the module including pre-registered coders.
 
 
 Create a new coder
@@ -65,5 +63,61 @@ Registry:
 
   - :data:`ring.coder.registry`
   - :class:`ring.coder.Registry`
+  - :meth:`ring.coder.Registry.register`
 
-:see: :doc:`extend`
+
+For example, the float example above can be written as a coder like below:
+
+.. code-block:: python
+
+    class FloatCoder(ring.coder.Coder):
+
+        def encode(self, value):
+            return str(value).encode('utf-8')
+
+        def decode(self, data):
+            return float(data.decode('utf-8'))
+
+
+    ring.coder.register('float', FloatCoder)
+
+
+Now `FloatCoder` is registered as `float`. Use it in a familiar way.
+
+.. code-block:: python
+
+    @ring.dict({}, coder='float')
+    def f():
+        return 3.1415
+
+
+:note: `coder` parameter of factories only take one of the registered names of
+    coders and actual :class:`ring.coder.Coder` objects. On the other hands,
+    :meth:`ring.coder.Registry.register` take raw materials of
+    :class:`ring.coder.Coder` or :class:`ring.coder.CoderTuple`. See
+    :func:`ring.coder.coderize` for details.
+
+
+
+Override a coder
+----------------
+
+Sometimes coder is not a reusable part of the code. Do not create coders
+for single use. Instead of it, you can redefine encode and decode function
+of a ring object.
+
+
+.. code-block:: python
+
+    @ring.dict({})
+    def f():
+        return 3.1415
+
+    @f.ring.encode
+    def f_encode(value):
+        return str(value).encode('utf-8')
+
+    @f.ring.decode
+    def f_decode(value):
+        return float(data.decode('utf-8'))
+
