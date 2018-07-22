@@ -98,7 +98,6 @@ Now `FloatCoder` is registered as `float`. Use it in a familiar way.
     :func:`ring.coder.coderize` for details.
 
 
-
 Override a coder
 ----------------
 

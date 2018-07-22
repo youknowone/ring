@@ -506,10 +506,11 @@ class RingWire(Wire):
         The merging follows the signature of wrapped function and current
         instance.
         """
-        if type(self.__func__) is types.MethodType:  # noqa
-            bound_args = range(len(self._bound_objects))
-        else:
+        # TODO: self._bound_objects must be empty for non-binding functions
+        if type(self.__func__) is types.FunctionType:  # noqa
             bound_args = ()
+        else:
+            bound_args = range(len(self._bound_objects))
         full_kwargs = self._callable.kwargify(
             args, kwargs, bound_args=bound_args)
         return full_kwargs
@@ -630,13 +631,16 @@ def factory(
 
                 self.ring = PublicRing(self)
 
-        func = f if type(f) is types.FunctionType else f.__func__  # noqa
+        func = f if type(f) is types.FunctionType else Callable(f).wrapped_callable  # noqa
         interface_keys = tuple(k for k in dir(user_interface) if k[0] != '_')
 
         class _RingWire(RingWire):
             if wire_slots is not False:
                 assert isinstance(wire_slots, tuple)
                 __slots__ = interface_keys + wire_slots
+
+            def _on_property(self):
+                return self.run(self._rope.default_action)
 
             if default_action:
                 @functools.wraps(func)

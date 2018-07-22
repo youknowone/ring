@@ -6,7 +6,19 @@ from .test_func_sync import pythonmemcache_client
 __all__ = ('pythonmemcache_client', )
 
 
-class A():
+class hybridmethod(object):
+
+    def __init__(self, func):
+        self.__func__ = func
+
+    def __get__(self, obj, type=None):
+        bound = obj if obj is not None else type
+        return self.__func__.__get__(bound, type)
+
+
+class A(object):
+
+    v = -10
 
     def __init__(self, v):
         self.v = v
@@ -16,6 +28,16 @@ class A():
 
     @ring.dict({})
     def x(self):
+        return self.v
+
+    @ring.dict({})
+    @hybridmethod
+    def h(self):
+        return self.v
+
+    @ring.dict({})
+    @property
+    def p(self):
         return self.v
 
 
@@ -30,6 +52,16 @@ def test_ring_wrapper():
     assert b.x() == 20
     assert a.x() == 10
     assert b.x() == 20
+
+
+def test_custom_method():
+    assert A.h() == -10
+    assert A(10).h() == 10
+
+
+def test_ring_property():
+    a = A(15)
+    assert a.p == 15
 
 
 @pytest.mark.parametrize('value', [
