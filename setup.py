@@ -15,7 +15,7 @@ def get_version():
 
 install_requires = [
     'six>=1.11.0',
-    'wirerope>=0.1.2',
+    'wirerope>=0.2.0',
 ]
 tests_require = [
     'pytest>=3.0.2', 'pytest-cov', 'pytest-lazy-fixture', 'mock', 'patch',

@@ -34,8 +34,7 @@ def _kwargify(self, args, kwargs, bound_args=()):
     # no .POSITIONAL_ONLY support
 
     if bound_args:
-        while i in bound_args:
-            i += 1
+        i += len(bound_args)
 
     while i < parameters_len and \
             parameters[i].kind == inspect.Parameter.POSITIONAL_OR_KEYWORD:
