@@ -109,6 +109,16 @@ You can control them at a consistent level with **Ring**.
 :see: :func:`ring.django.cache_page` which exactly solved the problem.
 
 
+Methods and descriptors support
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This kind of convenient decorators commonly works for plain functions. Then
+how about class components like methods, classmethod and property? **Ring**
+supports them in expected convention with a unique form.
+
+:see: :ref:`why.descriptor` section for details.
+
+
 Fixed strategy
 ~~~~~~~~~~~~~~
 
@@ -299,6 +309,49 @@ same as the above.
 
 
 :see: :doc:`coder` for more information about coders.
+
+
+.. _why.descriptor:
+
+Methods and descriptors support
+-------------------------------
+
+Ring supports methods and descriptors including :func:`classmethod`,
+:func:`staticmethod` and :func:`property` in orthogonal interface. Any custom
+descriptors written in (weak) common convention also work.
+
+.. code-block:: python
+
+    class A(object):
+
+        v = None
+
+        def __ring_key__(self):
+            '''convert self value typed 'A' to ring key component'''
+            return v
+
+        @ring.dict({})
+        def method(self):
+            '''method support'''
+            ...
+
+        @ring.dict({})
+        @classmethod
+        def cmethod(self):
+            '''classmethod support'''
+            ...
+
+        @ring.dict({})
+        @staticmethod
+        def smethod(self):
+            '''staticmethod support'''
+            ...
+
+        @ring.dict({})
+        @property
+        def property(self):
+            '''property support'''
+            ...
 
 
 .. _why.strategy:
