@@ -112,6 +112,11 @@ method, classmethod, staticmethod
         def example_dot_com():
             return requests.get('http://example.com').content
 
+        @ring.dict({})
+        @property
+        def url_property(self):
+            return self.url_property
+
 
     Page.example_dot_com()  # as expected
     assert Page.example_dot_com.key().endswith('Page.example_dot_com')  # key with function-name
@@ -124,6 +129,8 @@ method, classmethod, staticmethod
     p.content()  # as expected
     # key with class name + function name + __ring_key__
     assert p.content.key().endswith('Page.content:page=http://example.com')
+
+    assert p.url_property == p.url
 
 
 Choosing backend
