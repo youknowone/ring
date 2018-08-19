@@ -29,8 +29,6 @@ docs_require = [
     'django',
 ]
 
-dev_require = tests_require + docs_require
-
 try:
     import __pypy__  # noqa
 except ImportError:
@@ -75,6 +73,8 @@ if sys.version_info[:2] <= (3, 4):
         install_requires.extend([
             'asyncio>=3.4.3',
         ])
+
+dev_require = tests_require + docs_require
 
 
 def get_readme():
