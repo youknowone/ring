@@ -320,7 +320,7 @@ class RedisHashStorage(RedisStorage):
     def __init__(self, rope, backend):
         storage_backend = backend[0]
         self.hash_key = backend[1]
-        super().__init__(rope, storage_backend)
+        super(RedisHashStorage, self).__init__(rope, storage_backend)
 
     def get_value(self, key):
         value = self.backend.hget(self.hash_key, key)
