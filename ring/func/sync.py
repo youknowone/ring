@@ -560,6 +560,7 @@ def redis_py_hash(
     .. _Redis HASH commands: https://redis.io/commands#hash
     .. _redis-py: https://pypi.org/project/redis/
     """
+    expire = None
     return fbase.factory(
         (client, hash_key), key_prefix=key_prefix, on_manufactured=None,
         user_interface=user_interface, storage_class=storage_class,
