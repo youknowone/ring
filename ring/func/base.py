@@ -586,7 +586,7 @@ def factory(
         :class:`str` typed. When this parameter is given, a key is encoded
         into :class:`bytes` using the given encoding.
     :param Optional[Callable[[str],str]] key_refactor: Roughly,
-        ``key = key_refector(key)`` will be run when `key_refector` is not
+        ``key = key_refactor(key)`` will be run when `key_refactor` is not
         :data:`None`; Otherwise it is omitted.
 
     :return: The factory decorator to create new ring wire or wire bridge.

@@ -15,7 +15,7 @@ else:
 
 
 __all__ = (
-    'dict', 'memcache', 'redis', 'shelve', 'disk')
+    'dict', 'memcache', 'redis', 'redis_hash', 'shelve', 'disk')
 
 
 if asyncio_mod:
@@ -34,5 +34,6 @@ if asyncio_mod:
     redis = asyncio.create_asyncio_factory_proxy(
         (sync.redis_py, asyncio.aioredis),
         support_asyncio=True)
+    from .sync import redis_py_hash as redis_hash
 else:
-    from .sync import dict, shelve, diskcache as disk, memcache, redis_py as redis
+    from .sync import dict, shelve, diskcache as disk, memcache, redis_py as redis, redis_py_hash as redis_hash
