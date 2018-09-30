@@ -337,6 +337,13 @@ class RedisHashStorage(RedisStorage):
     def has_value(self, key):
         return self.backend.hexists(self.hash_key, key)
 
+    def get_many_values(self, keys):
+        values = self.backend.hmget(self.hash_key, keys)
+        return [v if v is not None else fbase.NotFound for v in values]
+
+    def set_many_values(self, keys, values, expire):
+        self.backend.hmset(self.hash_key, {k: v for k, v in zip(keys, values)})
+
 
 class DiskCacheStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
 
@@ -530,7 +537,7 @@ def redis_py(
 
 
 def redis_py_hash(
-        client, hash_key=None, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
+        client, hash_key=None, key_prefix=None, coder=None, ignorable_keys=None,
         user_interface=(CacheUserInterface, BulkInterfaceMixin),
         storage_class=RedisHashStorage,
         **kwargs):

@@ -67,23 +67,55 @@ def test_redis(redis_client, expire):
 
 
 def test_redis_hash(redis_client):
-    @ring.redis_hash(redis_client, 'test-hash-key', 'test-field1')
-    def f1(a, b):
+    @ring.redis_hash(redis_client, 'test-hash-key', 'test-field')
+    def f(a, b):
         r = a * 100 + b
         return str(r).encode('utf-8')
 
-    assert f1.key(1, 2) == 'test-field1:1:2'
+    # delete previous test
+    f.delete(1, 2)
+    f.delete(3, 4)
+    f.delete(5, 6)
+    f.delete(7, 8)
 
-    f1.delete(1, 2)
-    assert False is f1.has(1, 2)
-    assert None is f1.get(1, b=2)
-    assert 102 == int(f1(1, b=2))
+    assert f.key(1, 2) == 'test-field:1:2'
 
-    @ring.redis_hash(redis_client, 'test-hash-key', 'test-field2')
-    def f2(a, b):
-        r = a * 200 + b
-        return str(r).encode('utf-8')
+    f.delete(1, 2)
+    assert False is f.has(1, 2)
+    assert None is f.get(1, b=2)
+    assert 102 == int(f(1, b=2))
 
-    assert f2.key(1, 2) == 'test-field2:1:2'
-    assert 202 == int(f2(1, b=2))
-    assert 102 is int(f1.get(1, b=2))
+    assert f.key(3, 4) == 'test-field:3:4'
+    assert 102 == int(f.get(1, b=2))
+    assert 304 == int(f(3, b=4))
+
+    mv = f.get_many(
+        (1, 2),
+        (3, 4),
+    )
+    assert mv == [b'102', b'304']
+
+    with pytest.raises(AttributeError):
+        f.delete_many()
+    f.delete(1, 2)
+    f.delete(3, 4)
+
+    mv = f.get_many(
+        (1, 2),
+        (3, 4),
+    )
+    assert mv == [None, None]
+
+    mv = f.update_many(
+        {'a': 5, 'b': 6},
+        (7, 8),
+    )
+    assert mv == [b'506', b'708']
+
+    mv = f.get_many(
+        (1, 2),
+        (3, 4),
+        (5, 6),
+        (7, 8),
+    )
+    assert mv == [None, None, b'506', b'708']
