@@ -64,3 +64,26 @@ def test_redis(redis_client, expire):
         (5, 1),
     )
     assert mv == [102, None, 501]
+
+
+def test_redis_hash(redis_client):
+    @ring.redis_hash(redis_client, 'test-hash-key', 'test-field1')
+    def f1(a, b):
+        r = a * 100 + b
+        return str(r).encode('utf-8')
+
+    assert f1.key(1, 2) == 'test-field1:1:2'
+
+    f1.delete(1, 2)
+    assert False is f1.has(1, 2)
+    assert None is f1.get(1, b=2)
+    assert 102 == int(f1(1, b=2))
+
+    @ring.redis_hash(redis_client, 'test-hash-key', 'test-field2')
+    def f2(a, b):
+        r = a * 200 + b
+        return str(r).encode('utf-8')
+
+    assert f2.key(1, 2) == 'test-field2:1:2'
+    assert 202 == int(f2(1, b=2))
+    assert 102 is int(f1.get(1, b=2))
