@@ -411,6 +411,53 @@ class AioredisStorage(
                 backend.expire(key, expire) for key in keys)))
 
 
+class AioredisHashStorage(AioredisStorage):
+    """Storage implementation for :class:`aioredis.Redis`."""
+
+    def __init__(self, rope, backend):
+        storage_backend = backend[0]
+        self.hash_key = backend[1]
+        super(AioredisHashStorage, self).__init__(rope, storage_backend)
+
+    @asyncio.coroutine
+    def get_value(self, key):
+        backend = yield from self._get_backend()
+        value = yield from backend.hget(self.hash_key, key)
+        if value is None:
+            raise fbase.NotFound
+        return value
+
+    @asyncio.coroutine
+    def set_value(self, key, value, expire):
+        backend = yield from self._get_backend()
+        result = yield from backend.hset(self.hash_key, key, value)
+        return result
+
+    @asyncio.coroutine
+    def delete_value(self, key):
+        backend = yield from self._get_backend()
+        result = yield from backend.hdel(self.hash_key, key)
+        return result
+
+    @asyncio.coroutine
+    def has_value(self, key):
+        backend = yield from self._get_backend()
+        result = yield from backend.hexists(self.hash_key, key)
+        return bool(result)
+
+    @asyncio.coroutine
+    def get_many_values(self, keys):
+        backend = yield from self._get_backend()
+        values = yield from backend.hmget(self.hash_key, *keys)
+        return [v if v is not None else fbase.NotFound for v in values]
+
+    @asyncio.coroutine
+    def set_many_values(self, keys, values, expire):
+        params = itertools.chain.from_iterable(zip(keys, values))
+        backend = yield from self._get_backend()
+        yield from backend.hmset(self.hash_key, *params)
+
+
 def dict(
         obj, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
         user_interface=CacheUserInterface, storage_class=None,
@@ -531,6 +578,61 @@ def aioredis(
 
     return fbase.factory(
         redis, key_prefix=key_prefix, on_manufactured=factory_doctor,
+        user_interface=user_interface, storage_class=storage_class,
+        miss_value=None, expire_default=expire, coder=coder,
+        ignorable_keys=ignorable_keys,
+        **kwargs)
+
+
+def aioredis_hash(
+        redis, hash_key=None, key_prefix=None, coder=None, ignorable_keys=None,
+        user_interface=(CacheUserInterface, BulkInterfaceMixin),
+        storage_class=AioredisHashStorage,
+        **kwargs):
+    """Redis interface for :mod:`asyncio`.
+
+        Expected client package is aioredis_.
+
+        This implements HASH commands in aioredis.
+
+        aioredis expect `Redis` client or dev package is installed on your
+        machine. If you are new to Memcached, check how to install it and the
+        python package on your platform.
+
+        Note that aioredis>=1.0.0 only supported.
+
+        .. _Redis: http://redis.io/
+        .. _aioredis: https://pypi.org/project/aioredis/
+
+        :param Union[aioredis.Redis,Callable[...aioredis.Redis]] client: aioredis
+            interface object. See :func:`aioredis.create_redis` or
+            :func:`aioredis.create_redis_pool`. For convenience, a coroutine
+            returning one of these objects also is proper. It means next 2
+            examples working almost same:
+
+                >>> redis = await aioredis.create_redis(('127.0.0.1', 6379))
+                >>> @ring.aioredis_hash(redis, ...)
+                >>> async def by_object(...):
+                >>>     ...
+
+                >>> redis_coroutine = aioredis.create_redis(('127.0.0.1', 6379))
+                >>> @ring.aioredis_hash(redis_coroutine, ...)
+                >>> async def by_coroutine(...):
+                >>>     ...
+
+        :see: :func:`ring.func.asyncio.CacheUserInterface` for single access
+            sub-functions.
+        :see: :func:`ring.func.asyncio.BulkInterfaceMixin` for bulk access
+            sub-functions.
+
+        :see: :func:`ring.redis` for non-asyncio version.
+        """
+    expire = None
+    if inspect.iscoroutine(redis):
+        redis = SingletonCoroutineProxy(redis)
+
+    return fbase.factory(
+        (redis, hash_key), key_prefix=key_prefix, on_manufactured=factory_doctor,
         user_interface=user_interface, storage_class=storage_class,
         miss_value=None, expire_default=expire, coder=coder,
         ignorable_keys=ignorable_keys,

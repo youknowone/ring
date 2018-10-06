@@ -34,6 +34,8 @@ if asyncio_mod:
     redis = asyncio.create_asyncio_factory_proxy(
         (sync.redis_py, asyncio.aioredis),
         support_asyncio=True)
-    from .sync import redis_py_hash as redis_hash
+    redis_hash = asyncio.create_asyncio_factory_proxy(
+        (sync.redis_py_hash, asyncio.aioredis_hash),
+        support_asyncio=True)
 else:
     from .sync import dict, shelve, diskcache as disk, memcache, redis_py as redis, redis_py_hash as redis_hash
