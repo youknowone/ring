@@ -281,7 +281,7 @@ class BaseUserInterface(object):
     def update(self, wire, **kwargs):  # pragma: no cover
         """Execute the original function and `set` the result as the value.
 
-        This action is comprehensible as a concatnation of
+        This action is comprehensible as a concatenation of
         :meth:`ring.func.base.BaseUserInterface.execute` and
         :meth:`ring.func.base.BaseUserInterface.set`.
 
