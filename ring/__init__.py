@@ -9,7 +9,7 @@ from ring.func import (
     dict, shelve, disk, memcache, redis, redis_hash)
 try:
     import asyncio
-    from ring.func.asyncio import aiomcache, aioredis
+    from ring.func.asyncio import aiomcache, aioredis, aioredis_hash
 except ImportError:
     pass
 else:
@@ -22,4 +22,4 @@ except ImportError:  # pragma: no cover
 
 __all__ = (
     'dict', 'shelve', 'memcache', 'redis', 'redis_hash', 'disk',
-    'aiomcache', 'aioredis')
+    'aiomcache', 'aioredis', 'aioredis_hash')

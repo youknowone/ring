@@ -350,6 +350,66 @@ def test_aioredis(aioredis_pool, expire):
 
 @pytest.mark.asyncio
 @asyncio.coroutine
+def test_aioredis_hash(aioredis_pool):
+    client, _ = aioredis_pool
+
+    @ring.aioredis_hash(client, 'test-hashkey')
+    @asyncio.coroutine
+    def f(a):
+        return 't{}'.format(a).encode()
+
+    # delete previous test
+    yield from f.delete(1)
+    yield from f.delete(2)
+    yield from f.delete(3)
+
+    r = yield from f.get(1)
+    assert r is None
+
+    yield from f(1)
+    r = yield from f.has(1)
+    assert r is True
+    r = yield from f.get(1)
+    assert r == b't1'
+
+    r = yield from f.get_many(
+        (1,),
+        {'a': 2},
+    )
+    assert r == [b't1', None]
+
+    r = yield from f.update_many(
+        (1,),
+        {'a': 3},
+    )
+    assert r == [b't1', b't3']
+
+    yield from f.set_many((
+        (1,),
+        (2,),
+    ), (
+        b'foo',
+        b'bar',
+    ))
+
+    r = yield from f.get_many(
+        {'a': 1},
+        (2,),
+        (3,),
+    )
+    assert r == [b'foo', b'bar', b't3']
+    yield from f.delete(2)
+
+    r = yield from f.get_or_update_many(
+        (1,),
+        (2,),
+        (3,),
+    )
+    assert r == [b'foo', b't2', b't3']
+
+
+@pytest.mark.asyncio
+@asyncio.coroutine
 def test_func_method(storage_dict):
     storage, _ = storage_dict
 
