@@ -78,8 +78,8 @@ Ring will have full control for any layer of caching.
 :see: :doc:`why` if this document doesn't explain what **Ring** does.
 
 
-method, classmethod, staticmethod
----------------------------------
+method, classmethod, staticmethod, property
+-------------------------------------------
 
 **Ring** is adaptable for any kind of methods for Python class.
 
@@ -131,6 +131,9 @@ method, classmethod, staticmethod
     assert p.content.key().endswith('Page.content:page=http://example.com')
 
     assert p.url_property == p.url
+
+
+:see: :doc:`factory` for details.
 
 
 Choosing backend

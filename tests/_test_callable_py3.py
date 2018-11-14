@@ -27,7 +27,7 @@ def test_kwargify_exc_py3(f, args, kwargs, exc):
 
 
 def test_annotations():
-    def f(a: int, b: str, *c, d: Any=10, **e) -> Optional[float]:
+    def f(a: int, b: str, *c, d: Any = 10, **e) -> Optional[float]:
         pass
 
     c = Callable(f)

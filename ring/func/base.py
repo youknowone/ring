@@ -1,7 +1,7 @@
 """:mod:`ring.func.base` --- The building blocks of **ring.func.\***.
 =====================================================================
 
-"""
+"""  # noqa: W605
 import abc
 import types
 from typing import List
