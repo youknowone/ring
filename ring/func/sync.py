@@ -297,7 +297,7 @@ class RedisStorage(
         self.backend.delete(key)
 
     def has_value(self, key):
-        return self.backend.exists(key)
+        return bool(self.backend.exists(key))
 
     def touch_value(self, key, expire):
         if expire is None:
