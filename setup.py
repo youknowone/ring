@@ -18,7 +18,7 @@ install_requires = [
     'wirerope>=0.2.0',
 ]
 tests_require = [
-    'pytest>=3.0.2', 'pytest-cov', 'pytest-lazy-fixture', 'mock', 'patch',
+    'pytest>=3.6', 'pytest-cov', 'pytest-lazy-fixture', 'mock', 'patch',
     'pymemcache',
     'redis', 'requests',
     'diskcache',
