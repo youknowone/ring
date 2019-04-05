@@ -9,6 +9,9 @@
     :members:
     :undoc-members:
 
+.. autoclass:: ring.func.sync.LruStorage
+    :members:
+    :undoc-members:
 .. autoclass:: ring.func.sync.ExpirableDictStorage
     :members:
     :undoc-members:
@@ -25,5 +28,9 @@
     :members:
     :undoc-members:
 .. autoclass:: ring.func.sync.RedisStorage
+    :members:
+    :undoc-members:
+
+.. autoclass:: ring.func.lru_cache.LruCache
     :members:
     :undoc-members:

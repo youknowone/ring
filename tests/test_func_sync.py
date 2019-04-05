@@ -6,6 +6,7 @@ import pymemcache.client
 import memcache
 import redis
 import diskcache
+from ring.func.lru_cache import LruCache
 
 import pytest
 
@@ -45,6 +46,17 @@ def storage_shelve():
     storage.is_binary = False
     storage.has_has = True
     storage.has_touch = False
+    storage.has_expire = False
+    return storage
+
+
+@pytest.fixture
+def storage_lru():
+    storage = LruCache(128)
+    storage.ring = ring.lru
+    storage.is_binary = False
+    storage.has_has = True
+    storage.has_touch = True
     storage.has_expire = False
     return storage
 
@@ -96,6 +108,7 @@ def redis_client(request):
 @pytest.fixture(params=[
     pytest.lazy_fixture('storage_dict'),
     pytest.lazy_fixture('storage_shelve'),
+    pytest.lazy_fixture('storage_lru'),
     pytest.lazy_fixture('memcache_client'),
     pytest.lazy_fixture('redis_client'),
     pytest.lazy_fixture('storage_diskcache'),
@@ -283,6 +296,20 @@ def test_func_dict_expire():
     assert f.update(1, 2) == 102
     f.delete(1, 2)
     assert f.get(1, 2) is None
+
+
+def test_lru(storage_lru):
+    @ring.lru(maxsize=2)
+    def f(a, b):
+        return a * 100 + b
+
+    assert 102 == f(1, 2)
+    assert 205 == f(2, 5)
+    assert 102 == f.get(1, 2)
+    assert 205 == f.get(2, 5)
+
+    assert 503 == f(5, 3)
+    assert None is f.get(1, 2)
 
 
 def test_diskcache(storage_diskcache):

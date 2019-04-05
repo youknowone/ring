@@ -7,18 +7,21 @@ from __future__ import absolute_import
 from ring.func import sync
 
 try:
-    import asyncio as asyncio_mod
+    import asyncio as _has_asyncio
 except ImportError:
-    asyncio_mod = False
+    _has_asyncio = False
 else:
-    from . import asyncio
+    from ring.func import asyncio
 
 
 __all__ = (
-    'dict', 'memcache', 'redis', 'redis_hash', 'shelve', 'disk')
+    'lru', 'dict', 'memcache', 'redis', 'redis_hash', 'shelve', 'disk')
 
 
-if asyncio_mod:
+if _has_asyncio:
+    lru = asyncio.create_asyncio_factory_proxy(
+        (sync.lru, asyncio.create_factory_from(sync.LruStorage)),
+        support_asyncio=False)
     dict = asyncio.create_asyncio_factory_proxy(
         (sync.dict, asyncio.dict),
         support_asyncio=True)
@@ -38,4 +41,6 @@ if asyncio_mod:
         (sync.redis_py_hash, asyncio.aioredis_hash),
         support_asyncio=True)
 else:
-    from .sync import dict, shelve, diskcache as disk, memcache, redis_py as redis, redis_py_hash as redis_hash
+    from .sync import (
+        lru, dict, shelve, diskcache as disk, memcache,
+        redis_py as redis, redis_py_hash as redis_hash)

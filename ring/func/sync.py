@@ -9,9 +9,11 @@ import time
 import re
 import hashlib
 
-from . import base as fbase
+from . import base as fbase, lru_cache as lru_mod
 
-__all__ = ('dict', 'memcache', 'redis_py', 'redis_py_hash', 'shelve', 'diskcache')
+__all__ = (
+    'lru', 'dict', 'memcache', 'redis_py', 'redis_py_hash', 'shelve',
+    'diskcache')
 
 
 class CacheUserInterface(fbase.BaseUserInterface):
@@ -173,6 +175,33 @@ class BulkStorageMixin(object):
         if expire is Ellipsis:
             expire = self.rope.expire_default
         self.touch_many_values(keys, expire)
+
+
+class LruStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
+
+    def get_value(self, key):
+        value = self.backend.get(key)
+        if value is lru_mod.SENTINEL:
+            raise fbase.NotFound
+        return value
+
+    def has_value(self, key):
+        return self.backend.has(key)
+
+    def set_value(self, key, value, expire):
+        self.backend.set(key, value)
+
+    def delete_value(self, key):
+        try:
+            self.backend.delete(key)
+        except KeyError:
+            pass
+
+    def touch_value(self, key, expire):
+        try:
+            self.backend.touch(key)
+        except KeyError:
+            pass
 
 
 class ExpirableDictStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
@@ -360,6 +389,49 @@ class DiskCacheStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
         self.backend.delete(key)
 
 
+def lru(
+        lru=None, key_prefix=None, coder=None, ignorable_keys=None,
+        user_interface=CacheUserInterface, storage_class=LruStorage,
+        maxsize=128, **kwargs):
+    """LRU(Least-Recently-Used) cache interface.
+
+    Because the lru backend is following the basic manner of
+    :func:`functools.lru_cache`, see the document for LRU cache details.
+
+        >>> @ring.lru(maxsize=128)
+        >>> def f(...):
+        ...     ...
+
+    The above is very similar to below:
+
+        >>> @functools.lru_cache(maxsize=128, typed=False)
+        >>> def f(...):
+        ...     ...
+
+    Note that **ring** basically supports key consistency and manual
+    operation features, unlike :func:`functools.lru_cache`.
+
+    :param ring.func.lru_cache.LruCache lru: Cache storage. If the default
+        value :data:`None` is given, a new `LruCache`
+        object will be created. (Recommended)
+    :param int maxsize: The maximum size of the cache storage.
+
+    :see: :func:`functools.lru_cache` for LRU cache basics.
+    :see: :func:`ring.func.sync.CacheUserInterface` for sub-functions.
+    """
+    expire = None
+    if lru is None:
+        lru = lru_mod.LruCache(maxsize)
+        if key_prefix is None:
+            key_prefix = ''
+    return fbase.factory(
+        lru, key_prefix=key_prefix, on_manufactured=None,
+        user_interface=user_interface, storage_class=storage_class,
+        miss_value=None, expire_default=expire, coder=coder,
+        ignorable_keys=ignorable_keys,
+        **kwargs)
+
+
 def dict(
         obj, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
         user_interface=CacheUserInterface, storage_class=None,
@@ -369,8 +441,8 @@ def dict(
     This backend is not designed for real products, but useful by
     keeping below in mind:
 
-    - :func:`functools.lru_cache` is the standard library for the most of
-      local cache.
+    - :func:`ring.lru` and :func:`functools.lru_cache` are the standard way
+      for the most of local cache.
     - Expired objects will never be removed from the dict. If the function has
       unlimited input combinations, never use dict.
     - It is designed to "simulate" cache backends, not to provide an actual

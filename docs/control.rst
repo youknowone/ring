@@ -21,7 +21,7 @@ Meta controller
 
     .. code-block:: python
 
-        @ring.dict({})
+        @ring.lru()
         def f(a, b):
             ...
 

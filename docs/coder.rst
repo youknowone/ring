@@ -86,7 +86,7 @@ Now `FloatCoder` is registered as `float`. Use it in a familiar way.
 
 .. code-block:: python
 
-    @ring.dict({}, coder='float')
+    @ring.lru(coder='float')
     def f():
         return 3.1415
 
@@ -108,7 +108,7 @@ of a ring object.
 
 .. code-block:: python
 
-    @ring.dict({})
+    @ring.lru()
     def f():
         return 3.1415
 

@@ -17,7 +17,7 @@ FULL, HITS, MISSES = 0, 1, 2  # names for stat
 
 
 class LruCache(object):
-    """Created by breaking down functools.lru_cache."""
+    """Created by breaking down functools.lru_cache from CPython 3.7.0."""
 
     def __init__(self, maxsize):
         cache = {}
@@ -109,3 +109,28 @@ class LruCache(object):
         self.set = set
         self.cache_info = cache_info
         self.clear = clear
+
+        # ring extension
+
+        def has(key):
+            with lock:
+                return key in cache
+
+        def touch(key):
+            with lock:
+                root = self.root
+                link = cache_get(key)
+                if link is None:
+                    raise KeyError
+                # Move the link to the front of the circular queue
+                link_prev, link_next, _key, result = link
+                link_prev[NEXT] = link_next
+                link_next[PREV] = link_prev
+                last = root[PREV]
+                last[NEXT] = root[PREV] = link
+                link[PREV] = last
+                link[NEXT] = root
+                return result
+
+        self.has = has
+        self.touch = touch
