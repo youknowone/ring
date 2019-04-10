@@ -84,24 +84,15 @@ def convert_storage(storage_class):
     return async_storage_class
 
 
-def create_factory_from(_storage_class):
+def create_factory_from(sync_factory, _storage_class):
     """Create :mod:`asyncio` compatible factory from synchronous storage."""
 
-    def factory(
-            obj, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
-            user_interface=CacheUserInterface, storage_class=None,
-            **kwargs):
-
-        if storage_class is None:
-            storage_class = convert_storage(_storage_class)
-
-        return fbase.factory(
-            obj, key_prefix=key_prefix, on_manufactured=factory_doctor,
-            user_interface=user_interface,
-            storage_class=convert_storage(storage_class),
-            miss_value=None, expire_default=expire, coder=coder,
-            ignorable_keys=ignorable_keys,
-            **kwargs)
+    def factory(*args, **kwargs):
+        if 'user_interface' not in kwargs:
+            kwargs['user_interface'] = CacheUserInterface
+        if 'storage_class' not in kwargs:
+            kwargs['storage_class'] = convert_storage(_storage_class)
+        return sync_factory(*args, **kwargs)
 
     return factory
 

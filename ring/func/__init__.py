@@ -20,16 +20,16 @@ __all__ = (
 
 if _has_asyncio:
     lru = asyncio.create_asyncio_factory_proxy(
-        (sync.lru, asyncio.create_factory_from(sync.LruStorage)),
+        (sync.lru, asyncio.create_factory_from(sync.lru, sync.LruStorage)),
         support_asyncio=False)
     dict = asyncio.create_asyncio_factory_proxy(
         (sync.dict, asyncio.dict),
         support_asyncio=True)
     shelve = asyncio.create_asyncio_factory_proxy(
-        (sync.shelve, asyncio.create_factory_from(sync.ShelveStorage)),
+        (sync.shelve, asyncio.create_factory_from(sync.shelve, sync.ShelveStorage)),
         support_asyncio=False)
     disk = asyncio.create_asyncio_factory_proxy(
-        (sync.diskcache, asyncio.create_factory_from(sync.DiskCacheStorage)),
+        (sync.diskcache, asyncio.create_factory_from(sync.diskcache, sync.DiskCacheStorage)),
         support_asyncio=False)
     memcache = asyncio.create_asyncio_factory_proxy(
         (sync.memcache, asyncio.aiomcache),

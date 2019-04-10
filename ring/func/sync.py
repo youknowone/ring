@@ -424,6 +424,7 @@ def lru(
         lru = lru_mod.LruCache(maxsize)
         if key_prefix is None:
             key_prefix = ''
+
     return fbase.factory(
         lru, key_prefix=key_prefix, on_manufactured=None,
         user_interface=user_interface, storage_class=storage_class,
