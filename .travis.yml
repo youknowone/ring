@@ -1,3 +1,4 @@
+dist: xenial
 language: python
 cache: pip
 sudo: false
@@ -5,6 +6,7 @@ python:
 - pypy2.7-5.10.0
 - pypy3.5-5.10.0
 - '2.7'
+- '3.7'
 - '3.6'
 - '3.5'
 - '3.4'

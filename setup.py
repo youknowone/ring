@@ -18,7 +18,8 @@ install_requires = [
     'wirerope>=0.2.0',
 ]
 tests_require = [
-    'pytest>=3.0.2', 'pytest-cov', 'pytest-lazy-fixture', 'mock', 'patch',
+    'pytest>=3.10.1', 'pytest-cov', 'pytest-lazy-fixture==0.4.2',
+    'mock', 'patch',
     'pymemcache',
     'redis', 'requests',
     'diskcache',
@@ -40,6 +41,8 @@ except ImportError:
 # new feature support
 if (3, 3) <= sys.version_info:
     if sys.version_info < (3, 5):
+        assert tests_require[0].startswith('pytest')
+        tests_require[0] = 'pytest==3.10.1'
         tests_require.append('pytest-asyncio==0.5.0')
     else:
         tests_require.append('pytest-asyncio')

@@ -461,5 +461,5 @@ def test_forced_sync(synchronous_storage_and_ring):
 
     yield from f.delete('a')
     assert None is ((yield from f.get('a')))
-    assert 'a' is ((yield from f('a')))
-    assert 'a' is ((yield from f.get('a')))
+    assert 'a' == ((yield from f('a')))
+    assert 'a' == ((yield from f.get('a')))
