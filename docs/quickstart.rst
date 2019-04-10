@@ -30,9 +30,15 @@ included in ring installation due to the following issues:
 Check each backend you use and manually add related packages to `setup.py`
 or `requirements.txt`.
 
-If you are new to **Ring** and cache, let's start with :func:`ring.dict`.
-it doesn't require any dependency. Changing dict to another backend is simple
+If you are new to **Ring** and cache, let's start with :func:`ring.lru`.
+It doesn't require any dependency. Changing lru to another backend is simple
 for later.
+
+.. note::
+
+    If you are new to LRU cache, check
+    `<https://en.wikipedia.org/wiki/Cache_replacement_policies#Least_recently_used_(LRU)>`_
+    for details.
 
 
 First example
@@ -45,17 +51,18 @@ Let's start with a simple example: function cache with bytes data.
     import ring
     import requests
 
-    # save in a dict, expire in 60 seconds.
-    @ring.dict({}, expire=60)
+    # save in a new lru storage
+    @ring.lru()
     def get_url(url):
         return requests.get(url).content
 
     # default access - it is cached
     data = get_url('http://example.com')
 
-This flow is what you see in common *smart* cache decorators.
+This flow is what you see in common *smart* cache decorators. Actually, this is
+very similar to :func:`functools.lru_cache` in Python standard library.
 
-
+The differences start here.
 The core feature of **Ring** is explicit controllers.
 
 .. code-block:: python
@@ -72,7 +79,8 @@ The core feature of **Ring** is explicit controllers.
     cached_data = get_url.decode(encoded_data)
 
 
-Ring will have full control for any layer of caching.
+Ring will have full control for any layer of caching. Which doesn't exist
+in :func:`functools.lru_cache`
 
 :see: :doc:`control` for sub-functions details.
 :see: :doc:`why` if this document doesn't explain what **Ring** does.
@@ -98,21 +106,21 @@ method, classmethod, staticmethod, property
         def __ring_key__(self):
             return 'page=' + self.url
 
-        @ring.dict({})
+        @ring.lru()
         def content(self):
             return requests.get(self.url).content
 
-        @ring.dict({})
+        @ring.lru()
         @classmethod
         def class_content(cls):
             return cls.base_content
 
-        @ring.dict({})
+        @ring.lru()
         @staticmethod
         def example_dot_com():
             return requests.get('http://example.com').content
 
-        @ring.dict({})
+        @ring.lru()
         @property
         def url_property(self):
             return self.url_property
@@ -139,7 +147,7 @@ method, classmethod, staticmethod, property
 Choosing backend
 ----------------
 
-Let's consider using actual cache storage instead of :class:`dict`.
+Let's consider using external cache storage instead of :class:`lru`.
 
 **Ring** includes common cache storage supports. `Memcached` is one of the
 popular cache storage. `Memcached` itself is out of the Python world. You must
@@ -171,7 +179,7 @@ Now you are ready to edit the ``get_url`` to use Memcached.
     client = pymemcache.client.Client(('127.0.0.1', 11211))  #2 create a client
 
     # save to memcache client, expire in 60 seconds.
-    @ring.memcache(client, expire=60)  #3 dict -> memcache
+    @ring.memcache(client, expire=60)  #3 lru -> memcache
     def get_url(url):
         return requests.get(url).content
 
@@ -179,7 +187,7 @@ Now you are ready to edit the ``get_url`` to use Memcached.
     data = get_url('http://example.com')
 
 
-Try and compare what's changed from :func:`ring.dict` version.
+Try and compare what's changed from :func:`ring.lru` version.
 
 There are many more included factories for various backends.
 
@@ -200,7 +208,7 @@ They follow similar convention but requiring `await` for IO jobs.
 
     import ring
 
-    @ring.dict({})
+    @ring.lru()
     async def f():
         ...
 
@@ -268,17 +276,22 @@ Low-level access
 
 Do you wonder how your data is encoded? Which keys are mapped to the
 functions? You don't need to be suffered by looking inside of **Ring**.
+At this time, let's use :func:`ring.dict` to look into the storage.
 
 .. code-block:: python
 
     import ring
 
-    @ring.dict({})
+    dict_storage = {}
+
+    @ring.dict(dict_storage)
     def f():
         ...
 
     key = f.key()  # retrieving the key
     raw_data = f.storage.backend.get(key)  # getting raw data from storage
+
+    # look into `dict_storage` by yourself to check how it works.
 
 
 :see: :doc:`control` for more attributes.

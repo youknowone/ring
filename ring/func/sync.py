@@ -438,8 +438,8 @@ def dict(
         **kwargs):
     """Basic Python :class:`dict` based cache.
 
-    This backend is not designed for real products, but useful by
-    keeping below in mind:
+    This backend is not designed for real products. Please carefully read the
+    next details to check it fits your demands.
 
     - :func:`ring.lru` and :func:`functools.lru_cache` are the standard way
       for the most of local cache.
@@ -449,13 +449,9 @@ def dict(
       cache backend. If a caching function is a fast job, this backend even
       can drop the performance.
 
-    Still, it doesn't mean you can't use this backend for products. Take
-    advantage of it when your demands fit.
-
     :param dict obj: Cache storage. Any :class:`dict` compatible object.
 
     :see: :func:`ring.func.sync.CacheUserInterface` for sub-functions.
-
     :see: :func:`ring.dict` for :mod:`asyncio` version.
     """
     if storage_class is None:
@@ -504,7 +500,7 @@ def memcache(
         **kwargs):
     """Common Memcached_ interface.
 
-    This backend is common interface for various memcached client libraries
+    This backend is shared interface for various memcached client libraries
     below:
 
     - https://pypi.org/project/python-memcached/
