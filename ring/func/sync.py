@@ -390,7 +390,7 @@ class DiskCacheStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
 
 
 def lru(
-        lru=None, key_prefix=None, coder=None, ignorable_keys=None,
+        lru=None, key_prefix=None, coder=None,
         user_interface=CacheUserInterface, storage_class=LruStorage,
         maxsize=128, **kwargs):
     """LRU(Least-Recently-Used) cache interface.
@@ -429,12 +429,11 @@ def lru(
         lru, key_prefix=key_prefix, on_manufactured=None,
         user_interface=user_interface, storage_class=storage_class,
         miss_value=None, expire_default=expire, coder=coder,
-        ignorable_keys=ignorable_keys,
         **kwargs)
 
 
 def dict(
-        obj, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
+        obj, key_prefix=None, expire=None, coder=None,
         user_interface=CacheUserInterface, storage_class=None,
         **kwargs):
     """Basic Python :class:`dict` based cache.
@@ -465,12 +464,11 @@ def dict(
         obj, key_prefix=key_prefix, on_manufactured=None,
         user_interface=user_interface, storage_class=storage_class,
         miss_value=None, expire_default=expire, coder=coder,
-        ignorable_keys=ignorable_keys,
         **kwargs)
 
 
 def shelve(
-        shelf, key_prefix=None, coder=None, ignorable_keys=None,
+        shelf, key_prefix=None, coder=None,
         user_interface=CacheUserInterface, storage_class=ShelveStorage,
         **kwargs):
     """Python :mod:`shelve` based cache.
@@ -490,12 +488,11 @@ def shelve(
         shelf, key_prefix=key_prefix, on_manufactured=None,
         user_interface=user_interface, storage_class=storage_class,
         miss_value=None, expire_default=expire, coder=coder,
-        ignorable_keys=ignorable_keys,
         **kwargs)
 
 
 def memcache(
-        client, key_prefix=None, expire=0, coder=None, ignorable_keys=None,
+        client, key_prefix=None, expire=0, coder=None,
         user_interface=(CacheUserInterface, BulkInterfaceMixin),
         storage_class=MemcacheStorage,
         **kwargs):
@@ -559,12 +556,12 @@ def memcache(
         client, key_prefix=key_prefix, on_manufactured=None,
         user_interface=user_interface, storage_class=storage_class,
         miss_value=miss_value, expire_default=expire, coder=coder,
-        ignorable_keys=ignorable_keys, key_refactor=key_refactor,
+        key_refactor=key_refactor,
         **kwargs)
 
 
 def redis_py(
-        client, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
+        client, key_prefix=None, expire=None, coder=None,
         user_interface=(CacheUserInterface, BulkInterfaceMixin),
         storage_class=RedisStorage,
         **kwargs):
@@ -601,12 +598,11 @@ def redis_py(
         client, key_prefix=key_prefix, on_manufactured=None,
         user_interface=user_interface, storage_class=storage_class,
         miss_value=None, expire_default=expire, coder=coder,
-        ignorable_keys=ignorable_keys,
         **kwargs)
 
 
 def redis_py_hash(
-        client, hash_key=None, key_prefix=None, coder=None, ignorable_keys=None,
+        client, hash_key=None, key_prefix=None, coder=None,
         user_interface=(CacheUserInterface, BulkInterfaceMixin),
         storage_class=RedisHashStorage,
         **kwargs):
@@ -641,12 +637,11 @@ def redis_py_hash(
         (client, hash_key), key_prefix=key_prefix, on_manufactured=None,
         user_interface=user_interface, storage_class=storage_class,
         miss_value=None, expire_default=expire, coder=coder,
-        ignorable_keys=ignorable_keys,
         **kwargs)
 
 
 def diskcache(
-        obj, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
+        obj, key_prefix=None, expire=None, coder=None,
         user_interface=CacheUserInterface, storage_class=DiskCacheStorage,
         **kwargs):
     """diskcache_ interface.
@@ -666,12 +661,11 @@ def diskcache(
         obj, key_prefix=key_prefix, on_manufactured=None,
         user_interface=user_interface, storage_class=storage_class,
         miss_value=None, expire_default=expire, coder=coder,
-        ignorable_keys=ignorable_keys,
         **kwargs)
 
 
 def arcus(
-        client, key_prefix=None, expire=0, coder=None, ignorable_keys=None,
+        client, key_prefix=None, expire=0, coder=None,
         default_action='get_or_update',
         user_interface=CacheUserInterface,
         **kwargs):  # pragma: no cover
@@ -710,6 +704,5 @@ def arcus(
         user_interface=user_interface, storage_class=Storage,
         default_action=default_action,
         miss_value=None, expire_default=expire, coder=coder,
-        ignorable_keys=ignorable_keys,
         key_refactor=key_refactor,
         **kwargs)

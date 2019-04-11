@@ -539,6 +539,7 @@ def factory(
         storage_backend,  # actual storage
         key_prefix,  # manual key prefix
         expire_default,  # default expiration
+        # keyword-only arguments from here
         # building blocks
         coder, miss_value, user_interface, storage_class,
         default_action=Ellipsis,

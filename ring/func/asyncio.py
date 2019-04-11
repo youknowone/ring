@@ -450,7 +450,7 @@ class AioredisHashStorage(AioredisStorage):
 
 
 def dict(
-        obj, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
+        obj, key_prefix=None, expire=None, coder=None,
         user_interface=CacheUserInterface, storage_class=None,
         **kwargs):
     """:class:`dict` interface for :mod:`asyncio`.
@@ -469,12 +469,11 @@ def dict(
         user_interface=user_interface,
         storage_class=convert_storage(storage_class),
         miss_value=None, expire_default=expire, coder=coder,
-        ignorable_keys=ignorable_keys,
         **kwargs)
 
 
 def aiomcache(
-        client, key_prefix=None, expire=0, coder=None, ignorable_keys=None,
+        client, key_prefix=None, expire=0, coder=None,
         user_interface=(CacheUserInterface, BulkInterfaceMixin),
         storage_class=AiomcacheStorage, key_encoding='utf-8',
         **kwargs):
@@ -509,14 +508,12 @@ def aiomcache(
         client, key_prefix=key_prefix, on_manufactured=factory_doctor,
         user_interface=user_interface, storage_class=storage_class,
         miss_value=None, expire_default=expire, coder=coder,
-        ignorable_keys=ignorable_keys,
-        key_encoding=key_encoding,
-        key_refactor=key_refactor,
+        key_encoding=key_encoding, key_refactor=key_refactor,
         **kwargs)
 
 
 def aioredis(
-        redis, key_prefix=None, expire=None, coder=None, ignorable_keys=None,
+        redis, key_prefix=None, expire=None, coder=None,
         user_interface=(CacheUserInterface, BulkInterfaceMixin),
         storage_class=AioredisStorage,
         **kwargs):
@@ -571,12 +568,11 @@ def aioredis(
         redis, key_prefix=key_prefix, on_manufactured=factory_doctor,
         user_interface=user_interface, storage_class=storage_class,
         miss_value=None, expire_default=expire, coder=coder,
-        ignorable_keys=ignorable_keys,
         **kwargs)
 
 
 def aioredis_hash(
-        redis, hash_key=None, key_prefix=None, coder=None, ignorable_keys=None,
+        redis, hash_key=None, key_prefix=None, coder=None,
         user_interface=(CacheUserInterface, BulkInterfaceMixin),
         storage_class=AioredisHashStorage,
         **kwargs):
@@ -626,5 +622,4 @@ def aioredis_hash(
         (redis, hash_key), key_prefix=key_prefix, on_manufactured=factory_doctor,
         user_interface=user_interface, storage_class=storage_class,
         miss_value=None, expire_default=expire, coder=coder,
-        ignorable_keys=ignorable_keys,
         **kwargs)

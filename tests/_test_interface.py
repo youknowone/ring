@@ -79,7 +79,7 @@ class DoubleCacheUserInterface(BaseUserInterface):
 
 
 def doublecache(
-        client, key_prefix, expire=0, coder=None, ignorable_keys=None,
+        client, key_prefix, expire=0, coder=None,
         user_interface=DoubleCacheUserInterface):
     from ring.func.sync import ExpirableDictStorage
     from ring.func.asyncio import convert_storage
@@ -88,8 +88,7 @@ def doublecache(
         client, key_prefix=key_prefix, on_manufactured=None,
         user_interface=user_interface,
         storage_class=convert_storage(ExpirableDictStorage),
-        miss_value=None, expire_default=expire, coder=coder,
-        ignorable_keys=ignorable_keys)
+        miss_value=None, expire_default=expire, coder=coder)
 
 
 @pytest.mark.asyncio
