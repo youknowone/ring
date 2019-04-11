@@ -9,6 +9,8 @@ import ring
 from ring.func.lru_cache import LruCache
 
 import pytest
+from pytest_lazyfixture import lazy_fixture
+
 from tests.test_func_sync import StorageDict
 
 
@@ -36,9 +38,9 @@ def aioredis_pool():
 
 
 @pytest.fixture(params=[
-    pytest.lazy_fixture('storage_dict'),
-    pytest.lazy_fixture('aiomcache_client'),
-    pytest.lazy_fixture('aioredis_pool'),
+    lazy_fixture('storage_dict'),
+    lazy_fixture('aiomcache_client'),
+    lazy_fixture('aioredis_pool'),
 ])
 def storage_and_ring(request):
     return request.param
@@ -62,9 +64,9 @@ def storage_disk(request):
 
 
 @pytest.fixture(params=[
-    pytest.lazy_fixture('storage_lru'),
-    pytest.lazy_fixture('storage_shelve'),
-    pytest.lazy_fixture('storage_disk'),
+    lazy_fixture('storage_lru'),
+    lazy_fixture('storage_shelve'),
+    lazy_fixture('storage_disk'),
 ])
 def synchronous_storage_and_ring(request):
     return request.param

@@ -9,6 +9,7 @@ import diskcache
 from ring.func.lru_cache import LruCache
 
 import pytest
+from pytest_lazyfixture import lazy_fixture
 
 
 pymemcache_client = pymemcache.client.Client(('127.0.0.1', 11211))
@@ -106,12 +107,12 @@ def redis_client(request):
 
 
 @pytest.fixture(params=[
-    pytest.lazy_fixture('storage_dict'),
-    pytest.lazy_fixture('storage_shelve'),
-    pytest.lazy_fixture('storage_lru'),
-    pytest.lazy_fixture('memcache_client'),
-    pytest.lazy_fixture('redis_client'),
-    pytest.lazy_fixture('storage_diskcache'),
+    lazy_fixture('storage_dict'),
+    lazy_fixture('storage_shelve'),
+    lazy_fixture('storage_lru'),
+    lazy_fixture('memcache_client'),
+    lazy_fixture('redis_client'),
+    lazy_fixture('storage_diskcache'),
 ])
 def storage(request):
     return request.param
