@@ -3,6 +3,7 @@ import ring
 from ring.key import FormatKey, CallableKey
 
 import pytest
+from pytest_lazyfixture import lazy_fixture
 
 
 @pytest.fixture(scope='session')
@@ -16,8 +17,8 @@ def callable_key():
 
 
 @pytest.fixture(params=[
-    pytest.lazy_fixture('format_key'),
-    pytest.lazy_fixture('callable_key'),
+    lazy_fixture('format_key'),
+    lazy_fixture('callable_key'),
 ])
 def ring_key(request):
     return request.param

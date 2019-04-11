@@ -190,7 +190,6 @@ class CachePageUserInterface(fbase.BaseUserInterface):
 
 def cache(
         backend=django_cache.cache, key_prefix=None, expire=None, coder=None,
-        ignorable_keys=None,
         user_interface=CacheUserInterface, storage_class=LowLevelCacheStorage):
     """A typical ring-style cache based on Django's low-level cache API.
 
@@ -208,8 +207,7 @@ def cache(
     return fbase.factory(
         backend, key_prefix=key_prefix, on_manufactured=None,
         user_interface=user_interface, storage_class=storage_class,
-        miss_value=None, expire_default=expire, coder=coder,
-        ignorable_keys=ignorable_keys)
+        miss_value=None, expire_default=expire, coder=coder)
 
 
 def cache_page(
