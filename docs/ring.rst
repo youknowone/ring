@@ -14,6 +14,15 @@
 
 .. automodule:: ring
 
+    .. function:: lru(...)
+
+        Proxy to select synchronous or :mod:`asyncio` versions of **Ring**
+        factory.
+
+        :see: :func:`ring.func.sync.lru` for synchronous version.
+        :note: :mod:`asyncio` version is based on synchronous version. It is
+            composed using :func:`ring.func.asyncio.convert_storage`.
+
     .. function:: dict(...)
 
         Proxy to select synchronous or :mod:`asyncio` versions of **Ring**

@@ -6,6 +6,7 @@ import shelve
 import aiomcache
 import diskcache
 import ring
+from ring.func.lru_cache import LruCache
 
 import pytest
 from tests.test_func_sync import StorageDict
@@ -44,6 +45,11 @@ def storage_and_ring(request):
 
 
 @pytest.fixture()
+def storage_lru():
+    return LruCache(128), ring.lru
+
+
+@pytest.fixture()
 def storage_shelve():
     storage = shelve.open('/tmp/ring-test/shelvea')
     return storage, ring.shelve
@@ -56,6 +62,7 @@ def storage_disk(request):
 
 
 @pytest.fixture(params=[
+    pytest.lazy_fixture('storage_lru'),
     pytest.lazy_fixture('storage_shelve'),
     pytest.lazy_fixture('storage_disk'),
 ])

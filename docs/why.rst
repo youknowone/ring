@@ -201,7 +201,7 @@ cache`.
 
     import ring
 
-    @ring.dict({})
+    @ring.lru()
     def cached_function():
         ...
 
@@ -229,7 +229,7 @@ Function parameters are also supported in an expected manner:
 
 .. code-block:: python
 
-    @ring.dict({})
+    @ring.lru()
     def cached_function(a, b, c):
         ...
 
@@ -330,24 +330,24 @@ descriptors written in (weak) common convention also work.
             '''convert self value typed 'A' to ring key component'''
             return v
 
-        @ring.dict({})
+        @ring.lru()
         def method(self):
             '''method support'''
             ...
 
-        @ring.dict({})
+        @ring.lru()
         @classmethod
         def cmethod(self):
             '''classmethod support'''
             ...
 
-        @ring.dict({})
+        @ring.lru()
         @staticmethod
         def smethod(self):
             '''staticmethod support'''
             ...
 
-        @ring.dict({})
+        @ring.lru()
         @property
         def property(self):
             '''property support'''

@@ -14,8 +14,8 @@ Built-in factory functions and backends
 ---------------------------------------
 
 **Factory function** means the end user interface of **Ring**, which usually
-looks like ``@ring.dict``, ``@ring.memcache``, ``@ring.django``, etc. These
-factory functions create concrete ring decorators by arguments.
+looks like ``@ring.lru``, ``@ring.dict``, ``@ring.memcache``, ``@ring.django``,
+etc. These factory functions create concrete ring decorators by arguments.
 
 Technically the factory functions are not associated with each backend as
 bijection, but the built-in functions are mostly matching to the backends.
@@ -24,6 +24,7 @@ backend descriptions.
 
 **Ring** includes support for common cache storages:
 
+ - :func:`ring.lru`
  - :func:`ring.dict`
  - :func:`ring.memcache`
  - :func:`ring.redis`
@@ -33,6 +34,7 @@ backend descriptions.
 Which are shortcuts of concrete implementations and tools below:
 
 .. autosummary::
+    ring.func.sync.lru
     ring.func.sync.dict
     ring.func.sync.memcache
     ring.func.sync.redis_py
@@ -68,24 +70,24 @@ Ring decorators can be adapted to any kind of methods and descriptors.
             '''convert self value typed 'A' to ring key component'''
             return v
 
-        @ring.dict({})
+        @ring.lru()
         def method(self):
             '''method support'''
             ...
 
-        @ring.dict({})
+        @ring.lru()
         @classmethod
         def cmethod(self):
             '''classmethod support'''
             ...
 
-        @ring.dict({})
+        @ring.lru()
         @staticmethod
         def smethod(self):
             '''staticmethod support'''
             ...
 
-        @ring.dict({})
+        @ring.lru()
         @property
         def property(self):
             '''property support'''

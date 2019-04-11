@@ -1,5 +1,9 @@
 .. automodule:: ring.func
 
+.. function:: lru(...)
+
+    :see: :func:`ring.lru`
+
 .. function:: dict(...)
 
     :see: :func:`ring.dict`
