@@ -561,7 +561,7 @@ def aioredis(
 
     :see: :func:`ring.redis` for non-asyncio version.
     """
-    if inspect.iscoroutine(redis):
+    if asyncio.iscoroutine(redis):
         redis = SingletonCoroutineProxy(redis)
 
     return fbase.factory(
@@ -615,7 +615,7 @@ def aioredis_hash(
         :see: :func:`ring.redis` for non-asyncio version.
         """
     expire = None
-    if inspect.iscoroutine(redis):
+    if asyncio.iscoroutine(redis):
         redis = SingletonCoroutineProxy(redis)
 
     return fbase.factory(
