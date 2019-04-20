@@ -1,4 +1,3 @@
-import time
 from functools import update_wrapper
 from ring.func.lru_cache import LruCache, SENTINEL
 
@@ -7,6 +6,11 @@ try:
 except ImportError:
     def _make_key(args, kwds, typed):
         return args, tuple(sorted(kwds.items()))
+
+try:
+    from unittest.mock import MagicMock
+except ImportError:
+    from mock import MagicMock
 
 
 def test_lru_cache_porting():
@@ -73,16 +77,22 @@ def test_lru_object():
 def test_expire_object():
     lru = LruCache(3)
 
+    now_mock = MagicMock()
+    now_mock.return_value = 0
+    lru.now = now_mock
+
     lru.set('a', 10, expire=1)
     lru.set('b', 20, expire=2)
-    lru.set('c', 30, expire=3)
+    lru.set('c', 30, expire=3)  # a - b - c
     # Check if cache works well
-    assert lru.get('a') == 10
+    assert lru.get('a') == 10  # b - c - a
     # Check if 'a' key expired
-    time.sleep(1)
-    assert lru.get('a') == SENTINEL
+    now_mock.return_value = 1
+    assert lru.get('a') == SENTINEL  # b - c
     # Check if lru logic works well
-    lru.set('d', 40, expire=4)
-    assert lru.get('b') == SENTINEL
+    lru.set('d', 40, expire=4)  # b - c - d
+    assert lru.get('b') == 20  # c - d - b
     # Check if 'c' key not expired
-    assert lru.get('c') == 30
+    assert lru.get('c') == 30  # d - b - c
+    lru.set('e', 50)  # b - c - e
+    assert lru.get('d') == SENTINEL
