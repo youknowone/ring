@@ -45,6 +45,7 @@ modern Python world.
     ring.coder.bypass_coder
     ring.coder.JsonCoder
     ring.coder.pickle_coder
+    ring.coder.DataclassCoder
 
 :see: :mod:`ring.coder` for the module including pre-registered coders.
 
