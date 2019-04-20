@@ -1,3 +1,4 @@
+import time
 from functools import update_wrapper
 from ring.func.lru_cache import LruCache, SENTINEL
 
@@ -67,3 +68,21 @@ def test_lru_object():
         assert SENTINEL is lru.get(c)
 
     lru.cache_info()
+
+
+def test_expire_object():
+    lru = LruCache(3)
+
+    lru.set('a', 10, expire=1)
+    lru.set('b', 20, expire=2)
+    lru.set('c', 30, expire=3)
+    # Check if cache works well
+    assert lru.get('a') == 10
+    # Check if 'a' key expired
+    time.sleep(1)
+    assert lru.get('a') == SENTINEL
+    # Check if lru logic works well
+    lru.set('d', 40, expire=4)
+    assert lru.get('b') == SENTINEL
+    # Check if 'c' key not expired
+    assert lru.get('c') == 30
