@@ -115,15 +115,19 @@ def coerce(v, in_memory_storage):
         return v.__ring_key__()
 
     if in_memory_storage and type(v).__hash__ != object.__hash__:
-        return hash(v)
+        return "{}:hash:{}".format(qualname(type(v)), hash(v))
 
     cls = v.__class__
     if cls.__str__ != object.__str__:
         return str(v)
 
+    msg = "Add __ring_key__() or __str__()."
+    if in_memory_storage:
+        msg = "Add __ring_key__(), __str__() or __hash__()."
+
     raise TypeError(
-        "The given value '{}' of type '{}' is not a key-compatible type. "
-        "Add __ring_key__() or __str__(). __hash__() is also possible in case of in-memory storage.".format(v, cls))
+        "The given value '{}' of type '{}' is not a key-compatible type. ".format(v, cls)
+        + msg)
 
 
 def create_key_builder(

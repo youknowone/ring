@@ -33,7 +33,7 @@ test_parameters = [
     ('test', 'test'),
     (1, 1),
     (ring_key_instance, 'User42'),
-    (ring_hash_instance, hash('User42')),
+    (ring_hash_instance, "HashUser:hash:{}".format(hash('User42'))),
     ([1, 2, 3, 4], '[1,2,3,4]'),
     (['1', '2', '3', '4'], "['1','2','3','4']"),
     ((1, 2, 3, 4), '(1,2,3,4)'),
