@@ -3,7 +3,7 @@ Quickstart
 
 To start, remember the philosophy of **Ring** is a human-friendly high-level
 interface *with* transparent and concrete low-level access. You probably be
-able to access most of the level of **Ring** you want.
+able to access most of the levels of **Ring** you want.
 
 
 Installation
@@ -151,12 +151,13 @@ Let's consider using external cache storage instead of :class:`lru`.
 
 **Ring** includes common cache storage supports. `Memcached` is one of the
 popular cache storage. `Memcached` itself is out of the Python world. You must
-install and run it to let your python code connects there. Because `Memcached`
-is very popular, it is well-packaged on most of the platforms. Check how to
-install it on your platform.
+install and run it to let your python code connects there. Fortunately,
+because `Memcached` is very popular, it is well-packaged on most of the
+platforms. Check how to install it on your platform.
 
-:note: ``apt install memcached`` for Debian/Ubuntu. ``yum install memcached``
-       for CentOS/RHEL ``brew install memcache`` for macOS with Homebrew_.
+:note: For example, ``apt install memcached`` for Debian/Ubuntu.
+    ``yum install memcached`` for CentOS/RHEL. ``brew install memcache`` for
+    macOS with Homebrew_.
 
 Once you installed it, do not forget to start it.
 
