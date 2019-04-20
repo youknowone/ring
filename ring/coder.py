@@ -162,10 +162,7 @@ if dataclasses:
             decoded_dict = JsonCoder.decode(binary)
             name = decoded_dict['name']
             fields = decoded_dict['fields']
-            field_list = []
-            for key, value in fields.items():
-                field_list.append((key, type(value)))
-            dataclass = dataclasses.make_dataclass(name, field_list)
+            dataclass = dataclasses.make_dataclass(name, fields.items())
             instance = dataclass(**fields)
             return instance
 
