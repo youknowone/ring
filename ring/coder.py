@@ -69,7 +69,7 @@ class Registry(object):
     :see: :func:`ring.coder.registry` for default registry instance.
     """
 
-    __slots__ = ('coders', )
+    __slots__ = ('coders',)
 
     def __init__(self):
         self.coders = {}
@@ -157,7 +157,7 @@ if dataclasses:
         def decode(binary):
             """Deserialize json encoded dictionary to dataclass object"""
             name, fields = JsonCoder.decode(binary)
-            dataclass = dataclasses.make_dataclass(name, fields.items())
+            dataclass = dataclasses.make_dataclass(name, [(key, type(value)) for key, value in fields.items()])
             instance = dataclass(**fields)
             return instance
 
