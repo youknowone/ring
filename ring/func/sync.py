@@ -179,7 +179,7 @@ class BulkStorageMixin(object):
 
 class LruStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
 
-    inmemory_storage = True
+    in_memory_storage = True
 
     def get_value(self, key):
         value = self.backend.get(key)
@@ -208,7 +208,7 @@ class LruStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
 
 class ExpirableDictStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
 
-    inmemory_storage = True
+    in_memory_storage = True
     now = time.time
 
     def get_value(self, key):
@@ -253,7 +253,7 @@ class ExpirableDictStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
 
 class PersistentDictStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
 
-    inmemory_storage = True
+    in_memory_storage = True
 
     def get_value(self, key):
         try:

@@ -104,7 +104,7 @@ def coerce_function(t):
     # but NEVER add a general iterator processing. it will cause user bugs.
 
 
-def coerce(v, inmemory_storage):
+def coerce(v, in_memory_storage):
     """Transform the given value to cache-friendly string data."""
 
     type_coerce = coerce_function(type(v))
@@ -114,7 +114,7 @@ def coerce(v, inmemory_storage):
     if hasattr(v, '__ring_key__'):
         return v.__ring_key__()
 
-    if inmemory_storage and type(v).__hash__ != object.__hash__:
+    if in_memory_storage and type(v).__hash__ != object.__hash__:
         return hash(v)
 
     cls = v.__class__
@@ -123,12 +123,12 @@ def coerce(v, inmemory_storage):
 
     raise TypeError(
         "The given value '{}' of type '{}' is not a key-compatible type. "
-        "Add __ring_key__() or __str__() or __hash__().".format(v, cls))
+        "Add __ring_key__() or __str__(). __hash__() is also possible in case of in-memory storage.".format(v, cls))
 
 
 def create_key_builder(
         c, key_prefix, ignorable_keys, coerce=coerce, encoding=None,
-        key_refactor=None, inmemory_storage=False):
+        key_refactor=None, in_memory_storage=False):
     assert isinstance(c, Callable)
     key_generator = CallableKey(
         c, format_prefix=key_prefix, ignorable_keys=ignorable_keys)
@@ -138,7 +138,7 @@ def create_key_builder(
         for i, prearg in enumerate(bound_args):
             full_kwargs[c.parameters[i].name] = bound_args[i]
         coerced_kwargs = {
-            k: coerce(v, inmemory_storage) for k, v in full_kwargs.items()
+            k: coerce(v, in_memory_storage) for k, v in full_kwargs.items()
             if k not in ignorable_keys}
         key = key_generator.build(coerced_kwargs)
         if encoding:
@@ -639,10 +639,10 @@ def factory(
                 _ignorable_keys = suggest_ignorable_keys(
                     self.callable, ignorable_keys)
                 _key_prefix = suggest_key_prefix(self.callable, key_prefix)
-                inmemory_storage = True if hasattr(self.storage, 'inmemory_storage') else False
+                in_memory_storage = hasattr(self.storage, 'in_memory_storage')
                 self.compose_key = create_key_builder(
                     self.callable, _key_prefix, _ignorable_keys,
-                    encoding=key_encoding, key_refactor=key_refactor, inmemory_storage=inmemory_storage)
+                    encoding=key_encoding, key_refactor=key_refactor, in_memory_storage=in_memory_storage)
                 self.compose_key.ignorable_keys = _ignorable_keys
                 self.encode = self.coder.encode
                 self.decode = self.coder.decode
