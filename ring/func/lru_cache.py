@@ -128,14 +128,21 @@ class LruCache(object):
             with lock:
                 return key in cache
 
-        def touch(key):
+        def touch(key, expire=None):
+            _now = self.now()
+            if expire is None:
+                expired_time = None
+            else:
+                expired_time = _now + expire
             with lock:
                 root = self.root
                 link = cache_get(key)
                 if link is None:
                     raise KeyError
                 # Move the link to the front of the circular queue
-                link_prev, link_next, _key, result = link
+                link_prev, link_next, _key, result, _ = link
+                # Also, update expiration time
+                link[EXPIRE] = expired_time
                 link_prev[NEXT] = link_next
                 link_next[PREV] = link_prev
                 last = root[PREV]
