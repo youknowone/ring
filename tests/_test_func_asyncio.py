@@ -14,6 +14,20 @@ from pytest_lazyfixture import lazy_fixture
 from tests.test_func_sync import StorageDict
 
 
+class AiomcacheProxy(object):
+
+    _aiomcache_clients = {}
+
+    def __getattr__(self, key):
+        _aiomcache_clients = AiomcacheProxy._aiomcache_clients
+        loop_key = id(asyncio.get_event_loop())
+        if loop_key not in _aiomcache_clients:
+            _aiomcache_clients[loop_key] = aiomcache.Client('127.0.0.1', 11211)
+        client = _aiomcache_clients[loop_key]
+
+        return getattr(client, key)
+
+
 @pytest.fixture()
 def storage_dict():
     storage = StorageDict()
@@ -22,7 +36,7 @@ def storage_dict():
 
 @pytest.fixture()
 def aiomcache_client():
-    client = aiomcache.Client('127.0.0.1', 11211)
+    client = AiomcacheProxy()
     return client, ring.func.asyncio.aiomcache
 
 
@@ -88,8 +102,8 @@ def test_singleton_proxy():
 
 @pytest.mark.asyncio
 @asyncio.coroutine
-def test_vanilla_function(aiomcache_client):
-    storage, storage_ring = aiomcache_client
+def test_vanilla_function(aioredis_pool):
+    storage, storage_ring = aioredis_pool
 
     with pytest.raises(TypeError):
         @storage_ring(storage)
