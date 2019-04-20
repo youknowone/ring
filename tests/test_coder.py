@@ -1,3 +1,4 @@
+import sys
 
 import ring
 from ring.coder import (
@@ -80,6 +81,21 @@ def test_ring_bare_coder():
         return 10
 
     assert f() == 10
+
+
+if sys.version_info >= (3, 7):
+    from tests._test_module_py37 import DataClass
+
+    def test_dataclass_coder():
+        coder = default_registry.get('dataclass')
+        dataclass = DataClass('name', 1, {'test': 1})
+        encoded_dataclass = coder.encode(dataclass)
+        assert b'["DataClass", {"name": "name", "my_int": 1, "my_dict": {"test": 1}}]' == encoded_dataclass
+        decoded_dataclass = coder.decode(encoded_dataclass)
+        assert 'DataClass' == type(decoded_dataclass).__name__
+        assert decoded_dataclass.name == 'name'
+        assert decoded_dataclass.my_int == 1
+        assert decoded_dataclass.my_dict == {'test': 1}
 
 
 def test_unexisting_coder():

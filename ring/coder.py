@@ -7,6 +7,7 @@ stored cache data.
 import abc
 import six
 from collections import namedtuple
+
 try:
     import ujson as json_mod
 except ImportError:
@@ -16,6 +17,11 @@ try:
     import cpickle as pickle_mod
 except ImportError:
     import pickle as pickle_mod
+
+try:
+    import dataclasses
+except ImportError:
+    dataclasses = None
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -63,7 +69,7 @@ class Registry(object):
     :see: :func:`ring.coder.registry` for default registry instance.
     """
 
-    __slots__ = ('coders', )
+    __slots__ = ('coders',)
 
     def __init__(self):
         self.coders = {}
@@ -113,7 +119,6 @@ def bypass(x):
 #: encode and decode functions bypass the given parameter.
 bypass_coder = bypass, bypass
 
-
 #: Pickle coder.
 #:
 #: encode is :func:`pickle.dumps` and decode is :func:`pickle.loads`.
@@ -139,6 +144,23 @@ class JsonCoder(Coder):
         return json_mod.loads(binary.decode('utf-8'))
 
 
+if dataclasses:
+    class DataclassCoder(Coder):
+
+        @staticmethod
+        def encode(data):
+            """Serialize dataclass object to json encoded dictionary"""
+            target_dict = (type(data).__name__, dataclasses.asdict(data))
+            return JsonCoder.encode(target_dict)
+
+        @staticmethod
+        def decode(binary):
+            """Deserialize json encoded dictionary to dataclass object"""
+            name, fields = JsonCoder.decode(binary)
+            dataclass = dataclasses.make_dataclass(name, [(key, type(value)) for key, value in fields.items()])
+            instance = dataclass(**fields)
+            return instance
+
 #: The default coder registry with pre-registered coders.
 #: Built-in coders are registered by default.
 #:
@@ -147,3 +169,6 @@ registry = Registry()
 registry.register(None, bypass_coder)
 registry.register('json', JsonCoder())
 registry.register('pickle', pickle_coder)
+
+if dataclasses:
+    registry.register('dataclass', DataclassCoder())
