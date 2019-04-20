@@ -29,7 +29,6 @@ if sys.version_info >= (3, 7):
         my_int: int
         my_dict: dict
 
-
     data = DataClass('name', 1, {'test': 1})
     test_parameters.append((data, "my_dict,{'test': 1},my_int,1,name,name"))
 
