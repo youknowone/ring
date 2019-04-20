@@ -13,6 +13,11 @@ from ..callable import Callable
 from ..key import CallableKey
 from ..coder import registry as default_registry
 
+try:
+    import dataclasses
+except ImportError:  # pragma: no cover
+    dataclasses = None
+
 __all__ = (
     'factory', 'NotFound',
     'BaseUserInterface', 'BaseStorage', 'CommonMixinStorage', 'StorageMixin')
@@ -67,6 +72,10 @@ def _coerce_ring_key(v):
     return v.__ring_key__()
 
 
+def _coerce_dataclass(v):
+    return type(v).__name__ + _coerce_dict(dataclasses.asdict(v))
+
+
 @functools.lru_cache(maxsize=128)
 def coerce_function(t):
     if hasattr(t, '__ring_key__'):
@@ -86,6 +95,10 @@ def coerce_function(t):
 
     if issubclass(t, (set, frozenset)):
         return _coerce_set
+
+    if dataclasses:
+        if dataclasses.is_dataclass(t):
+            return _coerce_dataclass
 
     # NOTE: general sequence processing is good -
     # but NEVER add a general iterator processing. it will cause user bugs.
