@@ -4,30 +4,31 @@ import pytest
 
 from ring.func.base import coerce
 
-try:
-    from dataclasses import dataclass  # noqa
-except ImportError:  # pragma: no cover
-    pass
 
+class User(object):
+    def __init__(self, user_id):
+        self.user_id = user_id
 
-class RingKey(object):
     def __ring_key__(self):
-        return 'ring key'
+        return 'User{self.user_id}'.format(self=self)
+
+    def __str__(self):
+        return str(self.user_id)
 
 
-ring_key_instance = RingKey()
+ring_key_instance = User(42)
 test_parameters = [
     ('test', 'test'),
     (1, 1),
-    (ring_key_instance, 'ring key'),
+    (ring_key_instance, 'User42'),
+    ([1, 2, 3, 4], '[1,2,3,4]'),
+    (['1', '2', '3', '4'], "['1','2','3','4']"),
+    ((1, 2, 3, 4), '(1,2,3,4)'),
+    (('1', '2', '3', '4'), "('1','2','3','4')"),
 ]
 
 if sys.version_info >= (3, 7):
-    @dataclass
-    class DataClass:
-        name: str
-        my_int: int
-        my_dict: dict
+    from tests._test_module_py37 import DataClass
 
     data = DataClass('name', 1, {'test': 1})
     test_parameters.append((data, "my_dict,{'test': 1},my_int,1,name,name"))
