@@ -280,6 +280,9 @@ class ShelveStorage(PersistentDictStorage):
         super(ShelveStorage, self).delete_value(key)
         self.backend.sync()
 
+    def __del__(self):
+        self.backend.close()
+
 
 class MemcacheStorage(
         fbase.CommonMixinStorage, fbase.StorageMixin, BulkStorageMixin):
