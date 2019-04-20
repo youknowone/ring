@@ -51,13 +51,25 @@ class LruCache(object):
                     return result
                 else:
                     stat[MISSES] += 1
+                    if link is not None:
+                        _delete(key)
             return SENTINEL
+
+        def _delete(key):
+            oldresult = self.root[RESULT]  # noqa
+            # delete from the linked list
+            link = cache[key]
+            link_prev, link_next, _, _, _ = link
+            link_prev[NEXT] = link_next
+            link_next[PREV] = link_prev
+
+            # delete from the cache
+            del cache[key]
+            stat[FULL] = False
 
         def delete(key):
             with lock:
-                oldresult = self.root[RESULT]  # noqa
-                del cache[key]
-                stat[FULL] = False
+                _delete(key)
 
         def set(key, result, expire=None):
             _now = self.now()
