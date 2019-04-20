@@ -150,18 +150,13 @@ if dataclasses:
         @staticmethod
         def encode(data):
             """Serialize dataclass object to json encoded dictionary"""
-            target_dict = {
-                'name': type(data).__name__,
-                'fields': dataclasses.asdict(data)
-            }
+            target_dict = (type(data).__name__, dataclasses.asdict(data))
             return JsonCoder.encode(target_dict)
 
         @staticmethod
         def decode(binary):
             """Deserialize json encoded dictionary to dataclass object"""
-            decoded_dict = JsonCoder.decode(binary)
-            name = decoded_dict['name']
-            fields = decoded_dict['fields']
+            name, fields = JsonCoder.decode(binary)
             dataclass = dataclasses.make_dataclass(name, fields.items())
             instance = dataclass(**fields)
             return instance

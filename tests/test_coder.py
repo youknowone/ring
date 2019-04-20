@@ -90,7 +90,7 @@ if sys.version_info >= (3, 7):
         coder = default_registry.get('dataclass')
         dataclass = DataClass('name', 1, {'test': 1})
         encoded_dataclass = coder.encode(dataclass)
-        assert b'{"name": "DataClass", "fields": {"name": "name", "my_int": 1, "my_dict": {"test": 1}}}' == encoded_dataclass
+        assert b'["DataClass", {"name": "name", "my_int": 1, "my_dict": {"test": 1}}]' == encoded_dataclass
         decoded_dataclass = coder.decode(encoded_dataclass)
         assert 'DataClass' == type(decoded_dataclass).__name__
         assert decoded_dataclass.name == 'name'
