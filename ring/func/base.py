@@ -3,6 +3,7 @@
 
 """  # noqa: W605
 import abc
+import sys
 import types
 from typing import List
 
@@ -12,6 +13,11 @@ from .._compat import functools, qualname
 from ..callable import Callable
 from ..key import CallableKey
 from ..coder import registry as default_registry
+
+try:
+    from dataclasses import is_dataclass, asdict # noqa
+except ImportError:  # pragma: no cover
+    pass
 
 __all__ = (
     'factory', 'NotFound',
@@ -67,6 +73,10 @@ def _coerce_ring_key(v):
     return v.__ring_key__()
 
 
+def _coerce_dataclass(v):
+    return _coerce_dict(asdict(v))
+
+
 @functools.lru_cache(maxsize=128)
 def coerce_function(t):
     if hasattr(t, '__ring_key__'):
@@ -86,6 +96,10 @@ def coerce_function(t):
 
     if issubclass(t, (set, frozenset)):
         return _coerce_set
+
+    if sys.version_info >= (3, 7):
+        if is_dataclass(t):
+            return _coerce_dataclass
 
     # NOTE: general sequence processing is good -
     # but NEVER add a general iterator processing. it will cause user bugs.
