@@ -41,13 +41,14 @@ def storage_dict():
 
 
 @pytest.fixture
-def storage_shelve():
+def storage_shelve(request):
     storage = shelve.open('/tmp/ring-test/shelve{}'.format(sys.version_info[0]))
     storage.ring = ring.shelve
     storage.is_binary = False
     storage.has_has = True
     storage.has_touch = False
     storage.has_expire = False
+    request.addfinalizer(storage.close)
     return storage
 
 
