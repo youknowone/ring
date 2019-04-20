@@ -31,7 +31,7 @@ if sys.version_info >= (3, 7):
     from tests._test_module_py37 import DataClass
 
     data = DataClass('name', 1, {'test': 1})
-    test_parameters.append((data, "my_dict,{'test': 1},my_int,1,name,name"))
+    test_parameters.append((data, "DataClassmy_dict,{'test': 1},my_int,1,name,name"))
 
 
 @pytest.mark.parametrize('value,result', test_parameters)

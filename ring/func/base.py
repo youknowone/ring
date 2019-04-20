@@ -73,7 +73,7 @@ def _coerce_ring_key(v):
 
 
 def _coerce_dataclass(v):
-    return _coerce_dict(dataclasses.asdict(v))
+    return type(v).__name__ + _coerce_dict(dataclasses.asdict(v))
 
 
 @functools.lru_cache(maxsize=128)
