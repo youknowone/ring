@@ -113,7 +113,7 @@ def test_basic_ignorable_key():
     def f(n, ignorable):
         return n + ignorable
 
-    # the actual funtion can be different
+    # the actual function can be different
     assert f.execute(10, 5) != f.execute(10, 10)
     # but key must be same
     assert f.key(10, 'ignorable') == f.key(10, 'must be not considered')
@@ -123,3 +123,24 @@ def test_basic_ignorable_key():
         pass
 
     assert f.key(10, A())  # ignorable key must not affect key generation
+
+
+def test_hash_key():
+    cache = {}
+
+    class A(object):
+        def __init__(self, a):
+            self.a = a
+
+        def __hash__(self):
+            return hash(self.a)
+
+        @ring.dict(cache)
+        def f(self):
+            return 0
+
+    a = A('test-key')
+    b = A('test-key')
+    assert a.f.key()
+    assert a != b
+    assert a.f.key() == b.f.key()

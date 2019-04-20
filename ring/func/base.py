@@ -104,8 +104,9 @@ def coerce_function(t):
     # but NEVER add a general iterator processing. it will cause user bugs.
 
 
-def coerce(v):
+def coerce(v, in_memory_storage):
     """Transform the given value to cache-friendly string data."""
+
     type_coerce = coerce_function(type(v))
     if type_coerce:
         return type_coerce(v)
@@ -113,18 +114,24 @@ def coerce(v):
     if hasattr(v, '__ring_key__'):
         return v.__ring_key__()
 
+    if in_memory_storage and type(v).__hash__ != object.__hash__:
+        return "{}:hash:{}".format(qualname(type(v)), hash(v))
+
     cls = v.__class__
     if cls.__str__ != object.__str__:
         return str(v)
 
+    msg = "Add __ring_key__() or __str__()."
+    if in_memory_storage:
+        msg = "Add __ring_key__(), __str__() or __hash__()."
+
     raise TypeError(
-        "The given value '{}' of type '{}' is not a key-compatible type. "
-        "Add __ring_key__() or __str__().".format(v, cls))
+        "The given value '{}' of type '{}' is not a key-compatible type. {}".format(v, cls, msg))
 
 
 def create_key_builder(
         c, key_prefix, ignorable_keys, coerce=coerce, encoding=None,
-        key_refactor=None):
+        key_refactor=None, in_memory_storage=False):
     assert isinstance(c, Callable)
     key_generator = CallableKey(
         c, format_prefix=key_prefix, ignorable_keys=ignorable_keys)
@@ -134,7 +141,7 @@ def create_key_builder(
         for i, prearg in enumerate(bound_args):
             full_kwargs[c.parameters[i].name] = bound_args[i]
         coerced_kwargs = {
-            k: coerce(v) for k, v in full_kwargs.items()
+            k: coerce(v, in_memory_storage) for k, v in full_kwargs.items()
             if k not in ignorable_keys}
         key = key_generator.build(coerced_kwargs)
         if encoding:
@@ -632,13 +639,13 @@ def factory(
                 super(RingRope, self).__init__(*args, **kwargs)
                 self.user_interface = self.user_interface_class(self)
                 self.storage = self.storage_class(self, storage_backend)
-
                 _ignorable_keys = suggest_ignorable_keys(
                     self.callable, ignorable_keys)
                 _key_prefix = suggest_key_prefix(self.callable, key_prefix)
+                in_memory_storage = hasattr(self.storage, 'in_memory_storage')
                 self.compose_key = create_key_builder(
                     self.callable, _key_prefix, _ignorable_keys,
-                    encoding=key_encoding, key_refactor=key_refactor)
+                    encoding=key_encoding, key_refactor=key_refactor, in_memory_storage=in_memory_storage)
                 self.compose_key.ignorable_keys = _ignorable_keys
                 self.encode = self.coder.encode
                 self.decode = self.coder.decode
