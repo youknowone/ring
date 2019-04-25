@@ -32,6 +32,11 @@ class LruCache(object):
         self.root[:] = [self.root, self.root, None, None, None]
         stat = [False, 0, 0]
 
+        def expiration_time(expire):
+            if expire is None:
+                return expire
+            return self.now() + expire
+
         def get(key):
             _now = self.now()
             with lock:
@@ -72,11 +77,7 @@ class LruCache(object):
                 _delete(key)
 
         def set(key, result, expire=None):
-            _now = self.now()
-            if expire is None:
-                expired_time = None
-            else:
-                expired_time = _now + expire
+            expired_time = expiration_time(expire)
             with lock:
                 link = cache_get(key)
                 if link is not None:
@@ -141,11 +142,7 @@ class LruCache(object):
                 return key in cache
 
         def touch(key, expire=None):
-            _now = self.now()
-            if expire is None:
-                expired_time = None
-            else:
-                expired_time = _now + expire
+            expired_time = expiration_time(expire)
             with lock:
                 root = self.root
                 link = cache_get(key)
