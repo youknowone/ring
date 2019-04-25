@@ -2,6 +2,7 @@
 # This file follows PYTHON SOFTWARE FOUNDATION LICENSE VERSION 2 as CPython
 # does.
 
+import time
 from threading import RLock
 
 try:
@@ -12,12 +13,14 @@ except ImportError:
         "CacheInfo", ["hits", "misses", "maxsize", "currsize"])
 
 SENTINEL = object()  # unique object used to signal cache misses
-PREV, NEXT, KEY, RESULT = 0, 1, 2, 3  # names for the link fields
+PREV, NEXT, KEY, RESULT, EXPIRE = 0, 1, 2, 3, 4  # names for the link fields
 FULL, HITS, MISSES = 0, 1, 2  # names for stat
 
 
 class LruCache(object):
     """Created by breaking down functools.lru_cache from CPython 3.7.0."""
+
+    now = time.time
 
     def __init__(self, maxsize):
         cache = {}
@@ -26,16 +29,23 @@ class LruCache(object):
         lock = RLock()     # because linkedlist updates aren't threadsafe
         self.root = []   # root of the circular doubly linked list
         # initialize by pointing to self
-        self.root[:] = [self.root, self.root, None, None]
+        self.root[:] = [self.root, self.root, None, None, None]
         stat = [False, 0, 0]
 
+        def expiration_time(expire):
+            if expire is None:
+                return expire
+            return self.now() + expire
+
         def get(key):
+            _now = self.now()
             with lock:
                 link = cache_get(key)
-                if link is not None:
+                if link is not None and \
+                        (link[EXPIRE] is None or _now < link[EXPIRE]):
                     root = self.root
                     # Move the link to the front of the circular queue
-                    link_prev, link_next, _key, result = link
+                    link_prev, link_next, _key, result, _ = link
                     link_prev[NEXT] = link_next
                     link_next[PREV] = link_prev
                     last = root[PREV]
@@ -46,25 +56,40 @@ class LruCache(object):
                     return result
                 else:
                     stat[MISSES] += 1
+                    if link is not None:
+                        _delete(key)
             return SENTINEL
+
+        def _delete(key):
+            oldresult = self.root[RESULT]  # noqa
+            # delete from the linked list
+            link = cache[key]
+            link_prev, link_next, _, _, _ = link
+            link_prev[NEXT] = link_next
+            link_next[PREV] = link_prev
+
+            # delete from the cache
+            del cache[key]
+            stat[FULL] = False
 
         def delete(key):
             with lock:
-                oldresult = self.root[RESULT]  # noqa
-                del cache[key]
-                stat[FULL] = False
+                _delete(key)
 
-        def set(key, result):
+        def set(key, result, expire=None):
+            expired_time = expiration_time(expire)
             with lock:
                 link = cache_get(key)
                 if link is not None:
                     # Update link to store the new result
-                    link[-1] = result
+                    link[RESULT] = result
+                    link[EXPIRE] = expired_time
                 elif stat[FULL]:
                     # Use the old root to store the new key and result.
                     oldroot = self.root
                     oldroot[KEY] = key
                     oldroot[RESULT] = result
+                    oldroot[EXPIRE] = expired_time
                     # Empty the oldest link and make it the new root.
                     # Keep a reference to the old key and old result to
                     # prevent their ref counts from going to zero during the
@@ -85,7 +110,7 @@ class LruCache(object):
                     root = self.root
                     # Put result in a new link at the front of the queue.
                     last = root[PREV]
-                    link = [last, root, key, result]
+                    link = [last, root, key, result, expired_time]
                     last[NEXT] = root[PREV] = cache[key] = link
                     # Use the cache_len bound method instead of the len() function
                     # which could potentially be wrapped in an lru_cache itself.
@@ -116,14 +141,17 @@ class LruCache(object):
             with lock:
                 return key in cache
 
-        def touch(key):
+        def touch(key, expire=None):
+            expired_time = expiration_time(expire)
             with lock:
                 root = self.root
                 link = cache_get(key)
                 if link is None:
                     raise KeyError
                 # Move the link to the front of the circular queue
-                link_prev, link_next, _key, result = link
+                link_prev, link_next, _key, result, _ = link
+                # Also, update expiration time
+                link[EXPIRE] = expired_time
                 link_prev[NEXT] = link_next
                 link_next[PREV] = link_prev
                 last = root[PREV]

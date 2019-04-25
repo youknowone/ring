@@ -191,7 +191,7 @@ class LruStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
         return self.backend.has(key)
 
     def set_value(self, key, value, expire):
-        self.backend.set(key, value)
+        self.backend.set(key, value, expire)
 
     def delete_value(self, key):
         try:
@@ -398,7 +398,7 @@ class DiskCacheStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
 
 
 def lru(
-        lru=None, key_prefix=None, coder=None,
+        lru=None, key_prefix=None, expire=None, coder=None,
         user_interface=CacheUserInterface, storage_class=LruStorage,
         maxsize=128, **kwargs):
     """LRU(Least-Recently-Used) cache interface.
@@ -427,7 +427,6 @@ def lru(
     :see: :func:`functools.lru_cache` for LRU cache basics.
     :see: :func:`ring.func.sync.CacheUserInterface` for sub-functions.
     """
-    expire = None
     if lru is None:
         lru = lru_mod.LruCache(maxsize)
         if key_prefix is None:
