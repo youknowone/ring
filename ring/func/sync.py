@@ -404,7 +404,8 @@ def lru(
     """LRU(Least-Recently-Used) cache interface.
 
     Because the lru backend is following the basic manner of
-    :func:`functools.lru_cache`, see the document for LRU cache details.
+    :func:`functools.lru_cache`, see also the document if you are not
+    familiar with it.
 
         >>> @ring.lru(maxsize=128)
         >>> def f(...):
