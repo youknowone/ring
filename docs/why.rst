@@ -1,7 +1,7 @@
 Why Ring?
 =========
 
-Cache is a popular concept widely spread on the broad range of computer
+Caching is a popular concept widely spread on the broad range of computer
 science. But cache interface is not well-developed yet. **Ring** is one of
 the solutions for humans. Its approach is close integration with a
 programming language.
