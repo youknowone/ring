@@ -397,6 +397,23 @@ class DiskCacheStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
         self.backend.delete(key)
 
 
+class DogpileStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
+
+    def get_value(self, key):
+        import dogpile.cache
+        expire = self.rope.expire_default  # FIXME
+        value = self.backend.get(key, expiration_time=expire)
+        if value == dogpile.cache.api.NO_VALUE:
+            raise fbase.NotFound
+        return value
+
+    def set_value(self, key, value, expire):
+        self.backend.set(key, value)
+
+    def delete_value(self, key):
+        self.backend.delete(key)
+
+
 def lru(
         lru=None, key_prefix=None, expire=None, coder=None,
         user_interface=CacheUserInterface, storage_class=LruStorage,
@@ -669,6 +686,38 @@ def diskcache(
         obj, key_prefix=key_prefix, on_manufactured=None,
         user_interface=user_interface, storage_class=storage_class,
         miss_value=None, expire_default=expire, coder=coder,
+        **kwargs)
+
+
+def dogpile(
+        region, key_prefix=None, coder=None,
+        user_interface=CacheUserInterface, storage_class=DogpileStorage,
+        **kwargs):
+    """dogpile_ interface.
+
+    .. _dogpile: https://dogpilecache.sqlalchemy.org/
+
+    :param dogpile.cache.region.CacheRegion region: dogpile region object.
+
+        >>> region = dogpile.cache.make_region().configure(
+                'dogpile.cache.pylibmc',
+                expiration_time = 3600,
+                arguments = {
+                    'url': ["127.0.0.1"],
+                }
+            )
+        >>> @ring.dogpile(region, ...)
+        ...     ...
+
+    :see: :func:`ring.func.sync.CacheUserInterface` for sub-functions.
+    """
+    expire = None  # set by dogpile region
+
+    return fbase.factory(
+        region, key_prefix=key_prefix, on_manufactured=None,
+        user_interface=user_interface, storage_class=storage_class,
+        miss_value=None, expire_default=expire, coder=coder,
+        key_refactor=region.key_mangler,
         **kwargs)
 
 
