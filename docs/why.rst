@@ -1,7 +1,7 @@
 Why Ring?
 =========
 
-Cache is a popular concept widely spread on the broad range of computer
+Caching is a popular concept widely spread on the broad range of computer
 science. But cache interface is not well-developed yet. **Ring** is one of
 the solutions for humans. Its approach is close integration with a
 programming language.
@@ -139,8 +139,8 @@ Hidden backend
 You might find another glitch. Their backends are concealed. Memory is ok.
 There are fewer reasons to uncover data from it. For services, the common cache
 backends are storages and database. Working high-level APIs are good. But we
-need to access the storages out of the original product, or even out of the
-Python world.
+need to access the storages outside of the original product, or even outside
+of the Python world.
 
 *Ring* has a transparent interface for backends. Moving between high-level
 :class:`ring.ring_base.Ring` and low-level storage interfaces are

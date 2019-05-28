@@ -150,8 +150,8 @@ Choosing backend
 Let's consider using external cache storage instead of :class:`lru`.
 
 **Ring** includes common cache storage supports. `Memcached` is one of the
-popular cache storage. `Memcached` itself is out of the Python world. You must
-install and run it to let your python code connects there. Fortunately,
+popular cache storage. `Memcached` itself is outside of the Python world. You
+must install and run it to let your python code connects there. Fortunately,
 because `Memcached` is very popular, it is well-packaged on most of the
 platforms. Check how to install it on your platform.
 

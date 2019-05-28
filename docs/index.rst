@@ -22,7 +22,7 @@ Using it in your code can be done in a single minute.
 Why Ring?
 ---------
 
-Cache is a popular concept widely spread on the broad range of computer
+Caching is a popular concept widely spread on the broad range of computer
 science but its interface is not well developed yet. In these days, we
 still experience common inconvenience. **Ring** is one of the solutions for
 humans. Its approach is close integration with the programming language. See
