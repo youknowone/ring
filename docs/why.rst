@@ -166,7 +166,7 @@ loading Python objects.
     client = memcache.Client(...)
 
     original_data = A()
-    client.set(key, data)
+    client.set(key, original_data)
     loaded_data = client.get(key)
 
     assert isinstance(loaded_data, A)  # True
