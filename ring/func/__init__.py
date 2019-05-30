@@ -13,9 +13,11 @@ except ImportError:
 else:
     from ring.func import asyncio
 
+from .sync import dogpile
 
 __all__ = (
-    'lru', 'dict', 'memcache', 'redis', 'redis_hash', 'shelve', 'disk')
+    'lru', 'dict', 'memcache', 'redis', 'redis_hash', 'shelve', 'disk',
+    'dogpile')
 
 
 if _has_asyncio:

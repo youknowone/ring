@@ -24,6 +24,7 @@ tests_require = [
     'redis', 'requests',
     'diskcache',
     'django',
+    'dogpile.cache',
 ]
 docs_require = [
     'sphinx',

@@ -6,6 +6,9 @@ import pymemcache.client
 import memcache
 import redis
 import diskcache
+from dogpile.cache import make_region
+
+from ring._memcache import key_refactor
 from ring.func.lru_cache import LruCache
 
 import pytest
@@ -76,6 +79,26 @@ def storage_diskcache(request):
     return client
 
 
+@pytest.fixture(scope='session', params=[
+    make_region(key_mangler=key_refactor).configure(
+        'dogpile.cache.pylibmc',
+        expiration_time=10,
+        arguments={
+            'url': ["127.0.0.1"],
+        }
+    )
+])
+def storage_dogpile(request):
+    client = request.param
+    client.ring = ring.dogpile
+    client.is_binary = False
+    client.has_has = False
+    client.has_touch = False
+    client.has_expire = False
+    assert(client.is_configured)
+    return client
+
+
 @pytest.fixture(scope='session', ids=['python-memcached', 'pymemcache', 'pylibmc'], params=[
     # client, binary, has_touch
     (pythonmemcache_client, False, sys.version_info[0] == 2),
@@ -114,6 +137,7 @@ def redis_client(request):
     lazy_fixture('memcache_client'),
     lazy_fixture('redis_client'),
     lazy_fixture('storage_diskcache'),
+    lazy_fixture('storage_dogpile'),
 ])
 def storage(request):
     return request.param
@@ -344,7 +368,7 @@ def test_common_value(storage):
 
     base = [b'a']
 
-    @storage.ring(storage, key_prefix=str(storage), **options)
+    @storage.ring(storage, key_prefix=str(storage) + '::', **options)
     def ff():
         base[0] += b'b'
         return base[0]
