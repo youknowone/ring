@@ -6,12 +6,14 @@ import abc
 import types
 from typing import List
 
+import attr
 import six
 from wirerope import Wire, WireRope, RopeCore
 from .._compat import functools, qualname
 from ..callable import Callable
 from ..key import CallableKey
 from ..coder import registry as default_registry
+from .._util import cached_property
 
 try:
     import dataclasses
@@ -250,8 +252,8 @@ class BaseUserInterface(object):
         :func:`ring.func.base.transform_kwargs_only`
     """
 
-    def __init__(self, rope):
-        self.rope = rope
+    def __init__(self, ring):
+        self._ring = ring
 
     @interface_attrs(
         transform_args=transform_kwargs_only, return_annotation=str)
@@ -262,7 +264,7 @@ class BaseUserInterface(object):
         :return: The composed key with given arguments.
         :rtype: str
         """
-        return self.rope.compose_key(*wire._bound_objects, **kwargs)
+        return wire._rope.compose_key(*wire._bound_objects, **kwargs)
 
     @interface_attrs(transform_args=transform_kwargs_only)
     def execute(self, wire, **kwargs):
@@ -507,14 +509,32 @@ class AbstractBulkUserInterfaceMixin(object):
         raise NotImplementedError
 
 
+@attr.s
+class Config(object):
+    coder = attr.ib()
+    user_interface = attr.ib()
+    storage_backend = attr.ib()
+    storage_class = attr.ib()
+    miss_value = attr.ib()
+    default_action = attr.ib()
+    key_encoding = attr.ib()
+    expire_default = attr.ib()
+    key_refactor = attr.ib()
+    key_prefix = attr.ib()
+    ignorable_keys = attr.ib()
+    # wire_class = attr.ib()
+
+
 class RingWire(Wire):
 
-    __slots__ = ('storage', )
+    __slots__ = ()
 
     def __init__(self, rope, *args, **kwargs):
         super(RingWire, self).__init__(rope, *args, **kwargs)
 
-        self.storage = rope.storage
+    @property
+    def storage(self):
+        return self._rope.storage
 
     def encode(self, v):
         return self._rope.encode(v)
@@ -541,6 +561,52 @@ class RingWire(Wire):
         attr = getattr(self, action)
         return attr(*args, **kwargs)
 
+    def _on_property(self):
+        return self.run(self._rope.config.default_action)
+
+    def __getattr__(self, name):
+        try:
+            return super(RingWire, self).__getattr__(name)
+        except AttributeError:
+            pass
+        try:
+            return self.__getattribute__(name)
+        except AttributeError:
+            pass
+
+        attr = getattr(self._rope.config.user_interface, name)
+        if callable(attr):
+            transform_args = getattr(
+                attr, 'transform_args', None)
+
+            def impl_f(*args, **kwargs):
+                if transform_args:
+                    transform_func, transform_rules = transform_args
+                    args, kwargs = transform_func(
+                        self, transform_rules, args, kwargs)
+                return attr(self, *args, **kwargs)
+
+            cc = self._callable.wrapped_callable
+            functools.wraps(cc)(impl_f)
+            impl_f.__name__ = '.'.join((cc.__name__, name))
+            if six.PY34:
+                impl_f.__qualname__ = '.'.join((cc.__qualname__, name))
+
+            annotations = getattr(
+                impl_f, '__annotations__', {})
+            annotations_override = getattr(
+                attr, '__annotations_override__', {})
+            for field, override in annotations_override.items():
+                if isinstance(override, types.FunctionType):
+                    new_annotation = override(annotations)
+                else:
+                    new_annotation = override
+                annotations[field] = new_annotation
+
+            setattr(self, name, impl_f)
+
+        return self.__getattribute__(name)
+
 
 class PublicRing(object):
 
@@ -551,10 +617,188 @@ class PublicRing(object):
         self._rope.compose_key = func
 
     def encode(self, func):
-        self._rope.encode = func
+        self._rope._encode = func
 
     def decode(self, func):
-        self._rope.decode = func
+        self._rope._decode = func
+
+
+class RingRope(RopeCore):
+    def __init__(self, *args, **kwargs):
+        super(RingRope, self).__init__(*args, **kwargs)
+
+        self._encode = None
+        self._decode = None
+
+        self.ring = PublicRing(self)
+
+    def compose_key(self, *bound_args, **kwargs):
+        config = self.config
+
+        _ignorable_keys = suggest_ignorable_keys(
+            self.callable, self.config.ignorable_keys)
+        _key_prefix = suggest_key_prefix(self.callable, config.key_prefix)
+
+        c = self.callable
+        key_generator = CallableKey(
+            c, format_prefix=_key_prefix, ignorable_keys=_ignorable_keys)
+
+        full_kwargs = kwargs.copy()
+        for i, prearg in enumerate(bound_args):
+            full_kwargs[c.parameters[i].name] = bound_args[i]
+
+        in_memory_storage = hasattr(config.storage_class, 'in_memory_storage')
+        coerced_kwargs = {
+            k: coerce(v, in_memory_storage) for k, v in full_kwargs.items()
+            if k not in _ignorable_keys}
+        key = key_generator.build(coerced_kwargs)
+        if config.key_encoding:
+            key = key.encode(config.key_encoding)
+        if config.key_refactor:
+            key = config.key_refactor(key)
+        return key
+
+    @property
+    def config(self):
+        return self.rope._ring_object.config
+
+    @property
+    def encode(self):
+        return self._encode or self.config.coder.encode
+
+    @encode.setter
+    def set_encode(self, value):
+        self._encode = value
+
+    @property
+    def decode(self):
+        return self._decode or self.config.coder.decode
+
+    @decode.setter
+    def set_decode(self, value):
+        self._decode = value
+
+    @cached_property
+    def storage(self):
+        # FIXME:
+        return self.config.storage_class(self.ring, self.config.storage_backend)
+
+
+class Ring(object):
+
+    def __init__(self, allows_default_action=True, wire_slots=Ellipsis):
+        self._config = None
+        self._allows_default_action = allows_default_action
+
+        # if wire_slots is Ellipsis:
+        #     wire_slots = ()
+
+        # func = self.__func__ if type(self.__func__) is types.FunctionType else Callable(self.__func__).wrapped_callable  # noqa
+        # interface_keys = tuple(k for k in dir(user_interface) if k[0] != '_')
+
+        class _RingWire(RingWire):
+            # if wire_slots is not False:
+            #     assert isinstance(wire_slots, tuple)
+            #     __slots__ = interface_keys + wire_slots
+
+            if allows_default_action:
+                # @functools.wraps(func)
+                def __call__(self, *args, **kwargs):
+                    return self.run(self._rope.config.default_action, *args, **kwargs)
+
+        self.wire_rope = WireRope(_RingWire, RingRope)
+        self.wire_rope._ring_object = self
+
+    @property
+    def config(self):
+        return self._config
+
+    def configure(self,
+                  storage_backend,  # actual storage
+                  key_prefix,  # manual key prefix
+                  expire_default,  # default expiration
+                  # keyword-only arguments from here
+                  # building blocks
+                  coder, miss_value, user_interface, storage_class,
+                  default_action=Ellipsis,
+                  coder_registry=Ellipsis,
+                  # key builder related parameters
+                  ignorable_keys=None, key_encoding=None, key_refactor=None):
+        """Configure ring object.
+
+         This is the base factory function that every internal **Ring** factories
+         are based on. See the source code of :mod:`ring.func.sync` or
+         :mod:`ring.func.asyncio` for actual usages and sample code.
+
+         :param Any storage_backend: Actual storage backend instance.
+         :param Optional[str] key_prefix: Specify storage key prefix when a
+             :class:`str` value is given; Otherwise a key prefix is automatically
+             suggested based on the function signature. Note that the suggested
+             key prefix is not compatible between Python 2 and 3.
+         :param Optional[float] expire_default: Set the duration of seconds to
+             expire the data when a number is given; Otherwise the default
+             behavior depends on the backend. Note that the storage may or may
+             not support expiration or persistent saving.
+
+         :param Union[str,ring.coder.Coder] coder: A registered coder name or a
+             coder object. See :doc:`coder` for details.
+         :param Any miss_value: The default value when storage misses a given key.
+         :param type user_interface: Injective implementation of sub-functions.
+         :param type storage_class: Injective implementation of storage.
+         :param Optional[str] default_action: The default action name for
+             `__call__` of the wire object. When the given value is :data:`None`,
+             there is no `__call__` method for ring wire.
+         :param Optional[ring.coder.Registry] coder_registry: The coder registry
+             to load the given `coder`. The default value is
+             :data:`ring.coder.registry` when :data:`None` is given.
+
+         :param Optional[Callable[[type(Wire),type(Ring)],None]] on_manufactured:
+             The callback function when a new ring wire or wire bridge is created.
+
+         :param List[str] ignorable_keys: (experimental) Parameter names not to
+             use to create storage key.
+         :param Optional[str] key_encoding: The storage key is usually
+             :class:`str` typed. When this parameter is given, a key is encoded
+             into :class:`bytes` using the given encoding.
+         :param Optional[Callable[[str],str]] key_refactor: Roughly,
+             ``key = key_refactor(key)`` will be run when `key_refactor` is not
+             :data:`None`; Otherwise it is omitted.
+
+         :return: The factory decorator to create new ring wire or wire bridge.
+         :rtype: (Callable)->ring.wire.RopeCore
+         """
+
+        if default_action is Ellipsis:
+            default_action = 'get_or_update'
+        assert bool(default_action) == bool(self._allows_default_action)
+        if coder_registry is Ellipsis:
+            coder_registry = default_registry
+        raw_coder = coder
+        ring_coder = coder_registry.get_or_coderize(raw_coder)
+
+        if isinstance(user_interface, (tuple, list)):
+            user_interface = type('_ComposedUserInterface', user_interface, {})
+
+        self._config = Config(
+            coder=ring_coder,
+            user_interface=user_interface(self),
+            storage_backend=storage_backend,
+            storage_class=storage_class,
+            miss_value=miss_value,
+            default_action=default_action,
+            key_encoding=key_encoding,
+            expire_default=expire_default,
+            key_refactor=key_refactor,
+            key_prefix=key_prefix,
+            ignorable_keys=ignorable_keys)
+
+    def create_rope(self, func, callback=None):
+        rope = self.wire_rope(func)
+
+        if callback is not None:
+            callback(wire_rope=rope)
+
+        return rope
 
 
 def factory(
@@ -615,114 +859,22 @@ def factory(
     :return: The factory decorator to create new ring wire or wire bridge.
     :rtype: (Callable)->ring.wire.RopeCore
     """
-    if wire_slots is Ellipsis:
-        wire_slots = ()
-    if default_action is Ellipsis:
-        default_action = 'get_or_update'
-    if coder_registry is Ellipsis:
-        coder_registry = default_registry
-    raw_coder = coder
-    ring_coder = coder_registry.get_or_coderize(raw_coder)
-
-    if isinstance(user_interface, (tuple, list)):
-        user_interface = type('_ComposedUserInterface', user_interface, {})
 
     def _decorator(f):
+        ring = Ring(allows_default_action=bool(default_action), wire_slots=wire_slots)
+        ring.configure(
+            storage_backend,
+            key_prefix,
+            expire_default,
+            # keyword-only arguments from here
+            # building blocks
+            coder, miss_value, user_interface, storage_class,
+            default_action,
+            coder_registry,
+            # key builder related parameters
+            ignorable_keys, key_encoding, key_refactor)
 
-        _storage_class = storage_class
-
-        class RingRope(RopeCore):
-
-            coder = ring_coder
-            user_interface_class = user_interface
-            storage_class = _storage_class
-
-            def __init__(self, *args, **kwargs):
-                super(RingRope, self).__init__(*args, **kwargs)
-                self.user_interface = self.user_interface_class(self)
-                self.storage = self.storage_class(self, storage_backend)
-                _ignorable_keys = suggest_ignorable_keys(
-                    self.callable, ignorable_keys)
-                _key_prefix = suggest_key_prefix(self.callable, key_prefix)
-                in_memory_storage = hasattr(self.storage, 'in_memory_storage')
-                self.compose_key = create_key_builder(
-                    self.callable, _key_prefix, _ignorable_keys,
-                    encoding=key_encoding, key_refactor=key_refactor, in_memory_storage=in_memory_storage)
-                self.compose_key.ignorable_keys = _ignorable_keys
-                self.encode = self.coder.encode
-                self.decode = self.coder.decode
-
-                self.ring = PublicRing(self)
-
-        func = f if type(f) is types.FunctionType else Callable(f).wrapped_callable  # noqa
-        interface_keys = tuple(k for k in dir(user_interface) if k[0] != '_')
-
-        class _RingWire(RingWire):
-            if wire_slots is not False:
-                assert isinstance(wire_slots, tuple)
-                __slots__ = interface_keys + wire_slots
-
-            def _on_property(self):
-                return self.run(self._rope.default_action)
-
-            if default_action:
-                @functools.wraps(func)
-                def __call__(self, *args, **kwargs):
-                    return self.run(self._rope.default_action, *args, **kwargs)
-
-            def __getattr__(self, name):
-                try:
-                    return super(RingWire, self).__getattr__(name)
-                except AttributeError:
-                    pass
-                try:
-                    return self.__getattribute__(name)
-                except AttributeError:
-                    pass
-
-                attr = getattr(self._rope.user_interface, name)
-                if callable(attr):
-                    transform_args = getattr(
-                        attr, 'transform_args', None)
-
-                    def impl_f(*args, **kwargs):
-                        if transform_args:
-                            transform_func, transform_rules = transform_args
-                            args, kwargs = transform_func(
-                                self, transform_rules, args, kwargs)
-                        return attr(self, *args, **kwargs)
-
-                    cc = self._callable.wrapped_callable
-                    functools.wraps(cc)(impl_f)
-                    impl_f.__name__ = '.'.join((cc.__name__, name))
-                    if six.PY34:
-                        impl_f.__qualname__ = '.'.join((cc.__qualname__, name))
-
-                    annotations = getattr(
-                        impl_f, '__annotations__', {})
-                    annotations_override = getattr(
-                        attr, '__annotations_override__', {})
-                    for field, override in annotations_override.items():
-                        if isinstance(override, types.FunctionType):
-                            new_annotation = override(annotations)
-                        else:
-                            new_annotation = override
-                        annotations[field] = new_annotation
-
-                    setattr(self, name, impl_f)
-
-                return self.__getattribute__(name)
-
-        wire_rope = WireRope(_RingWire, RingRope)
-        strand = wire_rope(f)
-        strand.miss_value = miss_value
-        strand.expire_default = expire_default
-        strand.default_action = default_action
-
-        if on_manufactured is not None:
-            on_manufactured(wire_rope=strand)
-
-        return strand
+        return ring.create_rope(f, on_manufactured)
 
     return _decorator
 
@@ -749,8 +901,8 @@ class BaseStorage(object):
     are mandatory; Otherwise not.
     """
 
-    def __init__(self, rope, backend):
-        self.rope = rope
+    def __init__(self, ring, backend):
+        self._ring = ring
         if contextvars:
             self._backend = (lambda: backend.get()) if isinstance(backend, contextvars.ContextVar) else (lambda: backend)
         else:
@@ -759,6 +911,10 @@ class BaseStorage(object):
     @property
     def backend(self):
         return self._backend()
+
+    @property
+    def rope(self):
+        return self._ring._rope
 
     @abc.abstractmethod
     def get(self, key):  # pragma: no cover
@@ -795,7 +951,7 @@ class CommonMixinStorage(BaseStorage):
 
     def set(self, key, value, expire=Ellipsis):
         if expire is Ellipsis:
-            expire = self.rope.expire_default
+            expire = self.rope.config.expire_default
         encoded = self.rope.encode(value)
         result = self.set_value(key, encoded, expire)
         return result
@@ -810,7 +966,7 @@ class CommonMixinStorage(BaseStorage):
 
     def touch(self, key, expire=Ellipsis):
         if expire is Ellipsis:
-            expire = self.rope.expire_default
+            expire = self.rope.config.expire_default
         result = self.touch_value(key, expire)
         return result
 
