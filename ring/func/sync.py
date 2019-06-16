@@ -8,6 +8,7 @@ from typing import Any, Optional, List
 import time
 import re
 import hashlib
+import threading, random, time
 
 from . import base as fbase, lru_cache as lru_mod
 
@@ -205,11 +206,82 @@ class LruStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
         except KeyError:
             pass
 
+class Gc(object):
+
+    def __init__(self, backend, target_size, expire_f=None):
+        assert round(target_size) > 0, 'target_size has to be at least 1'
+        assert expire_f is None or callable(expire_f), 'expire_f has to be function or None'
+        assert isinstance(backend, type({})), 'backend has to be dict-like'
+        self._backend = backend
+        self._target_size = round(target_size)
+        self._expire_f = expire_f
+        self._mutex = threading.Lock()
+
+    def run(self):
+        class WorkThread(threading.Thread):
+            DEBUG = False
+
+            def __init__(self, outer_instance):
+                threading.Thread.__init__(self)
+                self._backend = outer_instance._backend
+                self._target_size = outer_instance._target_size
+                self._expire_f = outer_instance._expire_f
+                self._mutex = outer_instance._mutex
+
+            def strategy_with_expire(self):
+                MAX_EXPIRE_RETRY_COUNT = 4
+                now = time.time()
+                retry_count = 0
+                keys = list(self._backend.keys())
+                while (len(self._backend) > self._target_size) and (retry_count < MAX_EXPIRE_RETRY_COUNT):
+                    k = keys.pop(random.randrange(len(keys)))
+                    val = self._backend.get(k, None)
+                    if val is None:
+                        continue
+                    expire = self._expire_f(val)
+                    if expire < now:
+                        self._backend.pop(k, None)
+                        self.print_d('{} removed from strategy_with_expire => size {}'.format(k, len(self._backend)))
+                    else:
+                        retry_count += 1
+                    if len(keys) == 0:
+                        keys = list(self._backend.keys())
+
+            def strategy_with_force(self):
+                keys = list(self._backend.keys())
+                while (len(self._backend) > self._target_size) and len(keys) > 0:
+                    k = keys.pop(random.randrange(len(keys)))
+                    self._backend.pop(k, None)
+                    self.print_d('{} removed from strategy_with_force => size {}'.format(k, len(self._backend)))
+                    if len(keys) == 0:
+                        keys = list(self._backend.keys())
+
+            def run(self):
+                try:
+                    self.print_d('gc started in size:{}'.format(len(self._backend)))
+                    if self._expire_f is not None:
+                        self.strategy_with_expire()
+                    self.strategy_with_force()
+                    self.print_d('gc ended in size:{}'.format(len(self._backend)))
+                finally:
+                    self._mutex.release()
+
+
+            def print_d(self, str_):
+                if self.DEBUG:
+                    print(str_)
+
+        self._mutex.acquire()
+        if (len(self._backend) > self._target_size):
+            WorkThread(self).start()
+        else:
+            self._mutex.release()
 
 class ExpirableDictStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
-
+    maxsize = 128
     in_memory_storage = True
     now = time.time
+    _gc = None
 
     def get_value(self, key):
         _now = self.now()
@@ -228,6 +300,11 @@ class ExpirableDictStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
         else:
             expired_time = _now + expire
         self.backend[key] = expired_time, value
+
+        if self.maxsize < len(self.backend):
+            if self._gc == None:
+                self._gc = Gc(self.backend, self.maxsize * 0.75, lambda x: x[0])
+            self._gc.run()
 
     def delete_value(self, key):
         try:
@@ -252,8 +329,9 @@ class ExpirableDictStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
 
 
 class PersistentDictStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
-
     in_memory_storage = True
+    maxsize = 128
+    _gc = None
 
     def get_value(self, key):
         try:
@@ -264,6 +342,10 @@ class PersistentDictStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
 
     def set_value(self, key, value, expire):
         self.backend[key] = value
+        if self.maxsize < len(self.backend):
+            if self._gc == None:
+                self._gc = Gc(self.backend, self.maxsize * 0.75)
+            self._gc.run()
 
     def delete_value(self, key):
         try:
@@ -443,7 +525,7 @@ def lru(
 def dict(
         obj, key_prefix=None, expire=None, coder=None,
         user_interface=CacheUserInterface, storage_class=None,
-        **kwargs):
+        maxsize=128, **kwargs):
     """Basic Python :class:`dict` based cache.
 
     This backend is not designed for real products. Please carefully read the
@@ -467,6 +549,7 @@ def dict(
             storage_class = PersistentDictStorage
         else:
             storage_class = ExpirableDictStorage
+        storage_class.maxsize = maxsize
 
     return fbase.factory(
         obj, key_prefix=key_prefix, on_manufactured=None,

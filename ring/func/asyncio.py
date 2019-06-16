@@ -452,7 +452,7 @@ class AioredisHashStorage(AioredisStorage):
 def dict(
         obj, key_prefix=None, expire=None, coder=None,
         user_interface=CacheUserInterface, storage_class=None,
-        **kwargs):
+        maxsize=128, **kwargs):
     """:class:`dict` interface for :mod:`asyncio`.
 
     :see: :func:`ring.func.sync.dict` for common description.
@@ -463,6 +463,7 @@ def dict(
             storage_class = fsync.PersistentDictStorage
         else:
             storage_class = fsync.ExpirableDictStorage
+        storage_class.maxsize = maxsize
 
     return fbase.factory(
         obj, key_prefix=key_prefix, on_manufactured=None,
