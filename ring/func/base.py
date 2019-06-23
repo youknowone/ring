@@ -562,6 +562,7 @@ def factory(
         # keyword-only arguments from here
         # building blocks
         coder, miss_value, user_interface, storage_class,
+        maxsize=128,
         default_action=Ellipsis,
         coder_registry=Ellipsis,
         # callback
@@ -638,7 +639,7 @@ def factory(
             def __init__(self, *args, **kwargs):
                 super(RingRope, self).__init__(*args, **kwargs)
                 self.user_interface = self.user_interface_class(self)
-                self.storage = self.storage_class(self, storage_backend)
+                self.storage = self.storage_class(self, storage_backend, maxsize)
                 _ignorable_keys = suggest_ignorable_keys(
                     self.callable, ignorable_keys)
                 _key_prefix = suggest_key_prefix(self.callable, key_prefix)
@@ -747,9 +748,10 @@ class BaseStorage(object):
     are mandatory; Otherwise not.
     """
 
-    def __init__(self, rope, backend):
+    def __init__(self, rope, backend, maxsize):
         self.rope = rope
         self.backend = backend
+        self.maxsize = maxsize
 
     @abc.abstractmethod
     def get(self, key):  # pragma: no cover
