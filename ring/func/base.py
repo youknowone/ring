@@ -17,7 +17,8 @@ try:
     import dataclasses
     import contextvars
 except ImportError:  # pragma: no cover
-    contextvars, dataclasses = None
+    contextvars = None
+    dataclasses = None
 
 __all__ = (
     'factory', 'NotFound',
