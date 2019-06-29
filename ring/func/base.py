@@ -751,11 +751,14 @@ class BaseStorage(object):
 
     def __init__(self, rope, backend):
         self.rope = rope
-        self._backend = backend
+        if contextvars:
+            self._backend = (lambda: backend.get()) if isinstance(backend, contextvars.ContextVar) else (lambda: backend)
+        else:
+            self._backend = lambda: backend
 
     @property
     def backend(self):
-        return self._backend.get() if isinstance(self._backend, contextvars.ContextVar) else self._backend
+        return self._backend()
 
     @abc.abstractmethod
     def get(self, key):  # pragma: no cover

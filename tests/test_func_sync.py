@@ -6,11 +6,15 @@ import pymemcache.client
 import memcache
 import redis
 import diskcache
-import contextvars
 from ring.func.lru_cache import LruCache
 
 import pytest
 from pytest_lazyfixture import lazy_fixture
+
+try:
+    import contextvars
+except ImportError:
+    contextvars = None
 
 
 pymemcache_client = pymemcache.client.Client(('127.0.0.1', 11211))
@@ -20,15 +24,15 @@ redis_py_client = redis.StrictRedis()
 pymemcache_client_contextvar = contextvars.ContextVar(
     "pymemcache_client_contextvar",
     default=pymemcache_client,
-)
+) if contextvars else None
 pythonmemcache_client_contextvar = contextvars.ContextVar(
     "pythonmemcache_client_contextvar",
     default=pythonmemcache_client,
-)
+) if contextvars else None
 redis_py_client_contextvar = contextvars.ContextVar(
     "redis_py_client",
     default=redis_py_client,
-)
+) if contextvars else None
 
 
 try:
@@ -41,7 +45,7 @@ finally:
     pylibmc_client_contextvar = contextvars.ContextVar(
         "pylibmc_client",
         default=pylibmc_client,
-    )
+    ) if contextvars else None
 
 
 class StorageDict(dict):
@@ -116,12 +120,13 @@ def storage_diskcache(request):
     ])
 def memcache_client(request):
     client, is_binary, has_touch = request.param
+    if contextvars:
+        if isinstance(client, contextvars.ContextVar):
+            client = client.get()
 
-    if isinstance(client, contextvars.ContextVar):
-        client = client.get()
-
-    if client is None:
+    if not client:
         pytest.skip()
+
     client.is_binary = is_binary
     client.has_has = False
     client.has_touch = has_touch
@@ -135,9 +140,14 @@ def memcache_client(request):
     redis_py_client_contextvar
 ])
 def redis_client(request):
-    client = request.param.get() \
-        if isinstance(request.param, contextvars.ContextVar) \
-        else request.param
+    client = request.param
+    if contextvars:
+        if isinstance(client, contextvars.ContextVar):
+            client = client.get()
+
+    if not client:
+        pytest.skip()
+
     client.ring = ring.redis
     client.is_binary = True
     client.has_has = True
