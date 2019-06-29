@@ -7,6 +7,7 @@ import types
 from typing import List
 
 import six
+import contextvars
 from wirerope import Wire, WireRope, RopeCore
 from .._compat import functools, qualname
 from ..callable import Callable
@@ -749,7 +750,11 @@ class BaseStorage(object):
 
     def __init__(self, rope, backend):
         self.rope = rope
-        self.backend = backend
+        self._backend = lambda: backend.get() if isinstance(backend, contextvars.ContextVar) else backend
+
+    @property
+    def backend(self):
+        return self._backend()
 
     @abc.abstractmethod
     def get(self, key):  # pragma: no cover
