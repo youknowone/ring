@@ -16,6 +16,11 @@ from ..coder import registry as default_registry
 from .._util import cached_property
 
 try:
+    import numpy as np
+except ImportError:
+    np = None
+
+try:
     import dataclasses
     import contextvars
 except ImportError:  # pragma: no cover
@@ -99,6 +104,10 @@ def coerce_function(t):
 
     if issubclass(t, (set, frozenset)):
         return _coerce_set
+
+    if np:
+        if issubclass(t, np.ndarray):
+            return _coerce_list_and_tuple
 
     if dataclasses:
         if dataclasses.is_dataclass(t):
