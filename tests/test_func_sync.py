@@ -6,6 +6,7 @@ import pymemcache.client
 import memcache
 import redis
 import diskcache
+import contextvars
 from ring.func.lru_cache import LruCache
 
 import pytest
@@ -16,6 +17,19 @@ pymemcache_client = pymemcache.client.Client(('127.0.0.1', 11211))
 pythonmemcache_client = memcache.Client(["127.0.0.1:11211"])
 redis_py_client = redis.StrictRedis()
 
+pymemcache_client_contextvar = contextvars.ContextVar(
+    "pymemcache_client_contextvar",
+    default=pymemcache_client,
+)
+pythonmemcache_client_contextvar = contextvars.ContextVar(
+    "pythonmemcache_client_contextvar",
+    default=pythonmemcache_client,
+)
+redis_py_client_contextvar = contextvars.ContextVar(
+    "redis_py_client",
+    default=redis_py_client,
+)
+
 
 try:
     import pylibmc
@@ -23,6 +37,11 @@ except ImportError:
     pylibmc_client = None
 else:
     pylibmc_client = pylibmc.Client(['127.0.0.1'])
+finally:
+    pylibmc_client_contextvar = contextvars.ContextVar(
+        "pylibmc_client",
+        default=pylibmc_client,
+    )
 
 
 class StorageDict(dict):
@@ -76,14 +95,31 @@ def storage_diskcache(request):
     return client
 
 
-@pytest.fixture(scope='session', ids=['python-memcached', 'pymemcache', 'pylibmc'], params=[
-    # client, binary, has_touch
-    (pythonmemcache_client, False, sys.version_info[0] == 2),
-    (pymemcache_client, True, True),
-    (pylibmc_client, True, None),  # actually has_touch but not in travis
-])
+@pytest.fixture(
+    scope='session',
+    ids=[
+        'python-memcached',
+        'pymemcache',
+        'pylibmc',
+        "pythonmemcache_client_contextvar",
+        "pymemcache_client_contextvar",
+        "pylibmc_client_contextvar",
+    ],
+    params=[
+        # client, binary, has_touch
+        (pythonmemcache_client, False, sys.version_info[0] == 2),
+        (pymemcache_client, True, True),
+        (pylibmc_client, True, None),  # actually has_touch but not in travis
+        (pythonmemcache_client_contextvar, False, sys.version_info[0] == 2),
+        (pymemcache_client_contextvar, True, True),
+        (pylibmc_client_contextvar, True, None),
+    ])
 def memcache_client(request):
     client, is_binary, has_touch = request.param
+
+    if isinstance(client, contextvars.ContextVar):
+        client = client.get()
+
     if client is None:
         pytest.skip()
     client.is_binary = is_binary
@@ -96,9 +132,12 @@ def memcache_client(request):
 
 @pytest.fixture(scope='session', params=[
     redis_py_client,
+    redis_py_client_contextvar
 ])
 def redis_client(request):
-    client = request.param
+    client = request.param.get() \
+        if isinstance(request.param, contextvars.ContextVar) \
+        else request.param
     client.ring = ring.redis
     client.is_binary = True
     client.has_has = True
