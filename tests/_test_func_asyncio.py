@@ -64,10 +64,20 @@ def aioredis_connection():
 
     return connection_coroutine, ring.aioredis
 
+
+@pytest.fixture(params=[
+    lazy_fixture('aioredis_connection'),
+    lazy_fixture('aioredis_pool'),
+])
+def aioredis_client(request):
+    return request.param
+
+
 @pytest.fixture(params=[
     lazy_fixture('storage_dict'),
     lazy_fixture('aiomcache_client'),
     lazy_fixture('aioredis_pool'),
+    lazy_fixture('aioredis_connection')
 ])
 def storage_and_ring(request):
     return request.param
@@ -115,8 +125,8 @@ def test_singleton_proxy():
 
 @pytest.mark.asyncio
 @asyncio.coroutine
-def test_vanilla_function(aioredis_pool):
-    storage, storage_ring = aioredis_pool
+def test_vanilla_function(aioredis_client):
+    storage, storage_ring = aioredis_client
 
     with pytest.raises(TypeError):
         @storage_ring(storage)
@@ -312,8 +322,8 @@ def test_aiomcache(aiomcache_client):
 ])
 @pytest.mark.asyncio
 @asyncio.coroutine
-def test_aioredis(aioredis_pool, expire):
-    client, _ = aioredis_pool
+def test_aioredis(aioredis_client, expire):
+    client, _ = aioredis_client
 
     @ring.aioredis(client, expire=expire)
     @asyncio.coroutine
@@ -386,8 +396,8 @@ def test_aioredis(aioredis_pool, expire):
 
 @pytest.mark.asyncio
 @asyncio.coroutine
-def test_aioredis_hash(aioredis_pool):
-    client, _ = aioredis_pool
+def test_aioredis_hash(aioredis_client):
+    client, _ = aioredis_client
 
     @ring.aioredis_hash(client, 'test-hashkey')
     @asyncio.coroutine
