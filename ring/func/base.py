@@ -7,7 +7,6 @@ import types
 from typing import List
 
 import six
-import contextvars
 from wirerope import Wire, WireRope, RopeCore
 from .._compat import functools, qualname
 from ..callable import Callable
@@ -16,8 +15,9 @@ from ..coder import registry as default_registry
 
 try:
     import dataclasses
+    import contextvars
 except ImportError:  # pragma: no cover
-    dataclasses = None
+    contextvars, dataclasses = None
 
 __all__ = (
     'factory', 'NotFound',
@@ -750,11 +750,11 @@ class BaseStorage(object):
 
     def __init__(self, rope, backend):
         self.rope = rope
-        self._backend = lambda: backend.get() if isinstance(backend, contextvars.ContextVar) else backend
+        self._backend = backend
 
     @property
     def backend(self):
-        return self._backend()
+        return self._backend.get() if isinstance(self._backend, contextvars.ContextVar) else self._backend
 
     @abc.abstractmethod
     def get(self, key):  # pragma: no cover
