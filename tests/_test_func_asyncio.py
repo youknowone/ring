@@ -51,6 +51,19 @@ def aioredis_pool():
         pytest.skip()
 
 
+@pytest.fixture()
+def aioredis_connection():
+    if sys.version_info <= (3, 5):
+        pytest.skip()
+
+    import aioredis
+
+    connection_coroutine = aioredis.create_redis(
+        ('localhost', 6379)
+    )
+
+    return connection_coroutine, ring.aioredis
+
 @pytest.fixture(params=[
     lazy_fixture('storage_dict'),
     lazy_fixture('aiomcache_client'),
