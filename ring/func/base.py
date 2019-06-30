@@ -15,7 +15,9 @@ from ..coder import registry as default_registry
 
 try:
     import dataclasses
+    import contextvars
 except ImportError:  # pragma: no cover
+    contextvars = None
     dataclasses = None
 
 __all__ = (
@@ -749,7 +751,14 @@ class BaseStorage(object):
 
     def __init__(self, rope, backend):
         self.rope = rope
-        self.backend = backend
+        if contextvars:
+            self._backend = (lambda: backend.get()) if isinstance(backend, contextvars.ContextVar) else (lambda: backend)
+        else:
+            self._backend = lambda: backend
+
+    @property
+    def backend(self):
+        return self._backend()
 
     @abc.abstractmethod
     def get(self, key):  # pragma: no cover
