@@ -205,9 +205,66 @@ class LruStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
         except KeyError:
             pass
 
+class SizeMaintainer(object):
+    _DEBUG = False
+
+    def __init__(self, backend, target_size, expire_f=None):
+        from collections import abc
+        assert round(target_size) > 0, 'target_size has to be at least 1'
+        assert expire_f is None or callable(expire_f), 'expire_f has to be function or None'
+        assert isinstance(backend, abc.MutableMapping), 'backend has to be dict-like'
+        self._backend = backend
+        self._target_size = round(target_size)
+        self._expire_f = expire_f
+
+    def run(self):
+        if (len(self._backend) <= self._target_size):
+            return
+
+        import random, time
+        def strategy_with_expire():
+            MAX_EXPIRE_RETRY_COUNT = 4
+            now = time.time()
+            retry_count = 0
+
+            keys = list(self._backend.keys())
+            random.shuffle(keys)
+            key_index = 0
+            while (len(self._backend) > self._target_size) and (retry_count < MAX_EXPIRE_RETRY_COUNT):
+                key = keys[key_index]
+                val = self._backend.get(key, None)
+                expire = self._expire_f(val)
+                if expire < now:
+                    self._backend.pop(key, None)
+                    key_index += 1
+                    if self._DEBUG:
+                        print('{} removed from strategy_with_expire => size {}'.format(key, len(self._backend)))
+                else:
+                    retry_count += 1
+
+        def strategy_with_force():
+            keys = list(self._backend.keys())
+            random.shuffle(keys)
+            key_index = 0
+            while (len(self._backend) > self._target_size):
+                key = keys[key_index]
+                self._backend.pop(key, None)
+                key_index += 1
+                if self._DEBUG:
+                    print('{} removed from strategy_with_force => size {}'.format(key, len(self._backend)))
+
+        if self._DEBUG:
+            print('gc started in size:{}'.format(len(self._backend)))
+
+        if self._expire_f is not None:
+            strategy_with_expire()
+        strategy_with_force()
+
+        if self._DEBUG:
+            print('gc ended in size:{}'.format(len(self._backend)))
+
 
 class ExpirableDictStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
-
     in_memory_storage = True
     now = time.time
 
@@ -228,6 +285,9 @@ class ExpirableDictStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
         else:
             expired_time = _now + expire
         self.backend[key] = expired_time, value
+
+        if self.maxsize < len(self.backend):
+            SizeMaintainer(self.backend, self.maxsize * 0.75, lambda x: x[0]).run()
 
     def delete_value(self, key):
         try:
@@ -252,7 +312,6 @@ class ExpirableDictStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
 
 
 class PersistentDictStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
-
     in_memory_storage = True
 
     def get_value(self, key):
@@ -264,6 +323,8 @@ class PersistentDictStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
 
     def set_value(self, key, value, expire):
         self.backend[key] = value
+        if self.maxsize < len(self.backend):
+            SizeMaintainer(self.backend, self.maxsize * 0.75).run()
 
     def delete_value(self, key):
         try:
@@ -443,7 +504,7 @@ def lru(
 def dict(
         obj, key_prefix=None, expire=None, coder=None,
         user_interface=CacheUserInterface, storage_class=None,
-        **kwargs):
+        maxsize=128, **kwargs):
     """Basic Python :class:`dict` based cache.
 
     This backend is not designed for real products. Please carefully read the
@@ -470,7 +531,7 @@ def dict(
 
     return fbase.factory(
         obj, key_prefix=key_prefix, on_manufactured=None,
-        user_interface=user_interface, storage_class=storage_class,
+        user_interface=user_interface, storage_class=storage_class, maxsize=maxsize,
         miss_value=None, expire_default=expire, coder=coder,
         **kwargs)
 
