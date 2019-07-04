@@ -59,6 +59,20 @@ def test_dict_size_persistent_with_delete():
 
     assert len(cache) <= MAX_SIZE
 
+def test_dict_size_persistent_infinite():
+    cache = {}
+    MAX_SIZE = None
+
+    @ring.dict(cache, maxsize=MAX_SIZE)
+    def f_persistent_infinite(i):
+        return i
+
+    for i in range(10000):
+        f_persistent_infinite(i)
+        assert len(cache) <= 10000
+
+    assert len(cache) == 10000
+
 def test_dict_size_expire_1():
     cache = {}
     MAX_SIZE = 1
@@ -138,3 +152,17 @@ def test_dict_size_expire_with_delete():
                     cache.popitem()
 
     assert len(cache) <= 128
+
+def test_dict_size_expire_infinite():
+    cache = {}
+    MAX_SIZE = None
+
+    @ring.dict(cache, maxsize=MAX_SIZE)
+    def f_expire_infinite(i):
+        return i
+
+    for i in range(10000):
+        f_expire_infinite(i)
+        assert len(cache) <= 10000
+
+    assert len(cache) == 10000

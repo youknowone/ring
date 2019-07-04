@@ -286,7 +286,7 @@ class ExpirableDictStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
             expired_time = _now + expire
         self.backend[key] = expired_time, value
 
-        if self.maxsize < len(self.backend):
+        if (self.maxsize is not None) and (self.maxsize < len(self.backend)):
             SizeMaintainer(self.backend, self.maxsize * 0.75, lambda x: x[0]).run()
 
     def delete_value(self, key):
@@ -323,7 +323,7 @@ class PersistentDictStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
 
     def set_value(self, key, value, expire):
         self.backend[key] = value
-        if self.maxsize < len(self.backend):
+        if (self.maxsize is not None) and self.maxsize < len(self.backend):
             SizeMaintainer(self.backend, self.maxsize * 0.75).run()
 
     def delete_value(self, key):
@@ -415,10 +415,10 @@ class RedisStorage(
 
 class RedisHashStorage(RedisStorage):
 
-    def __init__(self, rope, backend):
+    def __init__(self, rope, backend, maxsize):
         storage_backend = backend[0]
         self.hash_key = backend[1]
-        super(RedisHashStorage, self).__init__(rope, storage_backend)
+        super(RedisHashStorage, self).__init__(rope, storage_backend, maxsize)
 
     def get_value(self, key):
         value = self.backend.hget(self.hash_key, key)

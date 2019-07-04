@@ -562,7 +562,7 @@ def factory(
         # keyword-only arguments from here
         # building blocks
         coder, miss_value, user_interface, storage_class,
-        maxsize=128,
+        maxsize=None,
         default_action=Ellipsis,
         coder_registry=Ellipsis,
         # callback

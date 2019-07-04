@@ -405,10 +405,10 @@ class AioredisStorage(
 class AioredisHashStorage(AioredisStorage):
     """Storage implementation for :class:`aioredis.Redis`."""
 
-    def __init__(self, rope, backend):
+    def __init__(self, rope, backend, maxsize):
         storage_backend = backend[0]
         self.hash_key = backend[1]
-        super(AioredisHashStorage, self).__init__(rope, storage_backend)
+        super(AioredisHashStorage, self).__init__(rope, storage_backend, maxsize)
 
     @asyncio.coroutine
     def get_value(self, key):
