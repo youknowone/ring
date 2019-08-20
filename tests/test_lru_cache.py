@@ -96,3 +96,12 @@ def test_expire_object():
     assert lru.get('c') == 30  # d - b - c
     lru.set('e', 50)  # b - c - e
     assert lru.get('d') == SENTINEL
+
+
+def test_overflow_after_clear():
+    lru = LruCache(1)
+
+    lru.clear()
+    lru.set('a', 10)
+    lru.set('b', 20)
+    assert lru.get('c') == SENTINEL

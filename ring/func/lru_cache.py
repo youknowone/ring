@@ -126,7 +126,7 @@ class LruCache(object):
             with lock:
                 cache.clear()
                 root = self.root
-                root[:] = [root, root, None, None]
+                root[:] = [root, root, None, None, None]
                 stat[:] = False, 0, 0
 
         self.get = get
