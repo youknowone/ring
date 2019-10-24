@@ -119,7 +119,7 @@ def coerce(v, in_memory_storage):
     if in_memory_storage and type(v).__hash__ != object.__hash__:
         return "{}:hash:{}".format(qualname(type(v)), hash(v))
 
-    cls = v.__class__
+    cls = type(v)
     if cls.__str__ != object.__str__:
         return str(v)
 
