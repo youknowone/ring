@@ -40,6 +40,11 @@ class A(object):
     def p(self):
         return self.v
 
+    @ring.dict({})
+    @staticmethod
+    def s(v):
+        return v
+
 
 def test_ring_wrapper():
     a = A(10)
@@ -52,6 +57,8 @@ def test_ring_wrapper():
     assert b.x() == 20
     assert a.x() == 10
     assert b.x() == 20
+    assert a.s(10) == 10
+    assert a.s(20) == 20
 
 
 def test_custom_method():
