@@ -78,6 +78,8 @@ class LruCache(object):
 
         def set(key, result, expire=None):
             expired_time = expiration_time(expire)
+            if maxsize == 0:
+                return
             with lock:
                 link = cache_get(key)
                 if link is not None:
@@ -114,7 +116,10 @@ class LruCache(object):
                     last[NEXT] = root[PREV] = cache[key] = link
                     # Use the cache_len bound method instead of the len() function
                     # which could potentially be wrapped in an lru_cache itself.
-                    stat[FULL] = (cache_len() >= maxsize)
+                    if maxsize is not None and not isinstance(maxsize, int):
+                        raise TypeError('Expected maxsize to be an integer or None')
+                    if maxsize is not None:
+                        stat[FULL] = (cache_len() >= maxsize)
 
         def cache_info():
             """Report cache statistics"""
