@@ -1,0 +1,28 @@
+version: '3.5'
+services:
+#  dynamodb-local:
+#    image: amazon/dynamodb-local
+#    container_name: dynamodb-local
+#    networks:
+#      - proxynet
+#    ports:
+#      - "8888:8000"
+  redis-local:
+    image: redis
+    container_name: redis-local
+    ports:
+      - "6379:6379"
+    networks:
+      - proxynet
+  memcached-local:
+    image: memcached
+    container_name: memcached-local
+    ports:
+      - "11211:11211"
+    networks:
+      - proxynet
+
+
+networks:
+  proxynet:
+    name: ring_test_proxynet
