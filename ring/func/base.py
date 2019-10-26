@@ -16,6 +16,11 @@ from ..coder import registry as default_registry
 from .._util import cached_property
 
 try:
+    import numpy
+except ImportError:
+    numpy = None
+
+try:
     import dataclasses
     import contextvars
 except ImportError:  # pragma: no cover
@@ -54,6 +59,10 @@ def suggest_key_prefix(c, key_prefix):
 
 def _coerce_bypass(v):
     return v
+
+
+def _coerce_ndarray(v):
+    return "{}:{}".format(type(v).__name__, str(v).replace(' ', ','))
 
 
 def _coerce_list_and_tuple(v):
@@ -99,6 +108,10 @@ def coerce_function(t):
 
     if issubclass(t, (set, frozenset)):
         return _coerce_set
+
+    if numpy:
+        if issubclass(t, numpy.ndarray):
+            return _coerce_ndarray
 
     if dataclasses:
         if dataclasses.is_dataclass(t):

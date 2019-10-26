@@ -1,5 +1,6 @@
 import sys
 
+import numpy
 import pytest
 
 from ring.func.base import coerce
@@ -38,6 +39,10 @@ test_parameters = [
     (['1', '2', '3', '4'], "['1','2','3','4']"),
     ((1, 2, 3, 4), '(1,2,3,4)'),
     (('1', '2', '3', '4'), "('1','2','3','4')"),
+    (numpy.array([1, 2, 3, 4]), 'ndarray:[1,2,3,4]'),
+    (numpy.array((1, 2, 3, 4)), 'ndarray:[1,2,3,4]'),
+    (numpy.array(['1', '2', '3', '4']), "ndarray:['1','2','3','4']"),
+    (numpy.array(('1', '2', '3', '4')), "ndarray:['1','2','3','4']"),
 ]
 
 if sys.version_info >= (3, 7):
