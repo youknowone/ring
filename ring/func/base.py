@@ -78,7 +78,10 @@ def _coerce_dict(v):
 
 
 def _coerce_set(v):
-    return ','.join(sorted(v))
+    return ','.join([
+        "'{}'".format(e) if isinstance(e, str) else str(e)
+        for e in sorted(v)
+    ])
 
 
 def _coerce_ring_key(v):
