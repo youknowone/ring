@@ -1,4 +1,7 @@
 from functools import update_wrapper
+
+import pytest
+
 from ring.func.lru_cache import LruCache, SENTINEL
 
 try:
@@ -153,3 +156,7 @@ def test_maxsize_compatibility_check():
     lru.set('a', 10)
 
     assert lru.get('a') == SENTINEL
+
+    lru = LruCache('test')
+    with pytest.raises(TypeError):
+        lru.set('a', 10)
