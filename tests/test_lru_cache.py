@@ -14,6 +14,10 @@ except ImportError:
 
 
 def test_lru_cache_porting():
+
+    global ring_cache_info
+    ring_cache_info = None
+
     def lru_cache(maxsize=128, typed=False):
         if maxsize is not None and not isinstance(maxsize, int):
             raise TypeError('Expected maxsize to be an integer or None')
@@ -29,6 +33,8 @@ def test_lru_cache_porting():
                     return result
                 result = user_function(*args, **kwds)
                 cache.set(key, result)
+                global ring_cache_info
+                ring_cache_info = cache.cache_info
                 return result
 
             return update_wrapper(wrapper, user_function)
@@ -48,6 +54,34 @@ def test_lru_cache_porting():
 
     assert fibonacci(10) == 55
     assert call_count == 11
+
+    from functools import lru_cache as lru_origin
+
+    global call_count_ring
+    global call_count_origin
+    call_count_ring = 0
+    call_count_origin = 0
+
+    @lru_cache(maxsize=0)
+    def fibonacci_ring(n):
+        global call_count_ring
+        call_count_ring += 1
+        if n <= 1:
+            return n
+        return fibonacci_ring(n - 1) + fibonacci_ring(n - 2)
+
+    @lru_origin(maxsize=0)
+    def fibonacci_origin(n):
+        global call_count_origin
+        call_count_origin += 1
+        if n <= 1:
+            return n
+        return fibonacci_origin(n - 1) + fibonacci_origin(n - 2)
+
+    assert fibonacci_ring(10) == fibonacci_origin(10)
+    assert call_count_ring == call_count_origin
+
+    assert ring_cache_info() == fibonacci_origin.cache_info()
 
 
 def test_lru_object():
@@ -105,3 +139,17 @@ def test_overflow_after_clear():
     lru.set('a', 10)
     lru.set('b', 20)
     assert lru.get('c') == SENTINEL
+
+
+def test_maxsize_compatibility_check():
+
+    lru = LruCache(None)
+    lru.set('a', 10)
+    lru.set('b', 20)
+
+    assert lru.get('a') == 10
+
+    lru = LruCache(0)
+    lru.set('a', 10)
+
+    assert lru.get('a') == SENTINEL
