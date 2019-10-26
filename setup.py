@@ -22,7 +22,7 @@ tests_require = [
     'mock', 'patch',
     'pymemcache',
     'redis', 'requests',
-    'diskcache',
+    'diskcache>=4.1.0',
     'django',
 ]
 docs_require = [
