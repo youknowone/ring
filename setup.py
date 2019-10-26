@@ -24,6 +24,7 @@ tests_require = [
     'redis', 'requests',
     'diskcache>=4.1.0',
     'django',
+    'numpy',
 ]
 docs_require = [
     'sphinx',
