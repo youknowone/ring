@@ -65,7 +65,7 @@ def _coerce_list_and_tuple(v):
     str_v = str(v)
     if numpy:
         if isinstance(v, numpy.ndarray):
-            str_v = str_v.replace(' ', ',')
+            str_v = "{}:{}".format(type(v).__name__, str_v.replace(' ', ','))
     return str_v.replace(' ', '')
 
 
