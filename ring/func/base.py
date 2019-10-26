@@ -62,7 +62,11 @@ def _coerce_bypass(v):
 
 
 def _coerce_list_and_tuple(v):
-    return str(v).replace(' ', '')
+    str_v = str(v)
+    if numpy:
+        if isinstance(v, numpy.ndarray):
+            str_v = str_v.replace(' ', ',')
+    return str_v.replace(' ', '')
 
 
 def _coerce_type(v):
