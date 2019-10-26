@@ -89,42 +89,65 @@ def _coerce_dataclass(v):
     return type(v).__name__ + _coerce_dict(dataclasses.asdict(v))
 
 
-@functools.lru_cache(maxsize=128)
-def coerce_function(t):
+def coerce_function(v):
+    t = type(v)
     if hasattr(t, '__ring_key__'):
         return _coerce_ring_key
 
-    if issubclass(t, (int, str, bool, type(None), type(Ellipsis))):
-        return _coerce_bypass
-
-    if issubclass(t, (list, tuple)):
-        return _coerce_list_and_tuple
-
-    if t == type:
-        return _coerce_type
-
-    if issubclass(t, dict):
-        return _coerce_dict
-
-    if issubclass(t, (set, frozenset)):
-        return _coerce_set
-
-    if numpy:
-        if issubclass(t, numpy.ndarray):
-            return _coerce_ndarray
+    func = _coerce_function(v)
+    if func:
+        return func
 
     if dataclasses:
         if dataclasses.is_dataclass(t):
             return _coerce_dataclass
 
-    # NOTE: general sequence processing is good -
-    # but NEVER add a general iterator processing. it will cause user bugs.
+
+@functools.singledispatch
+def _coerce_function(v):
+    return
+
+
+@_coerce_function.register(int)
+@_coerce_function.register(str)
+@_coerce_function.register(bool)
+@_coerce_function.register(type(None))
+@_coerce_function.register(type(Ellipsis))
+def _(v):
+    return _coerce_bypass
+
+
+@_coerce_function.register(list)
+@_coerce_function.register(tuple)
+def _(v):
+    return _coerce_list_and_tuple
+
+
+@_coerce_function.register(type)
+def _(v):
+    return _coerce_type
+
+
+@_coerce_function.register(dict)
+def _(v):
+    return _coerce_dict
+
+
+@_coerce_function.register(set)
+@_coerce_function.register(frozenset)
+def _(v):
+    return _coerce_set
+
+
+@_coerce_function.register(numpy.ndarray)
+def _(v):
+    return _coerce_ndarray
 
 
 def coerce(v, in_memory_storage):
     """Transform the given value to cache-friendly string data."""
 
-    type_coerce = coerce_function(type(v))
+    type_coerce = coerce_function(v)
     if type_coerce:
         return type_coerce(v)
 
