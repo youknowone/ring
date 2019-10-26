@@ -41,9 +41,8 @@ macOS
 
 .. sourcecode:: shell
 
-    $ brew install libmemcached memcached redis
-    $ brew services start memcached
-    $ brew services start redis
+    $ brew install docker-compose
+    $ docker-compose up
 
 
 Debian/Ubuntu
@@ -51,6 +50,5 @@ Debian/Ubuntu
 
 .. sourcecode:: shell
 
-    $ apt install libmemcached-dev memcached redis-server
-    $ service memcached start
-    $ service redis start
+    $ apt install docker-compose
+    $ docker-compose up
