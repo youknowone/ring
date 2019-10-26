@@ -61,12 +61,12 @@ def _coerce_bypass(v):
     return v
 
 
+def _coerce_ndarray(v):
+    return "{}:{}".format(type(v).__name__, str(v).replace(' ', ','))
+
+
 def _coerce_list_and_tuple(v):
-    str_v = str(v)
-    if numpy:
-        if isinstance(v, numpy.ndarray):
-            str_v = "{}:{}".format(type(v).__name__, str_v.replace(' ', ','))
-    return str_v.replace(' ', '')
+    return str(v).replace(' ', '')
 
 
 def _coerce_type(v):
@@ -111,7 +111,7 @@ def coerce_function(t):
 
     if numpy:
         if issubclass(t, numpy.ndarray):
-            return _coerce_list_and_tuple
+            return _coerce_ndarray
 
     if dataclasses:
         if dataclasses.is_dataclass(t):
