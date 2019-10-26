@@ -16,9 +16,9 @@ from ..coder import registry as default_registry
 from .._util import cached_property
 
 try:
-    import numpy as np
+    import numpy
 except ImportError:
-    np = None
+    numpy = None
 
 try:
     import dataclasses
@@ -109,8 +109,8 @@ def coerce_function(t):
     if issubclass(t, (set, frozenset)):
         return _coerce_set
 
-    if np:
-        if issubclass(t, np.ndarray):
+    if numpy:
+        if issubclass(t, numpy.ndarray):
             return _coerce_list_and_tuple
 
     if dataclasses:
