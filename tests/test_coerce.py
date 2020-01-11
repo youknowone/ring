@@ -1,7 +1,14 @@
 import sys
 
-import numpy
 import pytest
+
+try:
+    import numpy
+except ImportError:
+    @pytest.mark.skip("`import numpy` failed")
+    def test_numpy_skipped():
+        pass
+    numpy = None
 
 from ring.func.base import coerce
 
@@ -40,11 +47,14 @@ test_parameters = [
     ({1, 2, 3, 4}, '{1,2,3,4}'),
     ({'1', '2', '3', '4'}, "{'1','2','3','4'}"),
     (('1', '2', '3', '4'), "('1','2','3','4')"),
-    (numpy.array([1, 2, 3, 4]), 'ndarray:[1,2,3,4]'),
-    (numpy.array((1, 2, 3, 4)), 'ndarray:[1,2,3,4]'),
-    (numpy.array(['1', '2', '3', '4']), "ndarray:['1','2','3','4']"),
-    (numpy.array(('1', '2', '3', '4')), "ndarray:['1','2','3','4']"),
 ]
+if numpy is not None:
+    test_parameters.extend([
+        (numpy.array([1, 2, 3, 4]), 'ndarray:[1,2,3,4]'),
+        (numpy.array((1, 2, 3, 4)), 'ndarray:[1,2,3,4]'),
+        (numpy.array(['1', '2', '3', '4']), "ndarray:['1','2','3','4']"),
+        (numpy.array(('1', '2', '3', '4')), "ndarray:['1','2','3','4']"),
+    ])
 
 if sys.version_info >= (3, 7):
     from tests._test_module_py37 import DataClass
