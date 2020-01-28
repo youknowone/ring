@@ -1,5 +1,4 @@
 
-import asyncio
 import pytest
 import ring.func.sync
 from ring.func.base import BaseUserInterface, NotFound, factory
@@ -7,23 +6,21 @@ from ring.func.base import BaseUserInterface, NotFound, factory
 
 class DoubleCacheUserInterface(BaseUserInterface):
 
-    @asyncio.coroutine
-    def execute(self, wire, **kwargs):
-        result = yield from wire.__func__(**kwargs)
+    async def execute(self, wire, **kwargs):
+        result = await wire.__func__(**kwargs)
         return result
 
     def key2(self, wire, **kwargs):
         return wire.key(**kwargs) + ':back'
 
-    @asyncio.coroutine
-    def get(self, wire, **kwargs):
+    async def get(self, wire, **kwargs):
         key1 = wire.key(**kwargs)
         key2 = wire.key2(**kwargs)
 
         result = ...
         for key in [key1, key2]:
             try:
-                result = yield from wire._rope.storage.get(key)
+                result = await wire._rope.storage.get(key)
             except NotFound:
                 continue
             else:
@@ -32,50 +29,46 @@ class DoubleCacheUserInterface(BaseUserInterface):
             result = wire._rope.config.miss_value
         return result
 
-    @asyncio.coroutine
-    def update(self, wire, **kwargs):
+    async def update(self, wire, **kwargs):
         key = wire.key(**kwargs)
         key2 = wire.key2(**kwargs)
-        result = yield from wire.execute(**kwargs)
-        yield from wire._rope.storage.set(key, result)
-        yield from wire._rope.storage.set(key2, result, None)
+        result = await wire.execute(**kwargs)
+        await wire._rope.storage.set(key, result)
+        await wire._rope.storage.set(key2, result, None)
         return result
 
-    @asyncio.coroutine
-    def get_or_update(self, wire, **kwargs):
+    async def get_or_update(self, wire, **kwargs):
         key = wire.key(**kwargs)
         key2 = wire.key2(**kwargs)
         try:
-            result = yield from wire._rope.storage.get(key)
+            result = await wire._rope.storage.get(key)
         except NotFound:
             try:
-                result = yield from wire.execute(**kwargs)
+                result = await wire.execute(**kwargs)
             except Exception:
                 try:
-                    result = yield from wire._rope.storage.get(key2)
+                    result = await wire._rope.storage.get(key2)
                 except NotFound:
                     pass
                 else:
                     return result
                 raise
             else:
-                yield from wire._rope.storage.set(key, result)
-                yield from wire._rope.storage.set(key2, result, None)
+                await wire._rope.storage.set(key, result)
+                await wire._rope.storage.set(key2, result, None)
         return result
 
-    @asyncio.coroutine
-    def delete(self, wire, **kwargs):
+    async def delete(self, wire, **kwargs):
         key = wire.key(**kwargs)
         key2 = wire.key2(**kwargs)
-        yield from wire._rope.storage.delete(key)
-        yield from wire._rope.storage.delete(key2)
+        await wire._rope.storage.delete(key)
+        await wire._rope.storage.delete(key2)
 
-    @asyncio.coroutine
-    def touch(self, wire, **kwargs):
+    async def touch(self, wire, **kwargs):
         key = wire.key(**kwargs)
         key2 = wire.key(**kwargs)
-        yield from wire._rope.storage.touch(key)
-        yield from wire._rope.storage.touch(key2)
+        await wire._rope.storage.touch(key)
+        await wire._rope.storage.touch(key2)
 
 
 def doublecache(
@@ -92,53 +85,52 @@ def doublecache(
 
 
 @pytest.mark.asyncio
-def test_x():
+async def test_x():
     storage = {}
 
     f_value = 0
 
     @doublecache(storage, key_prefix='f', expire=10)
-    @asyncio.coroutine
-    def f():
+    async def f():
         nonlocal f_value
         if f_value < 0:
             raise Exception
         return f_value
 
     assert storage == {}
-    assert 0 == (yield from f())
+    assert 0 == await f()
     assert 'f' in storage
     assert 'f:back' in storage
-    assert 0 == (yield from f.get())
+    assert 0 == await f.get()
 
     del storage['f']
-    assert 0 == (yield from f.get())
+    assert 0 == await f.get()
     assert len(storage) == 1
 
     f_value = -1
 
-    assert 0 == (yield from f.get())
+    assert 0 == await f.get()
     assert len(storage) == 1
-    assert 0 == (yield from f())
+    assert 0 == await f()
     assert len(storage) == 1
 
-    yield from f.delete()
+    await f.delete()
     assert storage == {}
 
-    assert None is (yield from f.get())
+    assert None is await f.get()
 
     f_value = 2
-    yield from f.update()
-    assert 2 == (yield from f())
+    await f.update()
+    assert 2 == await f()
 
     storage['f'] = storage['f'][0], 1
-    assert 1 == (yield from f.get())
-    assert 1 == (yield from f())
+    assert 1 == await f.get()
+    assert 1 == await f()
     del storage['f']
     f_value = 3
-    assert 2 == (yield from f.get())
-    assert 3 == (yield from f())
-    assert 3 == (yield from f.get())
+    assert 2 == await f.get()
+    assert 3 == await f()
+    assert 3 == await f.get()
 
 
 def test_coder_func():

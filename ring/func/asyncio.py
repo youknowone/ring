@@ -108,34 +108,29 @@ def factory_doctor(wire_rope) -> None:
 class CommonMixinStorage(fbase.BaseStorage):  # Working only as mixin
     """General :mod:`asyncio` storage root for BaseStorageMixin."""
 
-    @asyncio.coroutine
-    def get(self, key):
-        value = yield from self.get_value(key)
+    async def get(self, key):
+        value = await self.get_value(key)
         return self.rope.decode(value)
 
-    @asyncio.coroutine
-    def set(self, key, value, expire=...):
+    async def set(self, key, value, expire=...):
         if expire is ...:
             expire = self.rope.config.expire_default
         encoded = self.rope.encode(value)
-        result = yield from self.set_value(key, encoded, expire)
+        result = await self.set_value(key, encoded, expire)
         return result
 
-    @asyncio.coroutine
-    def delete(self, key):
-        result = yield from self.delete_value(key)
+    async def delete(self, key):
+        result = await self.delete_value(key)
         return result
 
-    @asyncio.coroutine
-    def has(self, key):
-        result = yield from self.has_value(key)
+    async def has(self, key):
+        result = await self.has_value(key)
         return result
 
-    @asyncio.coroutine
-    def touch(self, key, expire=...):
+    async def touch(self, key, expire=...):
         if expire is ...:
             expire = self.rope.config.expire_default
-        result = yield from self.touch_value(key, expire)
+        result = await self.touch_value(key, expire)
         return result
 
 
@@ -149,32 +144,29 @@ class CacheUserInterface(fbase.BaseUserInterface):
     @fbase.interface_attrs(
         transform_args=fbase.transform_kwargs_only,
         return_annotation=lambda a: Optional[a.get('return', Any)])
-    @asyncio.coroutine
-    def get(self, wire, **kwargs):
+    async def get(self, wire, **kwargs):
         key = self.key(wire, **kwargs)
         try:
-            result = yield from wire.storage.get(key)
+            result = await wire.storage.get(key)
         except fbase.NotFound:
             result = wire._rope.config.miss_value
         return result
 
     @fbase.interface_attrs(transform_args=fbase.transform_kwargs_only)
-    @asyncio.coroutine
-    def update(self, wire, **kwargs):
+    async def update(self, wire, **kwargs):
         key = self.key(wire, **kwargs)
-        result = yield from self.execute(wire, **kwargs)
-        yield from wire.storage.set(key, result)
+        result = await self.execute(wire, **kwargs)
+        await wire.storage.set(key, result)
         return result
 
     @fbase.interface_attrs(transform_args=fbase.transform_kwargs_only)
-    @asyncio.coroutine
-    def get_or_update(self, wire, **kwargs):
+    async def get_or_update(self, wire, **kwargs):
         key = self.key(wire, **kwargs)
         try:
-            result = yield from wire.storage.get(key)
+            result = await wire.storage.get(key)
         except fbase.NotFound:
-            result = yield from self.execute(wire, **kwargs)
-            yield from wire.storage.set(key, result)
+            result = await self.execute(wire, **kwargs)
+            await wire.storage.set(key, result)
         return result
 
     @fbase.interface_attrs(
@@ -225,20 +217,18 @@ class BulkInterfaceMixin(fbase.AbstractBulkUserInterfaceMixin):
 
     @fbase.interface_attrs(
         return_annotation=lambda a: List[a.get('return', Any)])
-    @asyncio.coroutine
-    def update_many(self, wire, *args_list):
+    async def update_many(self, wire, *args_list):
         keys = self.key_many(wire, *args_list)
-        values = yield from self.execute_many(wire, *args_list)
-        yield from wire.storage.set_many(keys, values)
+        values = await self.execute_many(wire, *args_list)
+        await wire.storage.set_many(keys, values)
         return values
 
     @fbase.interface_attrs(
         return_annotation=lambda a: List[a.get('return', Any)])
-    @asyncio.coroutine
-    def get_or_update_many(self, wire, *args_list):
+    async def get_or_update_many(self, wire, *args_list):
         keys = self.key_many(wire, *args_list)
         miss_value = object()
-        results = yield from wire.storage.get_many(
+        results = await wire.storage.get_many(
             keys, miss_value=miss_value)
 
         miss_indices = []
@@ -248,10 +238,10 @@ class BulkInterfaceMixin(fbase.AbstractBulkUserInterfaceMixin):
                 continue
             miss_indices.append(i)
 
-        new_results = yield from asyncio.gather(*(
+        new_results = await asyncio.gather(*(
             fbase.execute_bulk_item(wire, args_list[i]) for i in miss_indices))
         new_keys = [keys[i] for i in miss_indices]
-        yield from wire.storage.set_many(new_keys, new_results)
+        await wire.storage.set_many(new_keys, new_results)
 
         for new_i, old_i in enumerate(miss_indices):
             results[old_i] = new_results[new_i]
@@ -280,10 +270,9 @@ class BulkInterfaceMixin(fbase.AbstractBulkUserInterfaceMixin):
 
 class BulkStorageMixin(object):
 
-    @asyncio.coroutine
-    def get_many(self, keys, miss_value):
+    async def get_many(self, keys, miss_value):
         """Get and return values for the given key."""
-        values = yield from self.get_many_values(keys)
+        values = await self.get_many_values(keys)
         results = [
             self.rope.decode(v) if v is not fbase.NotFound else miss_value  # noqa
             for v in values]
@@ -315,9 +304,8 @@ class AiomcacheStorage(
         CommonMixinStorage, fbase.StorageMixin, BulkStorageMixin):
     """Storage implementation for :class:`aiomcache.Client`."""
 
-    @asyncio.coroutine
-    def get_value(self, key):
-        value = yield from self.backend.get(key)
+    async def get_value(self, key):
+        value = await self.backend.get(key)
         if value is None:
             raise fbase.NotFound
         return value
@@ -331,9 +319,8 @@ class AiomcacheStorage(
     def touch_value(self, key, expire):
         return self.backend.touch(key, expire)
 
-    @asyncio.coroutine
-    def get_many_values(self, keys):
-        values = yield from self.backend.multi_get(*keys)
+    async def get_many_values(self, keys):
+        values = await self.backend.multi_get(*keys)
         return [v if v is not None else fbase.NotFound for v in values]
 
     def set_many_values(self, keys, values, expire):
@@ -347,56 +334,48 @@ class AioredisStorage(
         CommonMixinStorage, fbase.StorageMixin, BulkStorageMixin):
     """Storage implementation for :class:`aioredis.Redis`."""
 
-    @asyncio.coroutine
-    def _get_backend(self):
-        backend = yield from self.backend
+    async def _get_backend(self):
+        backend = await self.backend
         return backend
 
-    @asyncio.coroutine
-    def get_value(self, key):
-        backend = yield from self._get_backend()
-        value = yield from backend.get(key)
+    async def get_value(self, key):
+        backend = await self._get_backend()
+        value = await backend.get(key)
         if value is None:
             raise fbase.NotFound
         return value
 
-    @asyncio.coroutine
-    def set_value(self, key, value, expire):
-        backend = yield from self._get_backend()
-        result = yield from backend.set(key, value, expire=expire)
+    async def set_value(self, key, value, expire):
+        backend = await self._get_backend()
+        result = await backend.set(key, value, expire=expire)
         return result
 
-    @asyncio.coroutine
-    def delete_value(self, key):
-        backend = yield from self._get_backend()
-        result = yield from backend.delete(key)
+    async def delete_value(self, key):
+        backend = await self._get_backend()
+        result = await backend.delete(key)
         return result
 
-    @asyncio.coroutine
-    def has_value(self, key):
-        backend = yield from self._get_backend()
-        result = yield from backend.exists(key)
+    async def has_value(self, key):
+        backend = await self._get_backend()
+        result = await backend.exists(key)
         return bool(result)
 
-    @asyncio.coroutine
-    def touch_value(self, key, expire):
+    async def touch_value(self, key, expire):
         if expire is None:
             raise TypeError("'touch' is requested for persistent cache")
-        backend = yield from self._get_backend()
-        result = yield from backend.expire(key, expire)
+        backend = await self._get_backend()
+        result = await backend.expire(key, expire)
         return result
 
-    @asyncio.coroutine
-    def get_many_values(self, keys):
-        backend = yield from self._get_backend()
-        values = yield from backend.mget(*keys)
+    async def get_many_values(self, keys):
+        backend = await self._get_backend()
+        values = await backend.mget(*keys)
         return [v if v is not None else fbase.NotFound for v in values]
 
-    @asyncio.coroutine
-    def set_many_values(self, keys, values, expire):
+    async def set_many_values(self, keys, values, expire):
         params = itertools.chain.from_iterable(zip(keys, values))
-        backend = yield from self._get_backend()
-        yield from backend.mset(*params)
+        backend = await self._get_backend()
+        await backend.mset(*params)
         if expire is not None:
             asyncio.ensure_future(asyncio.gather(*(
                 backend.expire(key, expire) for key in keys)))
@@ -410,43 +389,37 @@ class AioredisHashStorage(AioredisStorage):
         self.hash_key = backend[1]
         super(AioredisHashStorage, self).__init__(rope, storage_backend)
 
-    @asyncio.coroutine
-    def get_value(self, key):
-        backend = yield from self._get_backend()
-        value = yield from backend.hget(self.hash_key, key)
+    async def get_value(self, key):
+        backend = await self._get_backend()
+        value = await backend.hget(self.hash_key, key)
         if value is None:
             raise fbase.NotFound
         return value
 
-    @asyncio.coroutine
-    def set_value(self, key, value, expire):
-        backend = yield from self._get_backend()
-        result = yield from backend.hset(self.hash_key, key, value)
+    async def set_value(self, key, value, expire):
+        backend = await self._get_backend()
+        result = await backend.hset(self.hash_key, key, value)
         return result
 
-    @asyncio.coroutine
-    def delete_value(self, key):
-        backend = yield from self._get_backend()
-        result = yield from backend.hdel(self.hash_key, key)
+    async def delete_value(self, key):
+        backend = await self._get_backend()
+        result = await backend.hdel(self.hash_key, key)
         return result
 
-    @asyncio.coroutine
-    def has_value(self, key):
-        backend = yield from self._get_backend()
-        result = yield from backend.hexists(self.hash_key, key)
+    async def has_value(self, key):
+        backend = await self._get_backend()
+        result = await backend.hexists(self.hash_key, key)
         return bool(result)
 
-    @asyncio.coroutine
-    def get_many_values(self, keys):
-        backend = yield from self._get_backend()
-        values = yield from backend.hmget(self.hash_key, *keys)
+    async def get_many_values(self, keys):
+        backend = await self._get_backend()
+        values = await backend.hmget(self.hash_key, *keys)
         return [v if v is not None else fbase.NotFound for v in values]
 
-    @asyncio.coroutine
-    def set_many_values(self, keys, values, expire):
+    async def set_many_values(self, keys, values, expire):
         params = itertools.chain.from_iterable(zip(keys, values))
-        backend = yield from self._get_backend()
-        yield from backend.hmset(self.hash_key, *params)
+        backend = await self._get_backend()
+        await backend.hmset(self.hash_key, *params)
 
 
 def dict(

@@ -68,16 +68,6 @@ if sys.version_info[0] == 2:
         'functools32>=3.2.3-2',
     ])
 
-# backports - py34
-if sys.version_info[:2] <= (3, 4):
-    install_requires.extend([
-        'typing>=3.6.4',
-    ])
-    if (3, 3) <= sys.version_info[:2]:
-        install_requires.extend([
-            'asyncio>=3.4.3',
-        ])
-
 dev_require = tests_require + docs_require
 
 
@@ -118,9 +108,9 @@ setup(
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.3',
-        'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
     ],
 )  # noqa
