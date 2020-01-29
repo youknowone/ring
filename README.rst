@@ -15,7 +15,7 @@ Let's concentrate on code, not on storages.
 Ring shows a way to control cache in point of view of code - not about storages.
 Ring's decorator is convenient but also keeps fluency for general scenarios.
 
-asyncio support!
+asyncio support for Python3.5+!
 
 Take advantage of perfectly explicit and fully automated cache interface.
 Ring decorators convert your functions to cached version of them, with extra
