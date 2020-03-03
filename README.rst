@@ -113,6 +113,56 @@ Method cache
     # still hitting the same cache
     assert updated_data == user2.data()
 
+one key-value pair in a dictionary cache（字典中某个键值对的缓存）
+-------------------------------------------------------------------
+场景：由celery部署的后端框架，框架中所有job的入参、返回值格式均为dict，如下,其中，存在若干个job需要爬取入参中指定的url，
+并解析页面中的数据。由于相同URL的重复访问导致大量的资源浪费，因此需要增加job的缓存，确保相同的url 60分钟只请求一次。
+
+.. code:: python
+
+    arg_data = {
+        'taskid': 1,
+        'status':True,
+        'msg':'',
+        'data':{
+            'url':'https://www.baidu.com'
+        }
+    }
+
+
+通过指定装饰器参数`dict_keys`实现只对data做缓存的功能。
+
+.. code:: python
+
+    import ring
+    import redis
+
+    rc = redis.StrictRedis()
+
+    @ring.redis(rc, coder='json', expire=30, dict_keys='data')
+    def get_url(obj):
+        """very slow function
+        """
+        print('开始执行')
+        time.sleep(1)
+        return requests.get(obj['data']['url']).text
+
+
+    arg_data = {
+        'taskid': 160,
+        'data': {
+            'url': 'https://www.baidu.com'
+        }
+    }
+    timer_non_cached = timeit.Timer("get_url({'taskid': 160,'data': {'url': 'https://www.tita.com'}})", globals=globals())
+    t_non_cached = timer_non_cached.timeit(100)
+    print("Non-Cached: {t_non_cached:.06f} seconds".format(t_non_cached=t_non_cached))
+
+    timer_cached = timeit.Timer("get_url({'taskid': 161,'data': {'url': 'https://www.tita.com'}})", globals=globals())
+    t_cached = timer_cached.timeit(100)
+    print("Cached: {t_cached:.06f} seconds".format(t_cached=t_cached))
+
+
 
 Installation
 ------------

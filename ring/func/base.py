@@ -49,7 +49,7 @@ def suggest_key_prefix(c, key_prefix):
             if c.is_membermethod:
                 key_prefix = \
                     '{0.__module__}.{{self.__class__.__name__}}.{0.__name__}' \
-                    .format(cc)
+                        .format(cc)
             elif c.is_classmethod:
                 key_prefix = '{0.__module__}.{{cls}}.{0.__name__}'.format(cc)
     else:
@@ -57,27 +57,29 @@ def suggest_key_prefix(c, key_prefix):
     return key_prefix
 
 
-def _coerce_bypass(v):
+def _coerce_bypass(v, dict_keys=None):
     return v
 
 
-def _coerce_ndarray(v):
+def _coerce_ndarray(v, dict_keys=None):
     return "{}:{}".format(type(v).__name__, str(v).replace(' ', ','))
 
 
-def _coerce_list_and_tuple(v):
+def _coerce_list_and_tuple(v, dict_keys=None):
     return str(v).replace(' ', '')
 
 
-def _coerce_type(v):
+def _coerce_type(v, dict_keys=None):
     return v.__name__
 
 
-def _coerce_dict(v):
+def _coerce_dict(v, dict_keys=None):
+    if dict_keys:
+        return ','.join(['{},{}'.format(dict_keys, v[dict_keys])])
     return ','.join(['{},{}'.format(k, v[k]) for k in sorted(v.keys())])
 
 
-def _coerce_set(v):
+def _coerce_set(v, dict_keys=None):
     elements = ','.join([
         "'{}'".format(e) if isinstance(e, str) else str(e)
         for e in sorted(v)
@@ -85,11 +87,11 @@ def _coerce_set(v):
     return "{" + "{}".format(elements) + "}"
 
 
-def _coerce_ring_key(v):
+def _coerce_ring_key(v, dict_keys=None):
     return v.__ring_key__()
 
 
-def _coerce_dataclass(v):
+def _coerce_dataclass(v, dict_keys=None):
     return type(v).__name__ + _coerce_dict(dataclasses.asdict(v))
 
 
@@ -125,12 +127,12 @@ def coerce_function(t):
     # but NEVER add a general iterator processing. it will cause user bugs.
 
 
-def coerce(v, in_memory_storage):
+def coerce(v, in_memory_storage, dict_keys=None):
     """Transform the given value to cache-friendly string data."""
 
     type_coerce = coerce_function(type(v))
     if type_coerce:
-        return type_coerce(v)
+        return type_coerce(v, dict_keys)
 
     if hasattr(v, '__ring_key__'):
         return v.__ring_key__()
@@ -539,11 +541,11 @@ class Config(object):
     key_refactor = attr.ib()
     key_prefix = attr.ib()
     ignorable_keys = attr.ib()
+    dict_keys = attr.ib()
     # wire_class = attr.ib()
 
 
 class RingWire(Wire):
-
     __slots__ = ()
 
     def __init__(self, rope, *args, **kwargs):
@@ -666,7 +668,7 @@ class RingRope(RopeCore):
 
         in_memory_storage = hasattr(config.storage_class, 'in_memory_storage')
         coerced_kwargs = {
-            k: coerce(v, in_memory_storage) for k, v in full_kwargs.items()
+            k: coerce(v, in_memory_storage, self.config.dict_keys) for k, v in full_kwargs.items()
             if k not in _ignorable_keys}
         key = key_generator.build(coerced_kwargs)
         if config.key_encoding:
@@ -740,7 +742,7 @@ class Ring(object):
                   default_action=Ellipsis,
                   coder_registry=Ellipsis,
                   # key builder related parameters
-                  ignorable_keys=None, key_encoding=None, key_refactor=None):
+                  ignorable_keys=None, key_encoding=None, key_refactor=None, dict_keys=None):
         """Configure ring object.
 
          This is the base factory function that every internal **Ring** factories
@@ -807,7 +809,7 @@ class Ring(object):
             expire_default=expire_default,
             key_refactor=key_refactor,
             key_prefix=key_prefix,
-            ignorable_keys=ignorable_keys)
+            ignorable_keys=ignorable_keys, dict_keys=dict_keys)
 
     def create_rope(self, func, callback=None):
         rope = self.wire_rope(func)
@@ -832,7 +834,7 @@ def factory(
         # optimization
         wire_slots=Ellipsis,
         # key builder related parameters
-        ignorable_keys=None, key_encoding=None, key_refactor=None):
+        ignorable_keys=None, key_encoding=None, key_refactor=None, dict_keys=None):
     """Create a decorator which turns a function into ring wire or wire bridge.
 
     This is the base factory function that every internal **Ring** factories
@@ -872,6 +874,9 @@ def factory(
     :param Optional[Callable[[str],str]] key_refactor: Roughly,
         ``key = key_refactor(key)`` will be run when `key_refactor` is not
         :data:`None`; Otherwise it is omitted.
+    :param Optional[str] dict's key_caching: If a dictionary exists in the
+        parameters and dict_keys is specified, only the specified keys are
+        used as the unique identifier for the cache.
 
     :return: The factory decorator to create new ring wire or wire bridge.
     :rtype: (Callable)->ring.wire.RopeCore
@@ -889,7 +894,7 @@ def factory(
             default_action,
             coder_registry,
             # key builder related parameters
-            ignorable_keys, key_encoding, key_refactor)
+            ignorable_keys, key_encoding, key_refactor, dict_keys)
 
         return ring.create_rope(f, on_manufactured)
 
@@ -921,7 +926,8 @@ class BaseStorage(object):
     def __init__(self, ring, backend):
         self._ring = ring
         if contextvars:
-            self._backend = (lambda: backend.get()) if isinstance(backend, contextvars.ContextVar) else (lambda: backend)
+            self._backend = (lambda: backend.get()) if isinstance(backend, contextvars.ContextVar) else (
+                lambda: backend)
         else:
             self._backend = lambda: backend
 
@@ -1052,7 +1058,6 @@ class FactoryProxyMetaclass(type):
 
 
 class FactoryProxyBase(six.with_metaclass(FactoryProxyMetaclass, object)):
-
     classifier = None  # must be set in descendant
     factory_table = None  # must be set in descendant
 
