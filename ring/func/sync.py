@@ -178,7 +178,6 @@ class BulkStorageMixin(object):
 
 
 class LruStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
-
     in_memory_storage = True
 
     def get_value(self, key):
@@ -207,7 +206,6 @@ class LruStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
 
 
 class ExpirableDictStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
-
     in_memory_storage = True
     now = time.time
 
@@ -252,7 +250,6 @@ class ExpirableDictStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
 
 
 class PersistentDictStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
-
     in_memory_storage = True
 
     def get_value(self, key):
@@ -290,7 +287,7 @@ class ShelveStorage(PersistentDictStorage):
 
 
 class MemcacheStorage(
-        fbase.CommonMixinStorage, fbase.StorageMixin, BulkStorageMixin):
+    fbase.CommonMixinStorage, fbase.StorageMixin, BulkStorageMixin):
 
     def get_value(self, key):
         value = self.backend.get(key)
@@ -319,12 +316,13 @@ class MemcacheStorage(
 
 
 class RedisStorage(
-        fbase.CommonMixinStorage, fbase.StorageMixin, BulkStorageMixin):
+    fbase.CommonMixinStorage, fbase.StorageMixin, BulkStorageMixin):
 
     def get_value(self, key):
         value = self.backend.get(key)
         if value is None:
             raise fbase.NotFound
+        print(f'命中缓存，key:{key[:10]}')
         return value
 
     def set_value(self, key, value, expire):
@@ -678,6 +676,7 @@ def arcus(
         user_interface=CacheUserInterface,
         **kwargs):  # pragma: no cover
     """Arcus support. deprecated."""
+
     class Storage(fbase.CommonMixinStorage, fbase.StorageMixin):
         def get_value(self, key):
             value = self.backend.get(key).get_result()
