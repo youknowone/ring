@@ -62,7 +62,7 @@ def transform_cache_page_args(wire, rules, args, kwargs):
     else:
         request = raw_request  # type error?
 
-    return (request, ) + args[1:], kwargs
+    return (request, ), wire._pack_args(args[1:], kwargs)
 
 
 class CachePageUserInterface(fbase.BaseUserInterface):
@@ -83,7 +83,7 @@ class CachePageUserInterface(fbase.BaseUserInterface):
     @fbase.interface_attrs(
         transform_args=transform_cache_page_args,
         return_annotation=Tuple[str, str])
-    def key(self, wire, request, *args, **kwargs):
+    def key(self, wire, request, pargs):
         middleware = self.middleware
         key_get = get_cache_key(
             request, middleware.key_prefix, 'GET', cache=middleware.cache)
@@ -93,11 +93,11 @@ class CachePageUserInterface(fbase.BaseUserInterface):
 
     @fbase.interface_attrs(
         transform_args=transform_cache_page_args)
-    def execute(self, wire, request, *args, **kwargs):
+    def execute(self, wire, request, pargs):
         middleware = self.middleware
         view_func = wire.__func__
         try:
-            response = view_func(request, *args, **kwargs)
+            response = view_func(request, *pargs.args, **pargs.kwargs)
         except Exception as e:
             if hasattr(middleware, 'process_exception'):
                 result = middleware.process_exception(request, e)
@@ -113,7 +113,7 @@ class CachePageUserInterface(fbase.BaseUserInterface):
     @fbase.interface_attrs(
         transform_args=transform_cache_page_args,
         return_annotation=lambda a: Optional[a.get('return', Any)])
-    def get(self, wire, request, *args, **kwargs):
+    def get(self, wire, request, pargs):
         middleware = self.middleware
         result = middleware.process_request(request)
         if result is not None:
@@ -127,7 +127,7 @@ class CachePageUserInterface(fbase.BaseUserInterface):
 
     @fbase.interface_attrs(
         transform_args=transform_cache_page_args, return_annotation=None)
-    def set(self, wire, response, request, *args, **kwargs):
+    def set(self, wire, response, request, pargs):
         if not hasattr(request, '_cache_update_cache'):
             request._cache_update_cache = request.method in ('GET', 'HEAD')
         middleware = self.middleware
@@ -143,31 +143,31 @@ class CachePageUserInterface(fbase.BaseUserInterface):
 
     @fbase.interface_attrs(
         transform_args=transform_cache_page_args, return_annotation=None)
-    def update(self, wire, request, *args, **kwargs):
-        response = self.execute(wire, request, *args, **kwargs)
-        self.set(wire, response, request, *args, **kwargs)
+    def update(self, wire, request, pargs):
+        response = self.execute(wire, request, pargs)
+        self.set(wire, response, request, pargs)
         return response
 
     @fbase.interface_attrs(
         transform_args=transform_cache_page_args)
-    def get_or_update(self, wire, request, *args, **kwargs):
-        response = self.get(wire, request, *args, **kwargs)
+    def get_or_update(self, wire, request, pargs):
+        response = self.get(wire, request, pargs)
         if response is not None:
             return response
-        response = self.execute(wire, request, *args, **kwargs)
-        self.set(wire, response, request, *args, **kwargs)
+        response = self.execute(wire, request, pargs)
+        self.set(wire, response, request, pargs)
         return response
 
     @fbase.interface_attrs(
         transform_args=transform_cache_page_args, return_annotation=None)
-    def delete(self, wire, request, *args, **kwargs):
+    def delete(self, wire, request, pargs):
         if not getattr(request, '_fake_request', None):
             warnings.warn(
                 "A request is given as first argument. If this is intended "
                 "try '(request, None)'. Otherwise, Use '(request, path)' "
                 "instead of 'request' to convert the actual request to have "
                 "the target path.")
-        key_get, key_head = self.key(wire, request, *args, **kwargs)
+        key_get, key_head = self.key(wire, request, pargs)
         if key_get:
             self.middleware.cache.delete(key_get)
         if key_head:
@@ -175,7 +175,7 @@ class CachePageUserInterface(fbase.BaseUserInterface):
 
     @fbase.interface_attrs(
         transform_args=transform_cache_page_args, return_annotation=bool)
-    def has(self, *args, **kwargs):
+    def has(self, wire, request, pargs):
         raise NotImplementedError
         # The below implementation is not reliable for the return value `True`.
         # `False` always means the cache doesn't exist; While `True` doesn't
@@ -184,7 +184,7 @@ class CachePageUserInterface(fbase.BaseUserInterface):
 
     @fbase.interface_attrs(
         transform_args=transform_cache_page_args, return_annotation=None)
-    def touch(self, wire, request, *args, **kwargs):  #
+    def touch(self, wire, request, pargs):
         raise NotImplementedError
 
 

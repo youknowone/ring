@@ -1,29 +1,28 @@
 import asyncio
 from typing import Any, Optional
 from ring.callable import Callable
+from ring.func.base import ArgPack
 
 import pytest
 
 
-@pytest.mark.parametrize('f,args,kwargs,merged', [
-    (lambda x, *args, y=10, **kw: None, (1,), {}, dict(x=1, args=(), y=10, kw={})),
-    (lambda x, *, y, z=20: None, (1,), dict(y=10), dict(x=1, y=10, z=20)),
+@pytest.mark.parametrize('f,pargs,merged', [
+    (lambda x, *args, y=10, **kw: None, ArgPack((), (1,), {}), {"x": 1, "*args": (), "y": 10, "**kw": {}}),
+    (lambda x, *, y, z=20: None, ArgPack((), (1,), dict(y=10)), {"x": 1, "y": 10, "z": 20}),
 ])
-def test_kwargify_py3(f, args, kwargs, merged):
-    kwargified = Callable(f).kwargify(args, kwargs)
-    print(kwargified)
-    print(merged)
+def test_make_labels_py3(f, pargs, merged):
+    kwargified = pargs.labels(Callable(f))
     assert kwargified == merged, (kwargified, merged)
 
 
-@pytest.mark.parametrize('f,args,kwargs,exc', [
-    (lambda x, *args, y=30: None, (2), {'x': 1}, TypeError),
-    (lambda x, *, y, z=20: None, (1,), {}, TypeError),
-    (lambda x, *, z=20: None, (1,), {'w': 2}, TypeError),
+@pytest.mark.parametrize('f,pargs,exc', [
+    (lambda x, *args, y=30: None, ArgPack((), (2), {'x': 1}), TypeError),
+    (lambda x, *, y, z=20: None, ArgPack((), (1,), {}), TypeError),
+    (lambda x, *, z=20: None, ArgPack((), (1,), {'w': 2}), TypeError),
 ])
-def test_kwargify_exc_py3(f, args, kwargs, exc):
+def test_make_labels_exc_py3(f, pargs, exc):
     with pytest.raises(exc):
-        Callable(f).kwargify(args, kwargs)
+        pargs.labels(Callable(f))
 
 
 def test_annotations():

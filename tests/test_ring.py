@@ -120,3 +120,13 @@ def test_package_version():
     parts = ring.__version__.split('.')
     assert len(parts) == 3
     assert parts[0] == '0'
+
+
+def test_varargs():
+    def a(*args, **kwargs):
+        return (args, kwargs)
+
+    b = ring.lru()(a)
+
+    assert a(3) == b(3)
+    assert a(3, x=1) == b(3, x=1)

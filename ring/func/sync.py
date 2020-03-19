@@ -24,56 +24,53 @@ class CacheUserInterface(fbase.BaseUserInterface):
     """
 
     @fbase.interface_attrs(
-        transform_args=fbase.transform_kwargs_only,
         return_annotation=lambda a: Optional[a.get('return', Any)])
-    def get(self, wire, **kwargs):
-        key = self.key(wire, **kwargs)
+    def get(self, wire, pargs):
+        key = self.key(wire, pargs=pargs)
         try:
             result = wire.storage.get(key)
         except fbase.NotFound:
             result = wire._rope.config.miss_value
         return result
 
-    @fbase.interface_attrs(transform_args=fbase.transform_kwargs_only)
-    def update(self, wire, **kwargs):
-        key = wire.key(**kwargs)
-        result = wire.execute(**kwargs)
+    def update(self, wire, pargs):
+        key = self.key(wire, pargs=pargs)
+        result = self.execute(wire, pargs=pargs)
         wire.storage.set(key, result)
         return result
 
-    @fbase.interface_attrs(transform_args=fbase.transform_kwargs_only)
-    def get_or_update(self, wire, **kwargs):
-        key = self.key(wire, **kwargs)
+    def get_or_update(self, wire, pargs):
+        key = self.key(wire, pargs=pargs)
         try:
             result = wire.storage.get(key)
         except fbase.NotFound:
-            result = self.execute(wire, **kwargs)
+            result = self.execute(wire, pargs=pargs)
             wire.storage.set(key, result)
         return result
 
     @fbase.interface_attrs(
-        transform_args=(fbase.transform_kwargs_only, {'prefix_count': 1}),
+        transform_args=(fbase.transform_args_prefix, {'prefix_count': 1}),
         return_annotation=None)
-    def set(self, wire, _value, **kwargs):
-        key = self.key(wire, **kwargs)
+    def set(self, wire, _value, pargs):
+        key = self.key(wire, pargs=pargs)
         wire.storage.set(key, _value)
 
     @fbase.interface_attrs(
-        transform_args=fbase.transform_kwargs_only, return_annotation=None)
-    def delete(self, wire, **kwargs):
-        key = self.key(wire, **kwargs)
+        return_annotation=None)
+    def delete(self, wire, pargs):
+        key = self.key(wire, pargs=pargs)
         wire.storage.delete(key)
 
     @fbase.interface_attrs(
-        transform_args=fbase.transform_kwargs_only, return_annotation=bool)
-    def has(self, wire, **kwargs):
-        key = self.key(wire, **kwargs)
+        return_annotation=bool)
+    def has(self, wire, pargs):
+        key = self.key(wire, pargs=pargs)
         return wire.storage.has(key)
 
     @fbase.interface_attrs(
-        transform_args=fbase.transform_kwargs_only, return_annotation=None)
-    def touch(self, wire, **kwargs):
-        key = self.key(wire, **kwargs)
+        return_annotation=None)
+    def touch(self, wire, pargs):
+        key = self.key(wire, pargs=pargs)
         wire.storage.touch(key)
 
 
@@ -85,43 +82,47 @@ class BulkInterfaceMixin(fbase.AbstractBulkUserInterfaceMixin):
     """
 
     @fbase.interface_attrs(
+        transform_args=fbase.transform_positional_only,
         return_annotation=lambda a: List[a.get('return', Any)])
-    def execute_many(self, wire, *args_list):
-        values = [fbase.execute_bulk_item(wire, args) for args in args_list]
+    def execute_many(self, wire, pargs):
+        values = [fbase.execute_bulk_item(wire, args) for args in pargs.args]
         return values
 
     @fbase.interface_attrs(
+        transform_args=fbase.transform_positional_only,
         return_annotation=lambda a: List[Optional[a.get('return', Any)]])
-    def get_many(self, wire, *args_list):
-        keys = self.key_many(wire, *args_list)
+    def get_many(self, wire, pargs):
+        keys = self.key_many(wire, pargs)
         results = wire.storage.get_many(
             keys, miss_value=wire._rope.config.miss_value)
         return results
 
     @fbase.interface_attrs(
+        transform_args=fbase.transform_positional_only,
         return_annotation=lambda a: List[a.get('return', Any)])
-    def update_many(self, wire, *args_list):
-        keys = self.key_many(wire, *args_list)
-        values = self.execute_many(wire, *args_list)
+    def update_many(self, wire, pargs):
+        keys = self.key_many(wire, pargs)
+        values = self.execute_many(wire, pargs)
         wire.storage.set_many(keys, values)
         return values
 
     @fbase.interface_attrs(
+        transform_args=fbase.transform_positional_only,
         return_annotation=lambda a: List[a.get('return', Any)])
-    def get_or_update_many(self, wire, *args_list):
-        keys = self.key_many(wire, *args_list)
+    def get_or_update_many(self, wire, pargs):
+        keys = self.key_many(wire, pargs)
         miss_value = object()
         results = wire.storage.get_many(keys, miss_value=miss_value)
 
         miss_indices = []
-        for i, akr in enumerate(zip(args_list, keys, results)):
+        for i, akr in enumerate(zip(pargs.args, keys, results)):
             args, key, result = akr
             if result is not miss_value:
                 continue
             miss_indices.append(i)
 
         new_results = [
-            fbase.execute_bulk_item(wire, args_list[i]) for i in miss_indices]
+            fbase.execute_bulk_item(wire, pargs.args[i]) for i in miss_indices]
         new_keys = [keys[i] for i in miss_indices]
         wire.storage.set_many(new_keys, new_results)
 
@@ -129,24 +130,33 @@ class BulkInterfaceMixin(fbase.AbstractBulkUserInterfaceMixin):
             results[old_i] = new_results[new_i]
         return results
 
-    @fbase.interface_attrs(return_annotation=None)
-    def set_many(self, wire, args_list, value_list):
-        keys = self.key_many(wire, *args_list)
+    @fbase.interface_attrs(
+        transform_args=fbase.transform_positional_only,
+        return_annotation=None)
+    def set_many(self, wire, pargs):
+        args_list, value_list = pargs.args
+        keys = self.key_many(wire, fbase.ArgPack((), args_list, {}))
         wire.storage.set_many(keys, value_list)
 
-    @fbase.interface_attrs(return_annotation=None)
-    def delete_many(self, wire, *args_list):
-        keys = self.key_many(wire, *args_list)
+    @fbase.interface_attrs(
+        transform_args=fbase.transform_positional_only,
+        return_annotation=None)
+    def delete_many(self, wire, pargs):
+        keys = self.key_many(wire, pargs)
         wire.storage.delete_many(keys)
 
-    @fbase.interface_attrs(return_annotation=None)
-    def has_many(self, wire, *args_list):
-        keys = self.key_many(wire, *args_list)
+    @fbase.interface_attrs(
+        transform_args=fbase.transform_positional_only,
+        return_annotation=None)
+    def has_many(self, wire, pargs):
+        keys = self.key_many(wire, pargs)
         wire.storage.has_many(keys)
 
-    @fbase.interface_attrs(return_annotation=None)
-    def touch_many(self, wire, *args_list):
-        keys = self.key_many(wire, *args_list)
+    @fbase.interface_attrs(
+        transform_args=fbase.transform_positional_only,
+        return_annotation=None)
+    def touch_many(self, wire, pargs):
+        keys = self.key_many(wire, pargs)
         wire.storage.touch_many(keys)
 
 

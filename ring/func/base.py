@@ -3,13 +3,14 @@
 
 """  # noqa: W605
 import abc
+import collections
 import types
 from typing import List
 
 import attr
 import six
 from wirerope import Wire, WireRope, RopeCore
-from .._compat import functools, qualname
+from .._compat import functools, inspect, qualname
 from ..callable import Callable
 from ..key import CallableKey
 from ..coder import registry as default_registry
@@ -30,6 +31,98 @@ except ImportError:  # pragma: no cover
 __all__ = (
     'factory', 'NotFound',
     'BaseUserInterface', 'BaseStorage', 'CommonMixinStorage', 'StorageMixin')
+
+
+class ArgPack(collections.namedtuple("_ArgPack", ["bounds", "args", "kwargs"])):
+    __slots__ = []
+
+    def labels(self, callable):
+        """Create a merged kwargs-like object with given args and kwargs."""
+        bound_args, args, kwargs = self
+
+        merged = collections.OrderedDict()
+        parameters = callable.parameters
+        parameters_len = len(parameters)
+
+        consumed_i = 0
+        consumed_names = set()
+        i = 0
+
+        # no .POSITIONAL_ONLY support
+
+        args = bound_args + args
+        while i < parameters_len and \
+                parameters[i].kind == inspect.Parameter.POSITIONAL_OR_KEYWORD:
+            p = parameters[i]
+            i += 1
+
+            name = p.name
+            try:
+                value = args[consumed_i]
+            except IndexError:
+                pass
+            else:
+                if name in kwargs:
+                    raise TypeError(
+                        "{}() got multiple values for argument '{}'".format(
+                            callable.code.co_name, name))
+                consumed_i += 1
+                merged[name] = value
+                continue
+
+            if name in kwargs:
+                merged[name] = kwargs[name]
+                consumed_names.add(name)
+                continue
+
+            value = p.default
+            if value is inspect.Parameter.empty:
+                message = \
+                    "{}() missing required positional argument: '{}'".format(
+                        callable.code.co_name, p.name)
+                raise TypeError(message)
+            merged[name] = value
+
+        if i < parameters_len and \
+                parameters[i].kind == inspect.Parameter.VAR_POSITIONAL:
+            p = parameters[i]
+            i += 1
+
+            merged['*' + p.name] = args[consumed_i:]
+        else:
+            if consumed_i < len(args):
+                raise TypeError(
+                    "{}() takes {} positional arguments but {} were given"
+                    .format(callable.code.co_name, i, i + len(args) - consumed_i))
+
+        while i < parameters_len and \
+                parameters[i].kind == inspect.Parameter.KEYWORD_ONLY:
+            p = parameters[i]
+            i += 1
+
+            name = p.name
+            if name in kwargs:
+                merged[name] = kwargs[name]
+                consumed_names.add(name)
+            elif p.default is not inspect.Parameter.empty:
+                merged[name] = p.default
+            else:
+                raise TypeError(
+                    "{}() missing 1 required keyword-only argument: '{}'"
+                    .format(callable.code.co_name, p.name))
+
+        var_kws = {k: v for k, v in kwargs.items() if k not in consumed_names}
+        if i < parameters_len and \
+                parameters[i].kind == inspect.Parameter.VAR_KEYWORD:
+            p = parameters[i]
+            i += 1
+            merged['**' + p.name] = var_kws
+        elif var_kws:
+            raise TypeError(
+                "{}() got multiple values for arguments '{}'".format(
+                    callable.code.co_name, list(var_kws.keys())))
+
+        return merged
 
 
 def suggest_ignorable_keys(c, ignorable_keys):
@@ -150,30 +243,6 @@ def coerce(v, in_memory_storage):
         "The given value '{}' of type '{}' is not a key-compatible type. {}".format(v, cls, msg))
 
 
-def create_key_builder(
-        c, key_prefix, ignorable_keys, coerce=coerce, encoding=None,
-        key_refactor=None, in_memory_storage=False):
-    assert isinstance(c, Callable)
-    key_generator = CallableKey(
-        c, format_prefix=key_prefix, ignorable_keys=ignorable_keys)
-
-    def compose_key(*bound_args, **kwargs):
-        full_kwargs = kwargs.copy()
-        for i, prearg in enumerate(bound_args):
-            full_kwargs[c.parameters[i].name] = bound_args[i]
-        coerced_kwargs = {
-            k: coerce(v, in_memory_storage) for k, v in full_kwargs.items()
-            if k not in ignorable_keys}
-        key = key_generator.build(coerced_kwargs)
-        if encoding:
-            key = key.encode(encoding)
-        if key_refactor:
-            key = key_refactor(key)
-        return key
-
-    return compose_key
-
-
 def interface_attrs(**kwargs):
     if 'return_annotation' in kwargs:
         kwargs['__annotations_override__'] = {
@@ -198,7 +267,7 @@ def interface_attrs(**kwargs):
     return _decorator
 
 
-def transform_kwargs_only(wire, rules, args, kwargs):
+def transform_args_prefix(wire, rules, args, kwargs):
     """`transform_args` for basic single-access methods in interfaces.
 
     Create and returns uniform fully keyword-annotated arguments except for
@@ -226,8 +295,14 @@ def transform_kwargs_only(wire, rules, args, kwargs):
     prefix_count = rules.get('prefix_count', 0)
     wrapper_args = args[:prefix_count]
     function_args = args[prefix_count:]
-    full_kwargs = wire._merge_args(function_args, kwargs)
-    return wrapper_args, full_kwargs
+    pargs = wire._pack_args(function_args, kwargs)
+    return wrapper_args, pargs
+
+
+def transform_positional_only(wire, rules, args, kwargs):
+    if kwargs:
+        raise TypeError("Keyword arguments are not allowed for many operations")
+    return (), wire._pack_args(args, {})
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -246,55 +321,48 @@ class BaseUserInterface(object):
 
     The parameter *transform_args* in :func:`ring.func.base.interface_attrs`
     defines the figure of method parameters. For the **BaseUserInterface**,
-    every method's *transform_args* is
-    :func:`ring.func.base.transform_kwargs_only` which force to pass uniform
-    keyword arguments to the interface methods.
+    some methods' *transform_args* are
+    :func:`ring.func.base.transform_args_prefix` which removes specified
+    count of prefix.
     Other mix-ins or subclasses may have different *transform_args*.
 
     The first parameter of interface method *always* is a **RingWire** object.
     The other parameters are composed by *transform_args*.
 
-    :see: :func:`ring.func.base.transform_kwargs_only` for the specific
+    :see: :func:`ring.func.base.transform_args_prefix` for the specific
         argument transformation rule for each methods.
 
     The parameters below describe common methods' parameters.
 
     :param ring.func.base.RingWire wire: The corresponding ring
         wire object.
-    :param Dict[str,Any] kwargs: Fully keyword-annotated arguments. When
-        actual function arguments are passed to each sub-function of the
-        wire, they are merged into the form of keyword arguments. This gives
-        the consistent interface for arguments handling. Note that it only
-        describes the methods' *transform_args* attribute is
-        :func:`ring.func.base.transform_kwargs_only`
+    :param ArgPack pargs: Refined arguments pack.
     """
 
     def __init__(self, ring):
         self._ring = ring
 
     @interface_attrs(
-        transform_args=transform_kwargs_only, return_annotation=str)
-    def key(self, wire, **kwargs):
+        return_annotation=str)
+    def key(self, wire, pargs):
         """Create and return the composed key for storage.
 
         :see: The class documentation for the parameter details.
         :return: The composed key with given arguments.
         :rtype: str
         """
-        return wire._rope.compose_key(*wire._bound_objects, **kwargs)
+        return wire._rope.compose_key(pargs=pargs)
 
-    @interface_attrs(transform_args=transform_kwargs_only)
-    def execute(self, wire, **kwargs):
+    def execute(self, wire, pargs):
         """Execute and return the result of the original function.
 
         :see: The class documentation for the parameter details.
         :return: The result of the original function.
         """
-        return wire.__func__(**kwargs)
+        return wire.__func__(*pargs.args, **pargs.kwargs)
 
     @abc.abstractmethod
-    @interface_attrs(transform_args=transform_kwargs_only)
-    def get(self, wire, **kwargs):  # pragma: no cover
+    def get(self, wire, pargs):  # pragma: no cover
         """Try to get and return the storage value of the corresponding key.
 
         :see: The class documentation for the parameter details.
@@ -305,8 +373,8 @@ class BaseUserInterface(object):
         raise NotImplementedError
 
     @interface_attrs(
-        transform_args=(transform_kwargs_only, {'prefix_count': 1}))
-    def set(self, wire, value, **kwargs):  # pragma: no cover
+        transform_args=(transform_args_prefix, {'prefix_count': 1}))
+    def set(self, wire, value, pargs):  # pragma: no cover
         """Set the storage value of the corresponding key as the given `value`.
 
         :see: :meth:`ring.func.base.BaseUserInterface.key` for the key.
@@ -318,8 +386,7 @@ class BaseUserInterface(object):
         raise NotImplementedError
 
     @abc.abstractmethod
-    @interface_attrs(transform_args=transform_kwargs_only)
-    def update(self, wire, **kwargs):  # pragma: no cover
+    def update(self, wire, pargs):  # pragma: no cover
         """Execute the original function and `set` the result as the value.
 
         This action is comprehensible as a concatenation of
@@ -336,8 +403,7 @@ class BaseUserInterface(object):
         raise NotImplementedError
 
     @abc.abstractmethod
-    @interface_attrs(transform_args=transform_kwargs_only)
-    def get_or_update(self, wire, **kwargs):  # pragma: no cover
+    def get_or_update(self, wire, pargs):  # pragma: no cover
         """Try to get and return the storage value; Otherwise, update and so.
 
         :see: :meth:`ring.func.base.BaseUserInterface.get` for get.
@@ -350,8 +416,7 @@ class BaseUserInterface(object):
         raise NotImplementedError
 
     @abc.abstractmethod
-    @interface_attrs(transform_args=transform_kwargs_only)
-    def delete(self, wire, **kwargs):  # pragma: no cover
+    def delete(self, wire, pargs):  # pragma: no cover
         """Delete the storage value of the corresponding key.
 
         :see: :meth:`ring.func.base.BaseUserInterface.key` for the key.
@@ -361,8 +426,7 @@ class BaseUserInterface(object):
         """
         raise NotImplementedError
 
-    @interface_attrs(transform_args=transform_kwargs_only)
-    def has(self, wire, **kwargs):  # pragma: no cover
+    def has(self, wire, pargs):  # pragma: no cover
         """Return whether the storage has a value of the corresponding key.
 
         This is an optional function.
@@ -375,8 +439,7 @@ class BaseUserInterface(object):
         """
         raise NotImplementedError
 
-    @interface_attrs(transform_args=transform_kwargs_only)
-    def touch(self, wire, **kwargs):  # pragma: no cover
+    def touch(self, wire, pargs):  # pragma: no cover
         """Touch the storage value of the corresponding key.
 
         This is an optional function.
@@ -392,14 +455,17 @@ class BaseUserInterface(object):
 
 def create_bulk_key(interface, wire, args):
     if isinstance(args, tuple):
-        kwargs = wire._merge_args(args, {})
-        return interface.key(wire, **kwargs)
+        args_pack = wire._pack_args(args, {})
     elif isinstance(args, dict):
-        return interface.key(wire, **args)
+        args_pack = wire._pack_args((), args)
+    elif isinstance(args, ArgPack):
+        args_pack = args
     else:
         raise TypeError(
             "Each parameter of '_many' suffixed sub-functions must be an "
             "instance of 'tuple' or 'dict'")
+
+    return interface.key(wire, args_pack)
 
 
 def execute_bulk_item(wire, args):
@@ -440,17 +506,20 @@ class AbstractBulkUserInterfaceMixin(object):
         don't have *transform_args* attribute.
     """
 
-    @interface_attrs(return_annotation=lambda a: List[str])
-    def key_many(self, wire, *args_list):
+    @interface_attrs(
+        transform_args=transform_positional_only,
+        return_annotation=lambda a: List[str])
+    def key_many(self, wire, pargs):
         """Create and return the composed keys for storage.
 
         :see: The class documentation for the parameter details.
         :return: A sequence of created keys.
         :rtype: Sequence[str]
         """
-        return [create_bulk_key(self, wire, args) for args in args_list]
+        return [create_bulk_key(self, wire, args) for args in pargs.args]
 
-    def execute_many(self, wire, *args_list):  # pragma: no cover
+    @interface_attrs(transform_args=transform_positional_only)
+    def execute_many(self, wire, pargs):  # pragma: no cover
         """Execute and return the results of the original function.
 
         :see: The class documentation for the parameter details.
@@ -459,7 +528,8 @@ class AbstractBulkUserInterfaceMixin(object):
         """
         raise NotImplementedError
 
-    def get_many(self, wire, *args_list):  # pragma: no cover
+    @interface_attrs(transform_args=transform_positional_only)
+    def get_many(self, wire, pargs):  # pragma: no cover
         """Try to get and returns the storage values.
 
         :see: The class documentation for the parameter details.
@@ -470,7 +540,8 @@ class AbstractBulkUserInterfaceMixin(object):
         """
         raise NotImplementedError
 
-    def update_many(self, wire, *args_list):  # pragma: no cover
+    @interface_attrs(transform_args=transform_positional_only)
+    def update_many(self, wire, pargs):  # pragma: no cover
         """Execute the original function and `set` the result as the value.
 
         :see: The class documentation for the parameter details.
@@ -479,7 +550,8 @@ class AbstractBulkUserInterfaceMixin(object):
         """
         raise NotImplementedError
 
-    def get_or_update_many(self, wire, *args_list):  # pragma: no cover
+    @interface_attrs(transform_args=transform_positional_only)
+    def get_or_update_many(self, wire, pargs):  # pragma: no cover
         """Try to get and returns the storage values.
 
         :note: The semantics of this function may vary by the implementation.
@@ -491,7 +563,8 @@ class AbstractBulkUserInterfaceMixin(object):
         """
         raise NotImplementedError
 
-    def set_many(self, wire, args_list, value_list):  # pragma: no cover
+    @interface_attrs(transform_args=transform_positional_only)
+    def set_many(self, wire, pargs):  # pragma: no cover
         """Set the storage values of the corresponding keys as the given values.
 
         :see: The class documentation for common parameter details.
@@ -501,7 +574,8 @@ class AbstractBulkUserInterfaceMixin(object):
         """
         raise NotImplementedError
 
-    def delete_many(self, wire, *args_list):  # pragma: no cover
+    @interface_attrs(transform_args=transform_positional_only)
+    def delete_many(self, wire, pargs):  # pragma: no cover
         """Delete the storage values of the corresponding keys.
 
         :see: The class documentation for the parameter details.
@@ -509,7 +583,8 @@ class AbstractBulkUserInterfaceMixin(object):
         """
         raise NotImplementedError
 
-    def has_many(self, wire, *args_list):  # pragma: no cover
+    @interface_attrs(transform_args=transform_positional_only)
+    def has_many(self, wire, pargs):  # pragma: no cover
         """Return whether the storage has values of the corresponding keys.
 
         :see: The class documentation for the parameter details.
@@ -517,7 +592,8 @@ class AbstractBulkUserInterfaceMixin(object):
         """
         raise NotImplementedError
 
-    def touch_many(self, wire, *args_list):  # pragma: no cover
+    @interface_attrs(transform_args=transform_positional_only)
+    def touch_many(self, wire, pargs):  # pragma: no cover
         """Touch the storage values of the corresponding keys.
 
         :see: The class documentation for the parameter details.
@@ -559,7 +635,7 @@ class RingWire(Wire):
     def decode(self, v):
         return self._rope.decode(v)
 
-    def _merge_args(self, args, kwargs):
+    def _pack_args(self, args, kwargs):
         """Create a fake kwargs object by merging actual arguments.
 
         The merging follows the signature of wrapped function and current
@@ -569,10 +645,8 @@ class RingWire(Wire):
         if type(self.__func__) is types.FunctionType:  # noqa
             bound_args = ()
         else:
-            bound_args = range(len(self._bound_objects))
-        full_kwargs = self._callable.kwargify(
-            args, kwargs, bound_args=bound_args)
-        return full_kwargs
+            bound_args = self._bound_objects
+        return ArgPack(bound_args, args, kwargs)
 
     def run(self, action, *args, **kwargs):
         attr = getattr(self, action)
@@ -599,9 +673,12 @@ class RingWire(Wire):
             def impl_f(*args, **kwargs):
                 if transform_args:
                     transform_func, transform_rules = transform_args
-                    args, kwargs = transform_func(
+                    fargs, pargs = transform_func(
                         self, transform_rules, args, kwargs)
-                return attr(self, *args, **kwargs)
+                else:
+                    fargs = ()
+                    pargs = self._pack_args(args, kwargs)
+                return attr(self, *fargs, pargs=pargs)
 
             cc = self._callable.wrapped_callable
             functools.wraps(cc)(impl_f)
@@ -631,7 +708,7 @@ class PublicRing(object):
         self._rope = rope
 
     def key(self, func):
-        self._rope.compose_key = func
+        self._rope.compose_key = lambda pargs: func(*pargs.args, **pargs.kwargs)
 
     def encode(self, func):
         self._rope._encode = func
@@ -649,7 +726,7 @@ class RingRope(RopeCore):
 
         self.ring = PublicRing(self)
 
-    def compose_key(self, *bound_args, **kwargs):
+    def compose_key(self, pargs):
         config = self.config
 
         _ignorable_keys = suggest_ignorable_keys(
@@ -660,13 +737,10 @@ class RingRope(RopeCore):
         key_generator = CallableKey(
             c, format_prefix=_key_prefix, ignorable_keys=_ignorable_keys)
 
-        full_kwargs = kwargs.copy()
-        for i, prearg in enumerate(bound_args):
-            full_kwargs[c.parameters[i].name] = bound_args[i]
-
         in_memory_storage = hasattr(config.storage_class, 'in_memory_storage')
+        labels = pargs.labels(key_generator.provider)
         coerced_kwargs = {
-            k: coerce(v, in_memory_storage) for k, v in full_kwargs.items()
+            k: coerce(v, in_memory_storage) for k, v in labels.items()
             if k not in _ignorable_keys}
         key = key_generator.build(coerced_kwargs)
         if config.key_encoding:
