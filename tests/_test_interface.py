@@ -6,16 +6,16 @@ from ring.func.base import BaseUserInterface, NotFound, factory
 
 class DoubleCacheUserInterface(BaseUserInterface):
 
-    async def execute(self, wire, **kwargs):
-        result = await wire.__func__(**kwargs)
+    async def execute(self, wire, pargs):
+        result = await wire.__func__(*pargs.args, **pargs.kwargs)
         return result
 
-    def key2(self, wire, **kwargs):
-        return wire.key(**kwargs) + ':back'
+    def key2(self, wire, pargs):
+        return self.key(wire, pargs) + ':back'
 
-    async def get(self, wire, **kwargs):
-        key1 = wire.key(**kwargs)
-        key2 = wire.key2(**kwargs)
+    async def get(self, wire, pargs):
+        key1 = self.key(wire, pargs)
+        key2 = self.key2(wire, pargs)
 
         result = ...
         for key in [key1, key2]:
@@ -29,22 +29,24 @@ class DoubleCacheUserInterface(BaseUserInterface):
             result = wire._rope.config.miss_value
         return result
 
-    async def update(self, wire, **kwargs):
-        key = wire.key(**kwargs)
-        key2 = wire.key2(**kwargs)
-        result = await wire.execute(**kwargs)
-        await wire._rope.storage.set(key, result)
+    async def update(self, wire, pargs):
+        key1 = self.key(wire, pargs)
+        key2 = self.key2(wire, pargs)
+
+        result = await self.execute(wire, pargs)
+        await wire._rope.storage.set(key1, result)
         await wire._rope.storage.set(key2, result, None)
         return result
 
-    async def get_or_update(self, wire, **kwargs):
-        key = wire.key(**kwargs)
-        key2 = wire.key2(**kwargs)
+    async def get_or_update(self, wire, pargs):
+        key1 = self.key(wire, pargs)
+        key2 = self.key2(wire, pargs)
+
         try:
-            result = await wire._rope.storage.get(key)
+            result = await wire._rope.storage.get(key1)
         except NotFound:
             try:
-                result = await wire.execute(**kwargs)
+                result = await self.execute(wire, pargs)
             except Exception:
                 try:
                     result = await wire._rope.storage.get(key2)
@@ -54,20 +56,22 @@ class DoubleCacheUserInterface(BaseUserInterface):
                     return result
                 raise
             else:
-                await wire._rope.storage.set(key, result)
+                await wire._rope.storage.set(key1, result)
                 await wire._rope.storage.set(key2, result, None)
         return result
 
-    async def delete(self, wire, **kwargs):
-        key = wire.key(**kwargs)
-        key2 = wire.key2(**kwargs)
-        await wire._rope.storage.delete(key)
+    async def delete(self, wire, pargs):
+        key1 = self.key(wire, pargs)
+        key2 = self.key2(wire, pargs)
+
+        await wire._rope.storage.delete(key1)
         await wire._rope.storage.delete(key2)
 
-    async def touch(self, wire, **kwargs):
-        key = wire.key(**kwargs)
-        key2 = wire.key(**kwargs)
-        await wire._rope.storage.touch(key)
+    async def touch(self, wire, pargs):
+        key1 = self.key(wire, pargs)
+        key2 = self.key2(wire, pargs)
+
+        await wire._rope.storage.touch(key1)
         await wire._rope.storage.touch(key2)
 
 

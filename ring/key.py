@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 
 import re
+from ._compat import inspect
 from ._util import cached_property
 from .callable import Callable
 
@@ -43,6 +44,15 @@ class FormatKey(Key):
         return keys
 
 
+def _param_name(param):
+    if param.kind == inspect.Parameter.VAR_POSITIONAL:
+        return '*' + param.name
+    elif param.kind == inspect.Parameter.VAR_KEYWORD:
+        return '**' + param.name
+    else:
+        return param.name
+
+
 class CallableKey(Key):
 
     def __init__(
@@ -63,7 +73,7 @@ class CallableKey(Key):
 
     @cached_property
     def ordered_provider_keys(self):
-        keys = [arg.name for arg in self.provider.parameters]
+        keys = [_param_name(p) for p in self.provider.parameters]
         for key in self.ignorable_keys:
             if key not in keys:
                 raise KeyError(
@@ -79,20 +89,13 @@ class CallableKey(Key):
     @staticmethod
     def default_format_body(provider_keys, verbose):
         parts = []
+        if verbose:
+            arg_form = ':{key}={{{key}}}'
+        else:
+            arg_form = ':{{{key}}}'
         for key in provider_keys:
-            if verbose:
-                parts.append(':{key}={{{key}}}'.format(key=key))
-            else:
-                parts.append(':{{{key}}}'.format(key=key))
+            parts.append(arg_form.format(key=key))
         return ''.join(parts)
 
-    def merge_kwargs(self, args, kwargs):
-        merged = self.provider.kwargify(args, kwargs)
-        for key in self.ignorable_keys:
-            del merged[key]
-        return merged
-
-    def build(self, full_kwargs):
-        # print(self.format, full_kwargs)
-        key = self.format.format(**full_kwargs)
-        return key
+    def build(self, labels):
+        return self.format.format(**labels)

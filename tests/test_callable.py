@@ -3,40 +3,39 @@ import sys
 import pytest
 
 from ring.callable import Callable
+from ring.func.base import ArgPack
 
 
 if sys.version_info[0] >= 3:
     from ._test_callable_py3 import *  # noqa
 
 
-@pytest.mark.parametrize('f,args,kwargs,merged', [
-    (lambda: None, (), {}, {}),
-    (lambda x, y: None, (1, 2), {}, dict(x=1, y=2)),
-    (lambda x, y, z=30: None, (1, 2), {}, dict(x=1, y=2, z=30)),
-    (lambda x, y, z=30: None, (1,), {'y': 2}, dict(x=1, y=2, z=30)),
-    (lambda x, y, z=30: None, (1, 2, 3), {}, dict(x=1, y=2, z=3)),
-    (lambda x, y, z=30: None, (1,), {'y': 20}, dict(x=1, y=20, z=30)),
-    (lambda x, y, *args: None, (1,), {'y': 20}, dict(x=1, y=20, args=())),
-    (lambda x, y, *args: None, (1, 2, 3, 4, 5), {}, dict(x=1, y=2, args=(3, 4, 5))),
-    (lambda x, **kw: None, (), {'x': 10, 'y': 20, 'z': 30}, dict(x=10, kw={'y': 20, 'z': 30})),
-    (lambda x, *args, **kw: None, (1, 2, 3, 4), {'y': 20, 'z': 30}, dict(x=1, args=(2, 3, 4), kw={'y': 20, 'z': 30})),
+@pytest.mark.parametrize('f,pargs,merged', [
+    (lambda: None, ArgPack((), (), {}), {}),
+    (lambda x, y: None, ArgPack((), (1, 2), {}), {"x": 1, "y": 2}),
+    (lambda x, y, z=30: None, ArgPack((), (1, 2), {}), {"x": 1, "y": 2, "z": 30}),
+    (lambda x, y, z=30: None, ArgPack((), (1,), {'y': 2}), {"x": 1, "y": 2, "z": 30}),
+    (lambda x, y, z=30: None, ArgPack((), (1, 2, 3), {}), {"x": 1, "y": 2, "z": 3}),
+    (lambda x, y, z=30: None, ArgPack((), (1,), {'y': 20}), {"x": 1, "y": 20, "z": 30}),
+    (lambda x, y, *args: None, ArgPack((), (1,), {'y': 20}), {"x": 1, "y": 20, "*args": ()}),
+    (lambda x, y, *args: None, ArgPack((), (1, 2, 3, 4, 5), {}), {"x": 1, "y": 2, "*args": (3, 4, 5)}),
+    (lambda x, **kw: None, ArgPack((), (), {'x': 10, 'y': 20, 'z': 30}), {"x": 10, "**kw": {'y': 20, 'z': 30}}),
+    (lambda x, *args, **kw: None, ArgPack((), (1, 2, 3, 4), {'y': 20, 'z': 30}), {"x": 1, "*args": (2, 3, 4), "**kw": {'y': 20, 'z': 30}}),
 ])
-def test_kwargify(f, args, kwargs, merged):
-    kwargified = Callable(f).kwargify(args, kwargs)
-    print(kwargified)
-    print(merged)
+def test_make_labels(f, pargs, merged):
+    kwargified = pargs.labels(Callable(f))
     assert kwargified == merged
 
 
-@pytest.mark.parametrize('f,args,kwargs,exc', [
-    (lambda: None, (1, 2), {}, TypeError),
-    (lambda x, y: None, (2, 3), {'x': 1}, TypeError),
-    (lambda x, y, z=30: None, (1,), {}, TypeError),
-    (lambda x, y, z=30: None, (1,), {'x': 2}, TypeError),
+@pytest.mark.parametrize('f,pargs,exc', [
+    (lambda: None, ArgPack((), (1, 2), {}), TypeError),
+    (lambda x, y: None, ArgPack((), (2, 3), {'x': 1}), TypeError),
+    (lambda x, y, z=30: None, ArgPack((), (1,), {}), TypeError),
+    (lambda x, y, z=30: None, ArgPack((), (1,), {'x': 2}), TypeError),
 ])
-def test_kwargify_exc(f, args, kwargs, exc):
+def test_make_labels_exc(f, pargs, exc):
     with pytest.raises(exc):
-        Callable(f).kwargify(args, kwargs)
+        pargs.labels(Callable(f))
 
 
 def test_empty_annotations():
