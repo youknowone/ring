@@ -9,11 +9,14 @@ import asyncio
 import inspect
 import itertools
 from . import base as fbase, sync as fsync
+from asyncio import Lock
 
 __all__ = ('aiomcache', 'aioredis', )
 
 inspect_iscoroutinefunction = getattr(
     inspect, 'iscoroutinefunction', lambda f: False)
+
+lock = Lock()
 
 
 class SingletonCoroutineProxy(object):
@@ -27,12 +30,13 @@ class SingletonCoroutineProxy(object):
         self.singleton = None
 
     def __iter__(self):
-        if self.singleton is None:
-            if hasattr(self.awaitable, '__await__'):
-                awaitable = self.awaitable.__await__()
-            else:
-                awaitable = self.awaitable
-            self.singleton = yield from awaitable
+        with (yield from lock):
+            if self.singleton is None:
+                if hasattr(self.awaitable, '__await__'):
+                    awaitable = self.awaitable.__await__()
+                else:
+                    awaitable = self.awaitable
+                self.singleton = yield from awaitable
         return self.singleton
 
     __await__ = __iter__
