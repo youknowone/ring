@@ -80,7 +80,7 @@ For example, the float example above can be written as a coder like below:
             return float(data.decode('utf-8'))
 
 
-    ring.coder.register('float', FloatCoder)
+    ring.coder.registry.register('float', FloatCoder)
 
 
 Now `FloatCoder` is registered as `float`. Use it in a familiar way.
