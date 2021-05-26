@@ -4,7 +4,6 @@
 from __future__ import absolute_import
 
 import warnings
-from typing import Any, Optional, Tuple
 from django.core import cache as django_cache
 from django.http.request import HttpRequest
 from django.urls import reverse
@@ -13,6 +12,7 @@ from django.utils.cache import get_cache_key
 from django.middleware.cache import CacheMiddleware
 from .func import base as fbase
 from .func.sync import CacheUserInterface
+from .typing import Any, Optional, Tuple
 
 
 __all__ = ('cache', 'cache_page')

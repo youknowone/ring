@@ -4,7 +4,7 @@
 This module includes building blocks and storage implementations of **Ring**
 factories for :mod:`asyncio`.
 """
-from typing import Any, Optional, List
+from ring.typing import Any, Optional, List
 import asyncio
 import inspect
 import itertools
@@ -146,7 +146,7 @@ class CacheUserInterface(fbase.BaseUserInterface):
     """
 
     @fbase.interface_attrs(
-        return_annotation=lambda a: Optional[a.get('return', Any)])
+        return_annotation=lambda a: Optional[a.get('return', Any)])  # noqa: F722
     async def get(self, wire, **kwargs):
         key = self.key(wire, **kwargs)
         try:
@@ -205,14 +205,14 @@ class BulkInterfaceMixin(fbase.AbstractBulkUserInterfaceMixin):
 
     @fbase.interface_attrs(
         transform_args=fbase.transform_positional_only,
-        return_annotation=lambda a: List[a.get('return', Any)])
+        return_annotation=lambda a: List[a.get('return', Any)])  # noqa: F722
     def execute_many(self, wire, pargs):
         return asyncio.gather(*(
             fbase.execute_bulk_item(wire, args) for args in pargs.args))
 
     @fbase.interface_attrs(
         transform_args=fbase.transform_positional_only,
-        return_annotation=lambda a: List[Optional[a.get('return', Any)]])
+        return_annotation=lambda a: List[Optional[a.get('return', Any)]])  # noqa: F722
     def get_many(self, wire, pargs):
         keys = self.key_many(wire, pargs)
         return wire.storage.get_many(
@@ -220,7 +220,7 @@ class BulkInterfaceMixin(fbase.AbstractBulkUserInterfaceMixin):
 
     @fbase.interface_attrs(
         transform_args=fbase.transform_positional_only,
-        return_annotation=lambda a: List[a.get('return', Any)])
+        return_annotation=lambda a: List[a.get('return', Any)])  # noqa: F722
     async def update_many(self, wire, pargs):
         keys = self.key_many(wire, pargs)
         values = await self.execute_many(wire, pargs)
@@ -229,7 +229,7 @@ class BulkInterfaceMixin(fbase.AbstractBulkUserInterfaceMixin):
 
     @fbase.interface_attrs(
         transform_args=fbase.transform_positional_only,
-        return_annotation=lambda a: List[a.get('return', Any)])
+        return_annotation=lambda a: List[a.get('return', Any)])  # noqa: F722
     async def get_or_update_many(self, wire, pargs):
         keys = self.key_many(wire, pargs)
         miss_value = object()
