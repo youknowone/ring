@@ -1,0 +1,43 @@
+# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: Python package
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [2.7, 3.6, 3.7, 3.8, 3.9, pypy2, pypy3]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        sudo apt-get install libmemcached-dev
+        python -m pip install --upgrade pip
+        python -m pip install flake8 pytest
+        python -m pip install -e '.[tests]'
+    - name: Lint with flake8
+      run: |
+        # stop the build if there are Python syntax errors or undefined names
+        flake8 --ignore=E501,E999 ring tests setup.py --statistics
+    - name: Start containers
+      run: docker-compose -f "docker-compose.yml" up -d --build
+    - name: Test with pytest
+      run: |
+        pytest
+    - name: Stop containers
+      run: docker-compose -f "docker-compose.yml" down
