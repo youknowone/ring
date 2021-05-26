@@ -2,9 +2,6 @@ try:
     from typing import Any, Optional, Tuple, List
 except ImportError:
     class _Generic(object):
-        def __hash__(self):
-            return 0
-
         def __getitem__(self, key):
             return _Generic()
 
