@@ -29,15 +29,17 @@ class SingletonCoroutineProxy(object):
         self.awaitable = awaitable
         self.singleton = None
 
-    def __iter__(self):
-        with (yield from lock):
+    async def _await(self):
+        async with lock:
             if self.singleton is None:
                 if hasattr(self.awaitable, '__await__'):
-                    awaitable = self.awaitable.__await__()
+                    self.singleton = await self.awaitable
                 else:
-                    awaitable = self.awaitable
-                self.singleton = yield from awaitable
+                    self.singleton = self.awaitable
         return self.singleton
+
+    def __iter__(self):
+        return self._await().__await__()
 
     __await__ = __iter__
 
