@@ -16,6 +16,7 @@ def get_version():
 install_requires = [
     'six>=1.11.0',
     'wirerope==0.3.0',
+    'attrs>=19.3.0',
 ]
 tests_require = [
     'pytest>=3.10.1', 'pytest-cov', 'pytest-lazy-fixture==0.6.2',

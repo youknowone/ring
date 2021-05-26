@@ -4,7 +4,7 @@
 This module includes building blocks and storage implementations of **Ring**
 factories.
 """
-from typing import Any, Optional, List
+from ring.typing import Any, Optional, List
 import time
 import re
 import hashlib
@@ -24,7 +24,7 @@ class CacheUserInterface(fbase.BaseUserInterface):
     """
 
     @fbase.interface_attrs(
-        return_annotation=lambda a: Optional[a.get('return', Any)])
+        return_annotation=lambda a: Optional[a.get('return', Any)])  # noqa: F722
     def get(self, wire, pargs):
         key = self.key(wire, pargs=pargs)
         try:
