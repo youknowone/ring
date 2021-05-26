@@ -41,3 +41,6 @@ jobs:
         pytest
     - name: Stop containers
       run: docker-compose -f "docker-compose.yml" down
+
+    - name: Codecov
+      run: bash <(curl -s https://codecov.io/bash)
