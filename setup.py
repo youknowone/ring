@@ -15,7 +15,7 @@ def get_version():
 
 install_requires = [
     'six>=1.11.0',
-    'wirerope==0.3.0',
+    'wirerope==0.4.3',
     'attrs>=19.3.0',
 ]
 tests_require = [
