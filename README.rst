@@ -5,8 +5,7 @@ Ring
    :alt: Join the chat at https://gitter.im/ring-cache/community
    :target: https://gitter.im/ring-cache/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
 
-.. image:: https://travis-ci.org/youknowone/ring.svg?branch=master
-    :target: https://travis-ci.org/youknowone/ring
+.. image:: https://github.com/youknowone/ring/actions/workflows/python-package.yml/badge.svg
 .. image:: https://codecov.io/gh/youknowone/ring/graph/badge.svg
     :target: https://codecov.io/gh/youknowone/ring
 
