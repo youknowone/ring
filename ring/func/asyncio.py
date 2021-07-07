@@ -4,6 +4,9 @@
 This module includes building blocks and storage implementations of **Ring**
 factories for :mod:`asyncio`.
 """
+import sys
+from functools import wraps, partial
+
 from ring.typing import Any, Optional, List
 import asyncio
 import inspect
@@ -71,6 +74,17 @@ def create_asyncio_factory_proxy(factory_table, *, support_asyncio):
     return fbase.create_factory_proxy(proxy_base, classifier, factory_table)
 
 
+def async_wrap(func):
+    @wraps(func)
+    async def run(*args, loop=None, executor=None, **kwargs):
+        if loop is None:
+            loop = asyncio.get_event_loop()
+        pfunc = partial(func, *args, **kwargs)
+        return await loop.run_in_executor(executor, pfunc)
+
+    return run
+
+
 def convert_storage(storage_class):
     storage_bases = (fbase.CommonMixinStorage, BulkStorageMixin)
     async_storage_class = type(
@@ -81,7 +95,10 @@ def convert_storage(storage_class):
         if issubclass(storage_class, storage_base):
             count += 1
             for name in storage_base.__dict__.keys():
-                async_attr = asyncio.coroutine(getattr(storage_class, name))
+                if sys.version_info < (3, 8):
+                    async_attr = asyncio.coroutine(getattr(storage_class, name))
+                else:
+                    async_attr = async_wrap(getattr(storage_class, name))
                 setattr(async_storage_class, name, async_attr)
     if count == 0:
         raise TypeError(
