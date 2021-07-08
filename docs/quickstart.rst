@@ -209,7 +209,7 @@ They follow similar convention but requiring `await` for IO jobs.
 
     import ring
 
-    @ring.lru()
+    @ring.lru(force_asyncio=True)  # non-asyncio backends require `force_asyncio`
     async def f():
         ...
 
