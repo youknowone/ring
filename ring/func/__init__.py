@@ -8,7 +8,7 @@ from ring.func import sync
 
 try:
     import asyncio as _has_asyncio
-except ImportError:
+except (ImportError, RuntimeError):
     _has_asyncio = False
 else:
     from ring.func import asyncio
