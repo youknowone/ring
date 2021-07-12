@@ -10,7 +10,7 @@ from ring.func import (
 try:
     import asyncio
     from ring.func.asyncio import aiomcache, aioredis, aioredis_hash
-except (ImportError, RunTimeError):
+except (ImportError, RuntimeError):
     pass
 else:
     del asyncio
