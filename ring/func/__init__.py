@@ -11,7 +11,10 @@ try:
 except (ImportError, RuntimeError):
     _has_asyncio = False
 else:
-    from ring.func import asyncio
+    try:
+        from ring.func import asyncio
+    except RuntimeError:
+        _has_asyncio = False
 
 
 __all__ = (
