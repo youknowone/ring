@@ -19,7 +19,15 @@ __all__ = ('aiomcache', 'aioredis', )
 inspect_iscoroutinefunction = getattr(
     inspect, 'iscoroutinefunction', lambda f: False)
 
-lock = Lock()
+
+_shared_lock = None
+
+
+def shared_lock():
+    global _shared_lock
+    if _shared_lock is None:
+        _shared_lock = Lock()
+    return _shared_lock
 
 
 class SingletonCoroutineProxy(object):
@@ -33,7 +41,7 @@ class SingletonCoroutineProxy(object):
         self.singleton = None
 
     async def _await(self):
-        async with lock:
+        async with shared_lock():
             if self.singleton is None:
                 if hasattr(self.awaitable, '__await__'):
                     self.singleton = await self.awaitable
