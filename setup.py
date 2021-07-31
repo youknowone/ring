@@ -15,7 +15,7 @@ def get_version():
 
 install_requires = [
     'six>=1.11.0',
-    'wirerope==0.4.3',
+    'wirerope==0.4.5',
     'attrs>=19.3.0',
     'inspect2>=0.1.0;python_version<"3.0.0"',
     'functools32>=3.2.3-2>=0.1.0;python_version<"3.0"',
