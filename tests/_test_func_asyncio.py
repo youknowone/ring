@@ -5,6 +5,7 @@ import shelve
 from typing import Optional
 
 import aiomcache
+import aioredis
 import diskcache
 import ring
 from ring.func.lru_cache import LruCache
@@ -43,13 +44,13 @@ def aiomcache_client():
 
 @pytest.fixture()
 def aioredis_pool():
-    if sys.version_info >= (3, 5):
-        import aioredis
-        pool_coroutine = aioredis.create_redis_pool(
-            ('localhost', 6379), minsize=2, maxsize=2)
-        return pool_coroutine, ring.aioredis
-    else:
+    if sys.version_info <= (3, 5):
         pytest.skip()
+
+    pool = aioredis.from_url(
+        "redis://localhost", encoding="utf-8",
+    )
+    return pool, ring.aioredis
 
 
 @pytest.fixture()
@@ -57,13 +58,12 @@ def aioredis_connection():
     if sys.version_info <= (3, 5):
         pytest.skip()
 
-    import aioredis
-
-    connection_coroutine = aioredis.create_redis(
-        ('localhost', 6379)
+    pool = aioredis.from_url(
+        "redis://localhost", encoding="utf-8",
     )
-
-    return connection_coroutine, ring.aioredis
+    return pool, ring.aioredis
+    pool = aioredis_pool()[0]
+    return pool.client(), ring.aioredis
 
 
 @pytest.fixture(params=[

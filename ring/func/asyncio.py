@@ -370,7 +370,7 @@ class AiomcacheStorage(
         raise NotImplementedError("aiomcache doesn't support delete_multi.")
 
 
-class AioredisStorage(
+class Aioredis1Storage(
         CommonMixinStorage, fbase.StorageMixin, BulkStorageMixin):
     """Storage implementation for :class:`aioredis.Redis`."""
 
@@ -421,13 +421,13 @@ class AioredisStorage(
                 backend.expire(key, expire) for key in keys)))
 
 
-class AioredisHashStorage(AioredisStorage):
+class Aioredis1HashStorage(Aioredis1Storage):
     """Storage implementation for :class:`aioredis.Redis`."""
 
     def __init__(self, rope, backend):
         storage_backend = backend[0]
         self.hash_key = backend[1]
-        super(AioredisHashStorage, self).__init__(rope, storage_backend)
+        super(Aioredis1HashStorage, self).__init__(rope, storage_backend)
 
     async def get_value(self, key):
         backend = await self._get_backend()
@@ -460,6 +460,98 @@ class AioredisHashStorage(AioredisStorage):
         params = itertools.chain.from_iterable(zip(keys, values))
         backend = await self._get_backend()
         await backend.hmset(self.hash_key, *params)
+
+
+class Aioredis2Storage(
+        CommonMixinStorage, fbase.StorageMixin, BulkStorageMixin):
+    """Storage implementation for :class:`aioredis.Redis`."""
+
+    async def _get_backend(self):
+        backend = await self.backend
+        return backend
+
+    async def get_value(self, key):
+        backend = await self._get_backend()
+        value = await backend.get(key)
+        if value is None:
+            raise fbase.NotFound
+        return value
+
+    async def set_value(self, key, value, expire):
+        backend = await self._get_backend()
+        result = await backend.set(key, value, ex=expire)
+        return result
+
+    async def delete_value(self, key):
+        backend = await self._get_backend()
+        result = await backend.delete(key)
+        return result
+
+    async def has_value(self, key):
+        backend = await self._get_backend()
+        result = await backend.exists(key)
+        return bool(result)
+
+    async def touch_value(self, key, expire):
+        if expire is None:
+            raise TypeError("'touch' is requested for persistent cache")
+        backend = await self._get_backend()
+        result = await backend.expire(key, expire)
+        return result
+
+    async def get_many_values(self, keys):
+        backend = await self._get_backend()
+        values = await backend.mget(*keys)
+        return [v if v is not None else fbase.NotFound for v in values]
+
+    async def set_many_values(self, keys, values, expire):
+        params = type({})(zip(keys, values))
+        backend = await self._get_backend()
+        await backend.mset(params)
+        if expire is not None:
+            asyncio.ensure_future(asyncio.gather(*(
+                backend.expire(key, expire) for key in keys)))
+
+
+class Aioredis2HashStorage(Aioredis2Storage):
+    """Storage implementation for :class:`aioredis.Redis`."""
+
+    def __init__(self, rope, backend):
+        storage_backend = backend[0]
+        self.hash_key = backend[1]
+        super(Aioredis2HashStorage, self).__init__(rope, storage_backend)
+
+    async def get_value(self, key):
+        backend = await self._get_backend()
+        value = await backend.hget(self.hash_key, key)
+        if value is None:
+            raise fbase.NotFound
+        return value
+
+    async def set_value(self, key, value, expire):
+        backend = await self._get_backend()
+        result = await backend.hset(self.hash_key, key, value)
+        return result
+
+    async def delete_value(self, key):
+        backend = await self._get_backend()
+        result = await backend.hdel(self.hash_key, key)
+        return result
+
+    async def has_value(self, key):
+        backend = await self._get_backend()
+        result = await backend.hexists(self.hash_key, key)
+        return bool(result)
+
+    async def get_many_values(self, keys):
+        backend = await self._get_backend()
+        values = await backend.hmget(self.hash_key, keys)
+        return [v if v is not None else fbase.NotFound for v in values]
+
+    async def set_many_values(self, keys, values, expire):
+        params = type({})(zip(keys, values))
+        backend = await self._get_backend()
+        await backend.hmset(self.hash_key, params)
 
 
 def dict(
@@ -525,10 +617,10 @@ def aiomcache(
         **kwargs)
 
 
-def aioredis(
+def aioredis1(
         redis, key_prefix=None, expire=None, coder=None,
         user_interface=(CacheUserInterface, BulkInterfaceMixin),
-        storage_class=AioredisStorage,
+        storage_class=Aioredis1Storage,
         **kwargs):
     """Redis interface for :mod:`asyncio`.
 
@@ -538,7 +630,7 @@ def aioredis(
     machine. If you are new to Memcached, check how to install it and the
     python package on your platform.
 
-    Note that aioredis>=1.0.0 only supported.
+    Note that aioredis>=1.0.0;<2.0.0 only supported.
 
     .. _Redis: http://redis.io/
     .. _aioredis: https://pypi.org/project/aioredis/
@@ -584,10 +676,10 @@ def aioredis(
         **kwargs)
 
 
-def aioredis_hash(
+def aioredis1_hash(
         redis, hash_key=None, key_prefix=None, coder=None,
         user_interface=(CacheUserInterface, BulkInterfaceMixin),
-        storage_class=AioredisHashStorage,
+        storage_class=Aioredis1HashStorage,
         **kwargs):
     """Redis interface for :mod:`asyncio`.
 
@@ -599,7 +691,7 @@ def aioredis_hash(
         machine. If you are new to Memcached, check how to install it and the
         python package on your platform.
 
-        Note that aioredis>=1.0.0 only supported.
+        Note that aioredis>=1.0.0;<2.0.0 only supported.
 
         .. _Redis: http://redis.io/
         .. _aioredis: https://pypi.org/project/aioredis/
@@ -636,3 +728,120 @@ def aioredis_hash(
         user_interface=user_interface, storage_class=storage_class,
         miss_value=None, expire_default=expire, coder=coder,
         **kwargs)
+
+
+def aioredis2(
+        redis, key_prefix=None, expire=None, coder=None,
+        user_interface=(CacheUserInterface, BulkInterfaceMixin),
+        storage_class=Aioredis2Storage,
+        **kwargs):
+    """Redis interface for :mod:`asyncio`.
+
+    Expected client package is aioredis_.
+
+    aioredis expect `Redis` client or dev package is installed on your
+    machine. If you are new to Memcached, check how to install it and the
+    python package on your platform.
+
+    Note that aioredis>=2.0.0 only supported.
+
+    .. _Redis: http://redis.io/
+    .. _aioredis: https://pypi.org/project/aioredis/
+
+    :param Union[aioredis.Redis,Callable[...aioredis.Redis]] client: aioredis
+        interface object. See :func:`aioredis.create_redis` or
+        :func:`aioredis.create_redis_pool`. For convenience, a coroutine
+        returning one of these objects also is proper. It means next 2
+        examples working almost same:
+
+            >>> redis = await aioredis.create_redis(('127.0.0.1', 6379))
+            >>> @ring.aioredis(redis)
+            >>> async def by_object(...):
+            >>>     ...
+
+            >>> redis_coroutine = aioredis.create_redis(('127.0.0.1', 6379))
+            >>> @ring.aioredis(redis_coroutine)
+            >>> async def by_coroutine(...):
+            >>>     ...
+
+        Though they have slightly different behavior for `.storage.backend`:
+
+            >>> assert by_object.storage.backend is by_object
+
+            >>> assert by_coroutine.storage.backend is not redis_coroutine
+            >>> assert isinstance(
+            ...     await by_coroutine.storage.backend, aioredis.Redis)
+
+    :see: :func:`ring.func.asyncio.CacheUserInterface` for single access
+        sub-functions.
+    :see: :func:`ring.func.asyncio.BulkInterfaceMixin` for bulk access
+        sub-functions.
+
+    :see: :func:`ring.redis` for non-asyncio version.
+    """
+    if asyncio.iscoroutine(redis):
+        redis = SingletonCoroutineProxy(redis)
+
+    return fbase.factory(
+        redis, key_prefix=key_prefix, on_manufactured=factory_doctor,
+        user_interface=user_interface, storage_class=storage_class,
+        miss_value=None, expire_default=expire, coder=coder,
+        **kwargs)
+
+
+def aioredis2_hash(
+        redis, hash_key=None, key_prefix=None, coder=None,
+        user_interface=(CacheUserInterface, BulkInterfaceMixin),
+        storage_class=Aioredis2HashStorage,
+        **kwargs):
+    """Redis interface for :mod:`asyncio`.
+
+        Expected client package is aioredis_.
+
+        This implements HASH commands in aioredis.
+
+        aioredis expect `Redis` client or dev package is installed on your
+        machine. If you are new to Memcached, check how to install it and the
+        python package on your platform.
+
+        Note that aioredis>=2.0.0 only supported.
+
+        .. _Redis: http://redis.io/
+        .. _aioredis: https://pypi.org/project/aioredis/
+
+        :param Union[aioredis.Redis,Callable[...aioredis.Redis]] client: aioredis
+            interface object. See :func:`aioredis.create_redis` or
+            :func:`aioredis.create_redis_pool`. For convenience, a coroutine
+            returning one of these objects also is proper. It means next 2
+            examples working almost same:
+
+                >>> redis = await aioredis.create_redis(('127.0.0.1', 6379))
+                >>> @ring.aioredis_hash(redis, ...)
+                >>> async def by_object(...):
+                >>>     ...
+
+                >>> redis_coroutine = aioredis.create_redis(('127.0.0.1', 6379))
+                >>> @ring.aioredis_hash(redis_coroutine, ...)
+                >>> async def by_coroutine(...):
+                >>>     ...
+
+        :see: :func:`ring.func.asyncio.CacheUserInterface` for single access
+            sub-functions.
+        :see: :func:`ring.func.asyncio.BulkInterfaceMixin` for bulk access
+            sub-functions.
+
+        :see: :func:`ring.redis` for non-asyncio version.
+        """
+    expire = None
+    if asyncio.iscoroutine(redis):
+        redis = SingletonCoroutineProxy(redis)
+
+    return fbase.factory(
+        (redis, hash_key), key_prefix=key_prefix, on_manufactured=factory_doctor,
+        user_interface=user_interface, storage_class=storage_class,
+        miss_value=None, expire_default=expire, coder=coder,
+        **kwargs)
+
+
+aioredis = aioredis2
+aioredis_hash = aioredis2_hash
