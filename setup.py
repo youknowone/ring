@@ -52,7 +52,7 @@ if (3, 3) <= sys.version_info:
         tests_require.append('pytest-asyncio')
     tests_require.extend([
         'aiomcache',
-        'aioredis>=1.0.0',
+        'aioredis>=2.0.0',
     ])
 
 if sys.version_info[0] == 2:
