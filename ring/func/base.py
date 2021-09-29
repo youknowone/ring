@@ -708,7 +708,7 @@ class PublicRing(object):
         self._rope = rope
 
     def key(self, func):
-        self._rope.compose_key = lambda pargs: func(*pargs.args, **pargs.kwargs)
+        self._rope.compose_key = lambda pargs: func(*(pargs.bounds + pargs.args), **pargs.kwargs)
 
     def encode(self, func):
         self._rope._encode = func
