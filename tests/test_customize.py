@@ -2,7 +2,7 @@
 import ring
 
 
-def test_override_key():
+def test_override_key_function():
 
     @ring.dict({})
     def f(v):
@@ -29,3 +29,18 @@ def test_override_key():
 
     assert f.storage.backend['test:5'] == ('encoded', 5)
     assert f.get(5) == 6
+
+
+def test_override_key_class():
+    # https://github.com/youknowone/ring/issues/184
+    class A:
+        @ring.dict({})
+        def get_entity(self, id):
+            return {"test": "ok"}
+
+        @get_entity.ring.key
+        def get_entity_key(self, id):
+            return "test:{id}".format(id=id)
+
+    a = A()
+    a.get_entity("123")
