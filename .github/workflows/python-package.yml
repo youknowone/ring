@@ -5,18 +5,17 @@ name: Python package
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        python-version: [2.7, 3.6, 3.7, 3.8, 3.9, pypy2, pypy3]
+        python-version: ["2.7", "3.7", "3.8", "3.9", "3.10", "3.11"]
 
     steps:
     - uses: actions/checkout@v2
@@ -30,7 +29,7 @@ jobs:
       run: |
         sudo apt-get install libmemcached-dev
         python -m pip install --upgrade pip
-        python -m pip install flake8 pytest
+        python -m pip install flake8
         python -m pip install -e '.[tests]'
     - name: Lint with flake8
       run: |
