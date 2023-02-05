@@ -26,7 +26,7 @@ tests_require = [
     'pymemcache',
     'redis', 'requests',
     'diskcache>=4.1.0',
-    'django>=4',
+    'django<4',
     'numpy',
 ]
 docs_require = [

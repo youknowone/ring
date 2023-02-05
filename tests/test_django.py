@@ -14,41 +14,38 @@ django.setup()
 
 
 def test_django_cache():
-
-    @ring.django.cache('default', expire=1)
+    @ring.django.cache("default", expire=1)
     def f(a):
         return a * 100
 
     assert f.get(10) is None
     assert f(10) == 1000
     raw_key = f.key(10)
-    assert caches['default'].get(raw_key) == f.get(10)
+    assert caches["default"].get(raw_key) == f.get(10)
 
     @ring.django.cache()
     def f(a):
         return a * 50
 
     assert f.get(10) == 1000
-    caches['default'].delete(raw_key)
+    caches["default"].delete(raw_key)
     assert f(10) == 500
     f.delete(10)
-    assert caches['default'].get(raw_key) is None
+    assert caches["default"].get(raw_key) is None
 
 
-@pytest.mark.parametrize('view_func_source', [
-    django_app.ring_page,
-    None
-])
+@pytest.mark.parametrize("view_func_source", [django_app.ring_page, None])
 def test_django_cache_page(view_func_source):
     if view_func_source:
         view_func = view_func_source
     else:
+
         @ring.django.cache_page(1)
         def view_func(request):
             return HttpResponse(str(datetime.datetime.now()))
 
     request_factory = RequestFactory()
-    request_main = functools.partial(request_factory.get, '/ring')
+    request_main = functools.partial(request_factory.get, "/ring")
 
     view_func.delete((request_main(), None))
     response = view_func.get(request_main())
@@ -96,51 +93,54 @@ def test_django_cache_page_urls():
 
     # get is not testable in this way
     with pytest.raises(ValueError):
-        client.get('/ring/get')  # not cached
+        client.get("/ring/get")  # not cached
 
     # default behavior get_or_update
-    response = client.get('/ring')  # execute and cache
+    response = client.get("/ring")  # execute and cache
     assert response
     executed_content = response.content
 
-    response = client.get('/ring')
+    response = client.get("/ring")
     assert response
     assert executed_content == response.content  # cached
 
     # update
-    response = client.get('/ring/update')
+    response = client.get("/ring/update")
     executed_content = response.content
 
-    response = client.get('/ring/update')
+    response = client.get("/ring/update")
     assert executed_content != response.content  # new content for update
 
 
 def test_django_chaining():
     client = Client()
 
-    client.get('/chain/clear')  # clear items
-    response = client.get('/chain/list')
+    client.get("/chain/clear")  # clear items
+    response = client.get("/chain/list")
     cached_content = response.content
-    assert json.loads(response.content.decode('utf-8'))['items'] == []
+    assert json.loads(response.content.decode("utf-8"))["items"] == []
 
-    response = client.get('/chain/list')
+    response = client.get("/chain/list")
     assert cached_content == response.content  # ensure cache works
 
     response = client.post(
-        '/chain/new', {'delete': 'reverse', 'value': 'Reinhardt'}, follow=True)
+        "/chain/new", {"delete": "reverse", "value": "Reinhardt"}, follow=True
+    )
     assert cached_content != response.content
-    assert json.loads(
-        response.content.decode('utf-8'))['items'] == ['Reinhardt']
+    assert json.loads(response.content.decode("utf-8"))["items"] == ["Reinhardt"]
 
     response = client.post(
-        '/chain/new', {'delete': 'path', 'value': 'Django'}, follow=True)
-    assert json.loads(
-        response.content.decode('utf-8'))['items'] == ['Reinhardt', 'Django']
+        "/chain/new", {"delete": "path", "value": "Django"}, follow=True
+    )
+    assert json.loads(response.content.decode("utf-8"))["items"] == [
+        "Reinhardt",
+        "Django",
+    ]
 
 
 def test_django_invalid_reverse():
     request_factory = RequestFactory()
-    request = request_factory.get('/chain/new')
+    request = request_factory.get("/chain/new")
 
     # is silent failure acceptable?
-    django_app.chain_list.delete((request, 'fake-name'))
+    django_app.chain_list.delete((request, "fake-name"))
