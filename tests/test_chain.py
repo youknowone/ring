@@ -1,6 +1,4 @@
-
-
-'''
+"""
 from ring.storage import DictStorage
 from ring.ring import CallableRing, Link
 
@@ -199,4 +197,4 @@ def test_link_workflow(fx_ring, fx_ding):
     u1 = user_data(1)
     assert [asset['name'] for asset in u1['assets']] == ['ring', 'ding', 'doh!']
     assert history[-5:] == ['asset:2:2', 'asset:2:3', 'user:1', 'asset:1:3', 'user:1']
-'''
+"""

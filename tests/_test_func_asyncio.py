@@ -17,14 +17,13 @@ from tests.test_func_sync import StorageDict
 
 
 class AiomcacheProxy(object):
-
     _aiomcache_clients = {}
 
     def __getattr__(self, key):
         _aiomcache_clients = AiomcacheProxy._aiomcache_clients
         loop_key = id(asyncio.get_event_loop())
         if loop_key not in _aiomcache_clients:
-            _aiomcache_clients[loop_key] = aiomcache.Client('127.0.0.1', 11211)
+            _aiomcache_clients[loop_key] = aiomcache.Client("127.0.0.1", 11211)
         client = _aiomcache_clients[loop_key]
 
         return getattr(client, key)
@@ -48,7 +47,8 @@ def aioredis_pool():
         pytest.skip()
 
     pool = aioredis.from_url(
-        "redis://localhost", encoding="utf-8",
+        "redis://localhost",
+        encoding="utf-8",
     )
     return pool, ring.aioredis
 
@@ -59,27 +59,32 @@ def aioredis_connection():
         pytest.skip()
 
     pool = aioredis.from_url(
-        "redis://localhost", encoding="utf-8",
+        "redis://localhost",
+        encoding="utf-8",
     )
     return pool, ring.aioredis
     pool = aioredis_pool()[0]
     return pool.client(), ring.aioredis
 
 
-@pytest.fixture(params=[
-    lazy_fixture('aioredis_connection'),
-    lazy_fixture('aioredis_pool'),
-])
+@pytest.fixture(
+    params=[
+        lazy_fixture("aioredis_connection"),
+        lazy_fixture("aioredis_pool"),
+    ]
+)
 def aioredis_client(request):
     return request.param
 
 
-@pytest.fixture(params=[
-    lazy_fixture('storage_dict'),
-    lazy_fixture('aiomcache_client'),
-    lazy_fixture('aioredis_pool'),
-    lazy_fixture('aioredis_connection')
-])
+@pytest.fixture(
+    params=[
+        lazy_fixture("storage_dict"),
+        lazy_fixture("aiomcache_client"),
+        lazy_fixture("aioredis_pool"),
+        lazy_fixture("aioredis_connection"),
+    ]
+)
 def storage_and_ring(request):
     return request.param
 
@@ -91,28 +96,29 @@ def storage_lru():
 
 @pytest.fixture()
 def storage_shelve():
-    storage = shelve.open('/tmp/ring-test/shelvea')
+    storage = shelve.open("/tmp/ring-test/shelvea")
     return storage, ring.shelve
 
 
 @pytest.fixture()
 def storage_disk(request):
-    client = diskcache.Cache('/tmp/ring-test/diskcache')
+    client = diskcache.Cache("/tmp/ring-test/diskcache")
     return client, ring.disk
 
 
-@pytest.fixture(params=[
-    lazy_fixture('storage_lru'),
-    lazy_fixture('storage_shelve'),
-    lazy_fixture('storage_disk'),
-])
+@pytest.fixture(
+    params=[
+        lazy_fixture("storage_lru"),
+        lazy_fixture("storage_shelve"),
+        lazy_fixture("storage_disk"),
+    ]
+)
 def synchronous_storage_and_ring(request):
     return request.param
 
 
 @pytest.mark.asyncio
 async def test_singleton_proxy():
-
     async def client():
         return object()
 
@@ -127,6 +133,7 @@ async def test_vanilla_function(aioredis_client):
     storage, storage_ring = aioredis_client
 
     with pytest.raises(TypeError):
+
         @storage_ring(storage)
         def vanilla_function():
             pass
@@ -137,7 +144,7 @@ async def test_common(storage_and_ring):
     storage, storage_ring = storage_and_ring
     base = [0]
 
-    @storage_ring(storage, 'ring-test !@#', 5)
+    @storage_ring(storage, "ring-test !@#", 5)
     async def f(a, b):
         return str(base[0] + a * 100 + b).encode()
 
@@ -153,8 +160,12 @@ async def test_common(storage_and_ring):
         assert f.storage.backend is storage
     assert f.key(a=0, b=0)  # f takes a, b
     assert base[0] is not None  # f has attr base for test
-    assert (await f.execute(a=1, b=2)) != (await f.execute(a=1, b=3))  # f is not singular
-    assert (await f.execute(a=2, b=2)) != (await f.execute(a=1, b=2))  # f is not singular
+    assert (await f.execute(a=1, b=2)) != (
+        await f.execute(a=1, b=3)
+    )  # f is not singular
+    assert (await f.execute(a=2, b=2)) != (
+        await f.execute(a=1, b=2)
+    )  # f is not singular
     r = await f.execute(0, 0)
     base[0] += 1
     assert r != (await f.execute(0, 0))  # base has side effect
@@ -195,9 +206,9 @@ async def test_common(storage_and_ring):
     await f.touch(1, 2)  # just a running test
     await f.touch(0, 0)  # illegal access
 
-    await f.set(b'RANDOMVALUE', 1, 2)
+    await f.set(b"RANDOMVALUE", 1, 2)
     rset = await f.get(1, 2)
-    assert rset == b'RANDOMVALUE'
+    assert rset == b"RANDOMVALUE"
 
     await f.delete(1, 2)  # finallize
 
@@ -208,7 +219,7 @@ async def test_complicated_key(storage_and_ring):
 
     @storage_ring(storage)
     async def complicated(a, *args, b, **kw):
-        return b'42'
+        return b"42"
 
     # set
     v1 = await complicated(0, 1, 2, 3, b=4, c=5, d=6)
@@ -255,13 +266,13 @@ async def test_many(aiomcache_client):
 
     @ring.aiomcache(client)
     async def f(a):
-        return 't{}'.format(a).encode()
+        return "t{}".format(a).encode()
 
     r = await f.execute_many(
         (1,),
-        {'a': 2},
+        {"a": 2},
     )
-    assert r == [b't1', b't2']
+    assert r == [b"t1", b"t2"]
 
     with pytest.raises(TypeError):
         await f.execute_many(
@@ -275,7 +286,7 @@ async def test_aiomcache(aiomcache_client):
 
     @ring.aiomcache(client)
     async def f(a):
-        return 't{}'.format(a).encode()
+        return "t{}".format(a).encode()
 
     await f.delete(1)
     await f(1)
@@ -283,9 +294,9 @@ async def test_aiomcache(aiomcache_client):
 
     r = await f.get_many(
         (1,),
-        {'a': 2},
+        {"a": 2},
     )
-    assert r == [b't1', None]
+    assert r == [b"t1", None]
 
     with pytest.raises(AttributeError):
         await f.has(1)
@@ -303,17 +314,20 @@ async def test_aiomcache(aiomcache_client):
         await f.touch_many()
 
 
-@pytest.mark.parametrize('expire', [
-    1,
-    None,
-])
+@pytest.mark.parametrize(
+    "expire",
+    [
+        1,
+        None,
+    ],
+)
 @pytest.mark.asyncio
 async def test_aioredis(aioredis_client, expire):
     client, _ = aioredis_client
 
     @ring.aioredis(client, expire=expire)
     async def f(a):
-        return 't{}'.format(a).encode()
+        return "t{}".format(a).encode()
 
     await f.delete(1)
     await f.delete(2)
@@ -336,30 +350,33 @@ async def test_aioredis(aioredis_client, expire):
     # _many
     r = await f.get_many(
         (1,),
-        {'a': 2},
+        {"a": 2},
     )
-    assert r == [b't1', None]
+    assert r == [b"t1", None]
 
     r = await f.update_many(
         (1,),
-        {'a': 3},
+        {"a": 3},
     )
-    assert r == [b't1', b't3']
+    assert r == [b"t1", b"t3"]
 
-    await f.set_many((
-        (1,),
-        (2,),
-    ), (
-        b'foo',
-        b'bar',
-    ))
+    await f.set_many(
+        (
+            (1,),
+            (2,),
+        ),
+        (
+            b"foo",
+            b"bar",
+        ),
+    )
 
     r = await f.get_many(
-        {'a': 1},
+        {"a": 1},
         (2,),
         (3,),
     )
-    assert r == [b'foo', b'bar', b't3']
+    assert r == [b"foo", b"bar", b"t3"]
     await f.delete(2)
 
     r = await f.get_or_update_many(
@@ -367,7 +384,7 @@ async def test_aioredis(aioredis_client, expire):
         (2,),
         (3,),
     )
-    assert r == [b'foo', b't2', b't3']
+    assert r == [b"foo", b"t2", b"t3"]
 
     with pytest.raises(AttributeError):
         await f.delete_many()
@@ -383,9 +400,9 @@ async def test_aioredis(aioredis_client, expire):
 async def test_aioredis_hash(aioredis_client):
     client, _ = aioredis_client
 
-    @ring.aioredis_hash(client, 'test-hashkey')
+    @ring.aioredis_hash(client, "test-hashkey")
     async def f(a):
-        return 't{}'.format(a).encode()
+        return "t{}".format(a).encode()
 
     # delete previous test
     await f.delete(1)
@@ -399,34 +416,37 @@ async def test_aioredis_hash(aioredis_client):
     r = await f.has(1)
     assert r is True
     r = await f.get(1)
-    assert r == b't1'
+    assert r == b"t1"
 
     r = await f.get_many(
         (1,),
-        {'a': 2},
+        {"a": 2},
     )
-    assert r == [b't1', None]
+    assert r == [b"t1", None]
 
     r = await f.update_many(
         (1,),
-        {'a': 3},
+        {"a": 3},
     )
-    assert r == [b't1', b't3']
+    assert r == [b"t1", b"t3"]
 
-    await f.set_many((
-        (1,),
-        (2,),
-    ), (
-        b'foo',
-        b'bar',
-    ))
+    await f.set_many(
+        (
+            (1,),
+            (2,),
+        ),
+        (
+            b"foo",
+            b"bar",
+        ),
+    )
 
     r = await f.get_many(
-        {'a': 1},
+        {"a": 1},
         (2,),
         (3,),
     )
-    assert r == [b'foo', b'bar', b't3']
+    assert r == [b"foo", b"bar", b"t3"]
     await f.delete(2)
 
     r = await f.get_or_update_many(
@@ -434,7 +454,7 @@ async def test_aioredis_hash(aioredis_client):
         (2,),
         (3,),
     )
-    assert r == [b'foo', b't2', b't3']
+    assert r == [b"foo", b"t2", b"t3"]
 
 
 @pytest.mark.asyncio
@@ -443,7 +463,7 @@ async def test_func_method(storage_dict):
 
     class A(object):
         def __ring_key__(self):
-            return 'A'
+            return "A"
 
         @ring.dict(storage)
         async def method(self, a, b):
@@ -474,6 +494,7 @@ async def test_forced_sync(synchronous_storage_and_ring):
     storage, storage_ring = synchronous_storage_and_ring
 
     with pytest.raises(TypeError):
+
         @storage_ring(storage)
         async def g():
             return 1
@@ -482,10 +503,10 @@ async def test_forced_sync(synchronous_storage_and_ring):
     async def f(a):
         return a
 
-    await f.delete('a')
-    assert None is (await f.get('a'))
-    assert 'a' == (await f('a'))
-    assert 'a' == (await f.get('a'))
+    await f.delete("a")
+    assert None is (await f.get("a"))
+    assert "a" == (await f("a"))
+    assert "a" == (await f.get("a"))
 
 
 @pytest.mark.asyncio
@@ -497,7 +518,7 @@ async def test_async_def_func_method():
 
     class A(object):
         def __str__(self):
-            return 'A'
+            return "A"
 
         @ring.dict(cache)
         async def method(self, a, b):
@@ -522,22 +543,23 @@ async def test_async_def_func_method():
     assert value == 10202, value
 
 
-@pytest.mark.parametrize('field,expected', [
-    (None, {'a': int, 'b': str, 'return': float}),
-    ('__call__', {'a': int, 'b': str, 'return': float}),
-    ('execute', {'a': int, 'b': str, 'return': float}),
-    ('get', {'a': int, 'b': str, 'return': Optional[float]}),
-    ('get_or_update', {'a': int, 'b': str, 'return': float}),
-    ('update', {'a': int, 'b': str, 'return': float}),
-    ('key', {'a': int, 'b': str, 'return': str}),
-    ('set', {'a': int, 'b': str, 'return': None}),
-    ('delete', {'a': int, 'b': str, 'return': None}),
-    ('touch', {'a': int, 'b': str, 'return': None}),
-
-])
+@pytest.mark.parametrize(
+    "field,expected",
+    [
+        (None, {"a": int, "b": str, "return": float}),
+        ("__call__", {"a": int, "b": str, "return": float}),
+        ("execute", {"a": int, "b": str, "return": float}),
+        ("get", {"a": int, "b": str, "return": Optional[float]}),
+        ("get_or_update", {"a": int, "b": str, "return": float}),
+        ("update", {"a": int, "b": str, "return": float}),
+        ("key", {"a": int, "b": str, "return": str}),
+        ("set", {"a": int, "b": str, "return": None}),
+        ("delete", {"a": int, "b": str, "return": None}),
+        ("touch", {"a": int, "b": str, "return": None}),
+    ],
+)
 @pytest.mark.asyncio
 async def test_annotation(field, expected):
-
     @ring.dict({})
     def f(a: int, b: str) -> float:
         pass
@@ -551,8 +573,8 @@ async def test_annotation(field, expected):
     else:
         owner = f
 
-    print('actual:', owner.__annotations__)
-    print('expected:', expected)
+    print("actual:", owner.__annotations__)
+    print("expected:", expected)
     assert owner.__annotations__ == expected
 
     if field is not None:
@@ -560,6 +582,6 @@ async def test_annotation(field, expected):
     else:
         owner = g
 
-    print('actual:', owner.__annotations__)
-    print('expected:', expected)
+    print("actual:", owner.__annotations__)
+    print("expected:", expected)
     assert owner.__annotations__ == expected

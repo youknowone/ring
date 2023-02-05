@@ -14,10 +14,12 @@ import itertools
 from . import base as fbase, sync as fsync
 from asyncio import Lock
 
-__all__ = ('aiomcache', 'aioredis', )
+__all__ = (
+    "aiomcache",
+    "aioredis",
+)
 
-inspect_iscoroutinefunction = getattr(
-    inspect, 'iscoroutinefunction', lambda f: False)
+inspect_iscoroutinefunction = getattr(inspect, "iscoroutinefunction", lambda f: False)
 
 
 _shared_lock = None
@@ -31,19 +33,20 @@ def shared_lock():
 
 
 class SingletonCoroutineProxy(object):
-
     def __init__(self, awaitable):
         if not asyncio.iscoroutine(awaitable):
             raise TypeError(
-                "StorageProxy requires an awaitable object but '{}' found"
-                .format(type(awaitable)))
+                "StorageProxy requires an awaitable object but '{}' found".format(
+                    type(awaitable)
+                )
+            )
         self.awaitable = awaitable
         self.singleton = None
 
     async def _await(self):
         async with shared_lock():
             if self.singleton is None:
-                if hasattr(self.awaitable, '__await__'):
+                if hasattr(self.awaitable, "__await__"):
                     self.singleton = await self.awaitable
                 else:
                     self.singleton = self.awaitable
@@ -56,9 +59,8 @@ class SingletonCoroutineProxy(object):
 
 
 class NonAsyncioFactoryProxyBase(fbase.FactoryProxyBase):
-
     def __init__(self, *args, **kwargs):
-        self.force_asyncio = kwargs.pop('force_asyncio', False)
+        self.force_asyncio = kwargs.pop("force_asyncio", False)
         super().__init__(*args, **kwargs)
 
     def __call__(self, func):
@@ -69,7 +71,8 @@ class NonAsyncioFactoryProxyBase(fbase.FactoryProxyBase):
                 "factory does not support asyncio. This may result in the "
                 "storage operation blocking asyncio event loop which may "
                 "slow down the program. To force to allow it, pass "
-                "keyword parameter 'force_asyncio=True' to the ring factory.")
+                "keyword parameter 'force_asyncio=True' to the ring factory."
+            )
         return super().__call__(func)
 
 
@@ -94,8 +97,7 @@ def async_wrap(func):
 
 def convert_storage(storage_class):
     storage_bases = (fbase.CommonMixinStorage, BulkStorageMixin)
-    async_storage_class = type(
-        'Async' + storage_class.__name__, (storage_class,), {})
+    async_storage_class = type("Async" + storage_class.__name__, (storage_class,), {})
 
     count = 0
     for storage_base in storage_bases:
@@ -108,8 +110,7 @@ def convert_storage(storage_class):
                     async_attr = async_wrap(getattr(storage_class, name))
                 setattr(async_storage_class, name, async_attr)
     if count == 0:
-        raise TypeError(
-            "'storage_class' is not subclassing any known storage base")
+        raise TypeError("'storage_class' is not subclassing any known storage base")
 
     return async_storage_class
 
@@ -118,10 +119,10 @@ def create_factory_from(sync_factory, _storage_class):
     """Create :mod:`asyncio` compatible factory from synchronous storage."""
 
     def factory(*args, **kwargs):
-        if 'user_interface' not in kwargs:
-            kwargs['user_interface'] = CacheUserInterface
-        if 'storage_class' not in kwargs:
-            kwargs['storage_class'] = convert_storage(_storage_class)
+        if "user_interface" not in kwargs:
+            kwargs["user_interface"] = CacheUserInterface
+        if "storage_class" not in kwargs:
+            kwargs["storage_class"] = convert_storage(_storage_class)
         return sync_factory(*args, **kwargs)
 
     return factory
@@ -132,7 +133,9 @@ def factory_doctor(wire_rope) -> None:
     if not callable.is_coroutine:
         raise TypeError(
             "The function for cache '{}' must be an async function.".format(
-                callable.code.co_name))
+                callable.code.co_name
+            )
+        )
 
 
 class CommonMixinStorage(fbase.BaseStorage):  # Working only as mixin
@@ -172,7 +175,8 @@ class CacheUserInterface(fbase.BaseUserInterface):
     """
 
     @fbase.interface_attrs(
-        return_annotation=lambda a: Optional[a.get('return', Any)])  # noqa: F722
+        return_annotation=lambda a: Optional[a.get("return", Any)]
+    )  # noqa: F722
     async def get(self, wire, **kwargs):
         key = self.key(wire, **kwargs)
         try:
@@ -197,26 +201,24 @@ class CacheUserInterface(fbase.BaseUserInterface):
         return result
 
     @fbase.interface_attrs(
-        transform_args=(fbase.transform_args_prefix, {'prefix_count': 1}),
-        return_annotation=None)
+        transform_args=(fbase.transform_args_prefix, {"prefix_count": 1}),
+        return_annotation=None,
+    )
     def set(self, wire, _value, **kwargs):
         key = self.key(wire, **kwargs)
         return wire.storage.set(key, _value)
 
-    @fbase.interface_attrs(
-        return_annotation=None)
+    @fbase.interface_attrs(return_annotation=None)
     def delete(self, wire, **kwargs):
         key = self.key(wire, **kwargs)
         return wire.storage.delete(key)
 
-    @fbase.interface_attrs(
-        return_annotation=bool)
+    @fbase.interface_attrs(return_annotation=bool)
     def has(self, wire, **kwargs):
         key = self.key(wire, **kwargs)
         return wire.storage.has(key)
 
-    @fbase.interface_attrs(
-        return_annotation=None)
+    @fbase.interface_attrs(return_annotation=None)
     def touch(self, wire, **kwargs):
         key = self.key(wire, **kwargs)
         return wire.storage.touch(key)
@@ -231,22 +233,25 @@ class BulkInterfaceMixin(fbase.AbstractBulkUserInterfaceMixin):
 
     @fbase.interface_attrs(
         transform_args=fbase.transform_positional_only,
-        return_annotation=lambda a: List[a.get('return', Any)])  # noqa: F722
+        return_annotation=lambda a: List[a.get("return", Any)],
+    )  # noqa: F722
     def execute_many(self, wire, pargs):
-        return asyncio.gather(*(
-            fbase.execute_bulk_item(wire, args) for args in pargs.args))
+        return asyncio.gather(
+            *(fbase.execute_bulk_item(wire, args) for args in pargs.args)
+        )
 
     @fbase.interface_attrs(
         transform_args=fbase.transform_positional_only,
-        return_annotation=lambda a: List[Optional[a.get('return', Any)]])  # noqa: F722
+        return_annotation=lambda a: List[Optional[a.get("return", Any)]],
+    )  # noqa: F722
     def get_many(self, wire, pargs):
         keys = self.key_many(wire, pargs)
-        return wire.storage.get_many(
-            keys, miss_value=wire._rope.config.miss_value)
+        return wire.storage.get_many(keys, miss_value=wire._rope.config.miss_value)
 
     @fbase.interface_attrs(
         transform_args=fbase.transform_positional_only,
-        return_annotation=lambda a: List[a.get('return', Any)])  # noqa: F722
+        return_annotation=lambda a: List[a.get("return", Any)],
+    )  # noqa: F722
     async def update_many(self, wire, pargs):
         keys = self.key_many(wire, pargs)
         values = await self.execute_many(wire, pargs)
@@ -255,12 +260,12 @@ class BulkInterfaceMixin(fbase.AbstractBulkUserInterfaceMixin):
 
     @fbase.interface_attrs(
         transform_args=fbase.transform_positional_only,
-        return_annotation=lambda a: List[a.get('return', Any)])  # noqa: F722
+        return_annotation=lambda a: List[a.get("return", Any)],
+    )  # noqa: F722
     async def get_or_update_many(self, wire, pargs):
         keys = self.key_many(wire, pargs)
         miss_value = object()
-        results = await wire.storage.get_many(
-            keys, miss_value=miss_value)
+        results = await wire.storage.get_many(keys, miss_value=miss_value)
 
         miss_indices = []
         for i, akr in enumerate(zip(pargs.args, keys, results)):
@@ -269,8 +274,9 @@ class BulkInterfaceMixin(fbase.AbstractBulkUserInterfaceMixin):
                 continue
             miss_indices.append(i)
 
-        new_results = await asyncio.gather(*(
-            fbase.execute_bulk_item(wire, pargs.args[i]) for i in miss_indices))
+        new_results = await asyncio.gather(
+            *(fbase.execute_bulk_item(wire, pargs.args[i]) for i in miss_indices)
+        )
         new_keys = [keys[i] for i in miss_indices]
         await wire.storage.set_many(new_keys, new_results)
 
@@ -279,51 +285,50 @@ class BulkInterfaceMixin(fbase.AbstractBulkUserInterfaceMixin):
         return results
 
     @fbase.interface_attrs(
-        transform_args=fbase.transform_positional_only,
-        return_annotation=None)
+        transform_args=fbase.transform_positional_only, return_annotation=None
+    )
     def set_many(self, wire, pargs):
         args_list, value_list = pargs.args
         keys = self.key_many(wire, fbase.ArgPack((), args_list, {}))
         return wire.storage.set_many(keys, value_list)
 
     @fbase.interface_attrs(
-        transform_args=fbase.transform_positional_only,
-        return_annotation=None)
+        transform_args=fbase.transform_positional_only, return_annotation=None
+    )
     def delete_many(self, wire, pargs):
         keys = self.key_many(wire, pargs)
         return wire.storage.delete_many(keys)
 
     @fbase.interface_attrs(
-        transform_args=fbase.transform_positional_only,
-        return_annotation=None)
+        transform_args=fbase.transform_positional_only, return_annotation=None
+    )
     def has_many(self, wire, pargs):
         keys = self.key_many(wire, pargs)
         return wire.storage.has_many(keys)
 
     @fbase.interface_attrs(
-        transform_args=fbase.transform_positional_only,
-        return_annotation=None)
+        transform_args=fbase.transform_positional_only, return_annotation=None
+    )
     def touch_many(self, wire, pargs):
         keys = self.key_many(wire, pargs)
         return wire.storage.touch_many(keys)
 
 
 class BulkStorageMixin(object):
-
     async def get_many(self, keys, miss_value):
         """Get and return values for the given key."""
         values = await self.get_many_values(keys)
         results = [
             self.rope.decode(v) if v is not fbase.NotFound else miss_value  # noqa
-            for v in values]
+            for v in values
+        ]
         return results
 
     def set_many(self, keys, values, expire=Ellipsis):
         """Set values for the given keys."""
         if expire is Ellipsis:
             expire = self.rope.config.expire_default
-        return self.set_many_values(
-            keys, [self.rope.encode(v) for v in values], expire)
+        return self.set_many_values(keys, [self.rope.encode(v) for v in values], expire)
 
     def delete_many(self, keys):
         """Delete values for the given keys."""
@@ -340,8 +345,7 @@ class BulkStorageMixin(object):
         return self.touch_many_values(keys, expire)
 
 
-class AiomcacheStorage(
-        CommonMixinStorage, fbase.StorageMixin, BulkStorageMixin):
+class AiomcacheStorage(CommonMixinStorage, fbase.StorageMixin, BulkStorageMixin):
     """Storage implementation for :class:`aiomcache.Client`."""
 
     async def get_value(self, key):
@@ -370,8 +374,7 @@ class AiomcacheStorage(
         raise NotImplementedError("aiomcache doesn't support delete_multi.")
 
 
-class Aioredis1Storage(
-        CommonMixinStorage, fbase.StorageMixin, BulkStorageMixin):
+class Aioredis1Storage(CommonMixinStorage, fbase.StorageMixin, BulkStorageMixin):
     """Storage implementation for :class:`aioredis.Redis`."""
 
     async def _get_backend(self):
@@ -417,8 +420,9 @@ class Aioredis1Storage(
         backend = await self._get_backend()
         await backend.mset(*params)
         if expire is not None:
-            asyncio.ensure_future(asyncio.gather(*(
-                backend.expire(key, expire) for key in keys)))
+            asyncio.ensure_future(
+                asyncio.gather(*(backend.expire(key, expire) for key in keys))
+            )
 
 
 class Aioredis1HashStorage(Aioredis1Storage):
@@ -462,8 +466,7 @@ class Aioredis1HashStorage(Aioredis1Storage):
         await backend.hmset(self.hash_key, *params)
 
 
-class Aioredis2Storage(
-        CommonMixinStorage, fbase.StorageMixin, BulkStorageMixin):
+class Aioredis2Storage(CommonMixinStorage, fbase.StorageMixin, BulkStorageMixin):
     """Storage implementation for :class:`aioredis.Redis`."""
 
     async def _get_backend(self):
@@ -509,8 +512,9 @@ class Aioredis2Storage(
         backend = await self._get_backend()
         await backend.mset(params)
         if expire is not None:
-            asyncio.ensure_future(asyncio.gather(*(
-                backend.expire(key, expire) for key in keys)))
+            asyncio.ensure_future(
+                asyncio.gather(*(backend.expire(key, expire) for key in keys))
+            )
 
 
 class Aioredis2HashStorage(Aioredis2Storage):
@@ -555,9 +559,14 @@ class Aioredis2HashStorage(Aioredis2Storage):
 
 
 def dict(
-        obj, key_prefix=None, expire=None, coder=None,
-        user_interface=CacheUserInterface, storage_class=None,
-        **kwargs):
+    obj,
+    key_prefix=None,
+    expire=None,
+    coder=None,
+    user_interface=CacheUserInterface,
+    storage_class=None,
+    **kwargs
+):
     """:class:`dict` interface for :mod:`asyncio`.
 
     :see: :func:`ring.func.sync.dict` for common description.
@@ -570,18 +579,28 @@ def dict(
             storage_class = fsync.ExpirableDictStorage
 
     return fbase.factory(
-        obj, key_prefix=key_prefix, on_manufactured=None,
+        obj,
+        key_prefix=key_prefix,
+        on_manufactured=None,
         user_interface=user_interface,
         storage_class=convert_storage(storage_class),
-        miss_value=None, expire_default=expire, coder=coder,
-        **kwargs)
+        miss_value=None,
+        expire_default=expire,
+        coder=coder,
+        **kwargs
+    )
 
 
 def aiomcache(
-        client, key_prefix=None, expire=0, coder=None,
-        user_interface=(CacheUserInterface, BulkInterfaceMixin),
-        storage_class=AiomcacheStorage, key_encoding='utf-8',
-        **kwargs):
+    client,
+    key_prefix=None,
+    expire=0,
+    coder=None,
+    user_interface=(CacheUserInterface, BulkInterfaceMixin),
+    storage_class=AiomcacheStorage,
+    key_encoding="utf-8",
+    **kwargs
+):
     """Memcached_ interface for :mod:`asyncio`.
 
     Expected client package is aiomcache_.
@@ -610,18 +629,29 @@ def aiomcache(
     from ring._memcache import key_refactor
 
     return fbase.factory(
-        client, key_prefix=key_prefix, on_manufactured=factory_doctor,
-        user_interface=user_interface, storage_class=storage_class,
-        miss_value=None, expire_default=expire, coder=coder,
-        key_encoding=key_encoding, key_refactor=key_refactor,
-        **kwargs)
+        client,
+        key_prefix=key_prefix,
+        on_manufactured=factory_doctor,
+        user_interface=user_interface,
+        storage_class=storage_class,
+        miss_value=None,
+        expire_default=expire,
+        coder=coder,
+        key_encoding=key_encoding,
+        key_refactor=key_refactor,
+        **kwargs
+    )
 
 
 def aioredis1(
-        redis, key_prefix=None, expire=None, coder=None,
-        user_interface=(CacheUserInterface, BulkInterfaceMixin),
-        storage_class=Aioredis1Storage,
-        **kwargs):
+    redis,
+    key_prefix=None,
+    expire=None,
+    coder=None,
+    user_interface=(CacheUserInterface, BulkInterfaceMixin),
+    storage_class=Aioredis1Storage,
+    **kwargs
+):
     """Redis interface for :mod:`asyncio`.
 
     Expected client package is aioredis_.
@@ -670,71 +700,91 @@ def aioredis1(
         redis = SingletonCoroutineProxy(redis)
 
     return fbase.factory(
-        redis, key_prefix=key_prefix, on_manufactured=factory_doctor,
-        user_interface=user_interface, storage_class=storage_class,
-        miss_value=None, expire_default=expire, coder=coder,
-        **kwargs)
+        redis,
+        key_prefix=key_prefix,
+        on_manufactured=factory_doctor,
+        user_interface=user_interface,
+        storage_class=storage_class,
+        miss_value=None,
+        expire_default=expire,
+        coder=coder,
+        **kwargs
+    )
 
 
 def aioredis1_hash(
-        redis, hash_key=None, key_prefix=None, coder=None,
-        user_interface=(CacheUserInterface, BulkInterfaceMixin),
-        storage_class=Aioredis1HashStorage,
-        **kwargs):
+    redis,
+    hash_key=None,
+    key_prefix=None,
+    coder=None,
+    user_interface=(CacheUserInterface, BulkInterfaceMixin),
+    storage_class=Aioredis1HashStorage,
+    **kwargs
+):
     """Redis interface for :mod:`asyncio`.
 
-        Expected client package is aioredis_.
+    Expected client package is aioredis_.
 
-        This implements HASH commands in aioredis.
+    This implements HASH commands in aioredis.
 
-        aioredis expect `Redis` client or dev package is installed on your
-        machine. If you are new to Memcached, check how to install it and the
-        python package on your platform.
+    aioredis expect `Redis` client or dev package is installed on your
+    machine. If you are new to Memcached, check how to install it and the
+    python package on your platform.
 
-        Note that aioredis>=1.0.0;<2.0.0 only supported.
+    Note that aioredis>=1.0.0;<2.0.0 only supported.
 
-        .. _Redis: http://redis.io/
-        .. _aioredis: https://pypi.org/project/aioredis/
+    .. _Redis: http://redis.io/
+    .. _aioredis: https://pypi.org/project/aioredis/
 
-        :param Union[aioredis.Redis,Callable[...aioredis.Redis]] client: aioredis
-            interface object. See :func:`aioredis.create_redis` or
-            :func:`aioredis.create_redis_pool`. For convenience, a coroutine
-            returning one of these objects also is proper. It means next 2
-            examples working almost same:
+    :param Union[aioredis.Redis,Callable[...aioredis.Redis]] client: aioredis
+        interface object. See :func:`aioredis.create_redis` or
+        :func:`aioredis.create_redis_pool`. For convenience, a coroutine
+        returning one of these objects also is proper. It means next 2
+        examples working almost same:
 
-                >>> redis = await aioredis.create_redis(('127.0.0.1', 6379))
-                >>> @ring.aioredis_hash(redis, ...)
-                >>> async def by_object(...):
-                >>>     ...
+            >>> redis = await aioredis.create_redis(('127.0.0.1', 6379))
+            >>> @ring.aioredis_hash(redis, ...)
+            >>> async def by_object(...):
+            >>>     ...
 
-                >>> redis_coroutine = aioredis.create_redis(('127.0.0.1', 6379))
-                >>> @ring.aioredis_hash(redis_coroutine, ...)
-                >>> async def by_coroutine(...):
-                >>>     ...
+            >>> redis_coroutine = aioredis.create_redis(('127.0.0.1', 6379))
+            >>> @ring.aioredis_hash(redis_coroutine, ...)
+            >>> async def by_coroutine(...):
+            >>>     ...
 
-        :see: :func:`ring.func.asyncio.CacheUserInterface` for single access
-            sub-functions.
-        :see: :func:`ring.func.asyncio.BulkInterfaceMixin` for bulk access
-            sub-functions.
+    :see: :func:`ring.func.asyncio.CacheUserInterface` for single access
+        sub-functions.
+    :see: :func:`ring.func.asyncio.BulkInterfaceMixin` for bulk access
+        sub-functions.
 
-        :see: :func:`ring.redis` for non-asyncio version.
-        """
+    :see: :func:`ring.redis` for non-asyncio version.
+    """
     expire = None
     if asyncio.iscoroutine(redis):
         redis = SingletonCoroutineProxy(redis)
 
     return fbase.factory(
-        (redis, hash_key), key_prefix=key_prefix, on_manufactured=factory_doctor,
-        user_interface=user_interface, storage_class=storage_class,
-        miss_value=None, expire_default=expire, coder=coder,
-        **kwargs)
+        (redis, hash_key),
+        key_prefix=key_prefix,
+        on_manufactured=factory_doctor,
+        user_interface=user_interface,
+        storage_class=storage_class,
+        miss_value=None,
+        expire_default=expire,
+        coder=coder,
+        **kwargs
+    )
 
 
 def aioredis2(
-        redis, key_prefix=None, expire=None, coder=None,
-        user_interface=(CacheUserInterface, BulkInterfaceMixin),
-        storage_class=Aioredis2Storage,
-        **kwargs):
+    redis,
+    key_prefix=None,
+    expire=None,
+    coder=None,
+    user_interface=(CacheUserInterface, BulkInterfaceMixin),
+    storage_class=Aioredis2Storage,
+    **kwargs
+):
     """Redis interface for :mod:`asyncio`.
 
     Expected client package is aioredis_.
@@ -783,64 +833,80 @@ def aioredis2(
         redis = SingletonCoroutineProxy(redis)
 
     return fbase.factory(
-        redis, key_prefix=key_prefix, on_manufactured=factory_doctor,
-        user_interface=user_interface, storage_class=storage_class,
-        miss_value=None, expire_default=expire, coder=coder,
-        **kwargs)
+        redis,
+        key_prefix=key_prefix,
+        on_manufactured=factory_doctor,
+        user_interface=user_interface,
+        storage_class=storage_class,
+        miss_value=None,
+        expire_default=expire,
+        coder=coder,
+        **kwargs
+    )
 
 
 def aioredis2_hash(
-        redis, hash_key=None, key_prefix=None, coder=None,
-        user_interface=(CacheUserInterface, BulkInterfaceMixin),
-        storage_class=Aioredis2HashStorage,
-        **kwargs):
+    redis,
+    hash_key=None,
+    key_prefix=None,
+    coder=None,
+    user_interface=(CacheUserInterface, BulkInterfaceMixin),
+    storage_class=Aioredis2HashStorage,
+    **kwargs
+):
     """Redis interface for :mod:`asyncio`.
 
-        Expected client package is aioredis_.
+    Expected client package is aioredis_.
 
-        This implements HASH commands in aioredis.
+    This implements HASH commands in aioredis.
 
-        aioredis expect `Redis` client or dev package is installed on your
-        machine. If you are new to Memcached, check how to install it and the
-        python package on your platform.
+    aioredis expect `Redis` client or dev package is installed on your
+    machine. If you are new to Memcached, check how to install it and the
+    python package on your platform.
 
-        Note that aioredis>=2.0.0 only supported.
+    Note that aioredis>=2.0.0 only supported.
 
-        .. _Redis: http://redis.io/
-        .. _aioredis: https://pypi.org/project/aioredis/
+    .. _Redis: http://redis.io/
+    .. _aioredis: https://pypi.org/project/aioredis/
 
-        :param Union[aioredis.Redis,Callable[...aioredis.Redis]] client: aioredis
-            interface object. See :func:`aioredis.create_redis` or
-            :func:`aioredis.create_redis_pool`. For convenience, a coroutine
-            returning one of these objects also is proper. It means next 2
-            examples working almost same:
+    :param Union[aioredis.Redis,Callable[...aioredis.Redis]] client: aioredis
+        interface object. See :func:`aioredis.create_redis` or
+        :func:`aioredis.create_redis_pool`. For convenience, a coroutine
+        returning one of these objects also is proper. It means next 2
+        examples working almost same:
 
-                >>> redis = await aioredis.create_redis(('127.0.0.1', 6379))
-                >>> @ring.aioredis_hash(redis, ...)
-                >>> async def by_object(...):
-                >>>     ...
+            >>> redis = await aioredis.create_redis(('127.0.0.1', 6379))
+            >>> @ring.aioredis_hash(redis, ...)
+            >>> async def by_object(...):
+            >>>     ...
 
-                >>> redis_coroutine = aioredis.create_redis(('127.0.0.1', 6379))
-                >>> @ring.aioredis_hash(redis_coroutine, ...)
-                >>> async def by_coroutine(...):
-                >>>     ...
+            >>> redis_coroutine = aioredis.create_redis(('127.0.0.1', 6379))
+            >>> @ring.aioredis_hash(redis_coroutine, ...)
+            >>> async def by_coroutine(...):
+            >>>     ...
 
-        :see: :func:`ring.func.asyncio.CacheUserInterface` for single access
-            sub-functions.
-        :see: :func:`ring.func.asyncio.BulkInterfaceMixin` for bulk access
-            sub-functions.
+    :see: :func:`ring.func.asyncio.CacheUserInterface` for single access
+        sub-functions.
+    :see: :func:`ring.func.asyncio.BulkInterfaceMixin` for bulk access
+        sub-functions.
 
-        :see: :func:`ring.redis` for non-asyncio version.
-        """
+    :see: :func:`ring.redis` for non-asyncio version.
+    """
     expire = None
     if asyncio.iscoroutine(redis):
         redis = SingletonCoroutineProxy(redis)
 
     return fbase.factory(
-        (redis, hash_key), key_prefix=key_prefix, on_manufactured=factory_doctor,
-        user_interface=user_interface, storage_class=storage_class,
-        miss_value=None, expire_default=expire, coder=coder,
-        **kwargs)
+        (redis, hash_key),
+        key_prefix=key_prefix,
+        on_manufactured=factory_doctor,
+        user_interface=user_interface,
+        storage_class=storage_class,
+        miss_value=None,
+        expire_default=expire,
+        coder=coder,
+        **kwargs
+    )
 
 
 aioredis = aioredis2

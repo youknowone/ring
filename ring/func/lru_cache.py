@@ -9,8 +9,8 @@ try:
     from functools import _CacheInfo
 except ImportError:
     from collections import namedtuple
-    _CacheInfo = namedtuple(
-        "CacheInfo", ["hits", "misses", "maxsize", "currsize"])
+
+    _CacheInfo = namedtuple("CacheInfo", ["hits", "misses", "maxsize", "currsize"])
 
 SENTINEL = object()  # unique object used to signal cache misses
 PREV, NEXT, KEY, RESULT, EXPIRE = 0, 1, 2, 3, 4  # names for the link fields
@@ -26,8 +26,8 @@ class LruCache(object):
         cache = {}
         cache_get = cache.get  # bound method to lookup a key or return None
         cache_len = cache.__len__  # get cache size without calling len()
-        lock = RLock()     # because linkedlist updates aren't threadsafe
-        self.root = []   # root of the circular doubly linked list
+        lock = RLock()  # because linkedlist updates aren't threadsafe
+        self.root = []  # root of the circular doubly linked list
         # initialize by pointing to self
         self.root[:] = [self.root, self.root, None, None, None]
         stat = [False, 0, 0]
@@ -41,8 +41,7 @@ class LruCache(object):
             _now = self.now()
             with lock:
                 link = cache_get(key)
-                if link is not None and \
-                        (link[EXPIRE] is None or _now < link[EXPIRE]):
+                if link is not None and (link[EXPIRE] is None or _now < link[EXPIRE]):
                     root = self.root
                     # Move the link to the front of the circular queue
                     link_prev, link_next, _key, result, _ = link
@@ -117,9 +116,9 @@ class LruCache(object):
                     # Use the cache_len bound method instead of the len() function
                     # which could potentially be wrapped in an lru_cache itself.
                     if maxsize is not None and not isinstance(maxsize, int):
-                        raise TypeError('Expected maxsize to be an integer or None')
+                        raise TypeError("Expected maxsize to be an integer or None")
                     if maxsize is not None:
-                        stat[FULL] = (cache_len() >= maxsize)
+                        stat[FULL] = cache_len() >= maxsize
 
         def cache_info():
             """Report cache statistics"""

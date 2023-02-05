@@ -44,7 +44,7 @@ class Coder(object):
 
 
 #: Coder-compatible tuple with encode and decode functions
-CoderTuple = namedtuple('Coder', ['encode', 'decode'])
+CoderTuple = namedtuple("Coder", ["encode", "decode"])
 Coder.register(CoderTuple)
 
 
@@ -54,12 +54,13 @@ def coderize(raw_coder):
     else:
         if isinstance(raw_coder, tuple):
             coder = CoderTuple(*raw_coder)
-        elif hasattr(raw_coder, 'encode') and hasattr(raw_coder, 'decode'):
+        elif hasattr(raw_coder, "encode") and hasattr(raw_coder, "decode"):
             coder = CoderTuple(raw_coder.encode, raw_coder.decode)
         else:
             raise TypeError(
                 "The given coder is not a coder compatibile object or "
-                "not a registered name in coder registry")
+                "not a registered name in coder registry"
+            )
     return coder
 
 
@@ -69,7 +70,7 @@ class Registry(object):
     :see: :func:`ring.coder.registry` for default registry instance.
     """
 
-    __slots__ = ('coders',)
+    __slots__ = ("coders",)
 
     def __init__(self):
         self.coders = {}
@@ -104,8 +105,8 @@ class Registry(object):
         if coder is None:
             if isinstance(raw_coder, str):  # py2 support
                 raise TypeError(
-                    "The given coder is not a registered name in coder "
-                    "registry.")
+                    "The given coder is not a registered name in coder " "registry."
+                )
             coder = coderize(raw_coder)
         return coder
 
@@ -136,17 +137,17 @@ class JsonCoder(Coder):
     @staticmethod
     def encode(data):
         """Dump data to JSON string and encode it to UTF-8 bytes"""
-        return json_mod.dumps(data).encode('utf-8')
+        return json_mod.dumps(data).encode("utf-8")
 
     @staticmethod
     def decode(binary):
         """Decode UTF-8 bytes to JSON string and load it to object"""
-        return json_mod.loads(binary.decode('utf-8'))
+        return json_mod.loads(binary.decode("utf-8"))
 
 
 if dataclasses:
-    class DataclassCoder(Coder):
 
+    class DataclassCoder(Coder):
         @staticmethod
         def encode(data):
             """Serialize dataclass object to json encoded dictionary"""
@@ -157,9 +158,12 @@ if dataclasses:
         def decode(binary):
             """Deserialize json encoded dictionary to dataclass object"""
             name, fields = JsonCoder.decode(binary)
-            dataclass = dataclasses.make_dataclass(name, [(key, type(value)) for key, value in fields.items()])
+            dataclass = dataclasses.make_dataclass(
+                name, [(key, type(value)) for key, value in fields.items()]
+            )
             instance = dataclass(**fields)
             return instance
+
 
 #: The default coder registry with pre-registered coders.
 #: Built-in coders are registered by default.
@@ -167,8 +171,8 @@ if dataclasses:
 #: :see: :class:`ring.coder.Registry` for the class definition.
 registry = Registry()
 registry.register(None, bypass_coder)
-registry.register('json', JsonCoder())
-registry.register('pickle', pickle_coder)
+registry.register("json", JsonCoder())
+registry.register("pickle", pickle_coder)
 
 if dataclasses:
-    registry.register('dataclass', DataclassCoder())
+    registry.register("dataclass", DataclassCoder())

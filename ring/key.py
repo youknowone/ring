@@ -7,15 +7,14 @@ from .callable import Callable
 
 
 class Key(object):
-
-    def __init__(self, provider, indirect_marker='*'):
+    def __init__(self, provider, indirect_marker="*"):
         self.provider = provider
         self.indirect_marker = indirect_marker
 
     def __repr__(self):
-        return u'<{}.{} provider={}>'.format(
-            type(self).__module__, type(self).__name__,
-            self.provider)
+        return "<{}.{} provider={}>".format(
+            type(self).__module__, type(self).__name__, self.provider
+        )
 
     def build(self, args):  # pragma: no cover
         raise NotImplementedError
@@ -34,31 +33,33 @@ class Key(object):
 
 
 class FormatKey(Key):
-
     def build(self, args):
         return self.provider.format(**args)
 
     @cached_property
     def ordered_provider_keys(self):
-        keys = re.findall('{([a-zA-Z_][a-zA-Z_0-9]*)}', self.provider)
+        keys = re.findall("{([a-zA-Z_][a-zA-Z_0-9]*)}", self.provider)
         return keys
 
 
 def _param_name(param):
     if param.kind == inspect.Parameter.VAR_POSITIONAL:
-        return '*' + param.name
+        return "*" + param.name
     elif param.kind == inspect.Parameter.VAR_KEYWORD:
-        return '**' + param.name
+        return "**" + param.name
     else:
         return param.name
 
 
 class CallableKey(Key):
-
     def __init__(
-            self, provider, indirect_marker='*', format_prefix=None,
-            ignorable_keys=[], verbose=False):
-
+        self,
+        provider,
+        indirect_marker="*",
+        format_prefix=None,
+        ignorable_keys=[],
+        verbose=False,
+    ):
         if not isinstance(provider, Callable):
             provider = Callable(provider)
         super(CallableKey, self).__init__(provider, indirect_marker)
@@ -67,9 +68,9 @@ class CallableKey(Key):
             format_prefix = self.default_format_prefix
         if callable(format_prefix):
             format_prefix = format_prefix(provider)
-        self.format = format_prefix + \
-            self.default_format_body(
-                self.ordered_provider_keys, verbose=verbose)
+        self.format = format_prefix + self.default_format_body(
+            self.ordered_provider_keys, verbose=verbose
+        )
 
     @cached_property
     def ordered_provider_keys(self):
@@ -77,8 +78,8 @@ class CallableKey(Key):
         for key in self.ignorable_keys:
             if key not in keys:
                 raise KeyError(
-                    "'{}' is not an parameter name but in 'ignorable_keys'"
-                    .format(key))
+                    "'{}' is not an parameter name but in 'ignorable_keys'".format(key)
+                )
             keys.remove(key)
         return keys
 
@@ -90,12 +91,12 @@ class CallableKey(Key):
     def default_format_body(provider_keys, verbose):
         parts = []
         if verbose:
-            arg_form = ':{key}={{{key}}}'
+            arg_form = ":{key}={{{key}}}"
         else:
-            arg_form = ':{{{key}}}'
+            arg_form = ":{{{key}}}"
         for key in provider_keys:
             parts.append(arg_form.format(key=key))
-        return ''.join(parts)
+        return "".join(parts)
 
     def build(self, labels):
         return self.format.format(**labels)

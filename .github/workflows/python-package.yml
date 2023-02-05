@@ -29,12 +29,12 @@ jobs:
       run: |
         sudo apt-get install libmemcached-dev
         python -m pip install --upgrade pip
-        python -m pip install flake8
+        python --version | grep '3.' && python -m pip install black
         python -m pip install -e '.[tests]'
-    - name: Lint with flake8
+    - name: Lint with black
       run: |
-        # stop the build if there are Python syntax errors or undefined names
-        flake8 --ignore=E501,E999 ring tests setup.py --statistics
+        black --check ring tests setup.py
+      if: matrix.python-version != '2.7'
     - name: Start containers
       run: docker-compose -f "docker-compose.yml" up -d --build
     - name: Test with pytest

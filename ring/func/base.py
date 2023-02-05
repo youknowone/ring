@@ -29,8 +29,13 @@ except ImportError:  # pragma: no cover
     dataclasses = None
 
 __all__ = (
-    'factory', 'NotFound',
-    'BaseUserInterface', 'BaseStorage', 'CommonMixinStorage', 'StorageMixin')
+    "factory",
+    "NotFound",
+    "BaseUserInterface",
+    "BaseStorage",
+    "CommonMixinStorage",
+    "StorageMixin",
+)
 
 
 class ArgPack(collections.namedtuple("_ArgPack", ["bounds", "args", "kwargs"])):
@@ -51,8 +56,10 @@ class ArgPack(collections.namedtuple("_ArgPack", ["bounds", "args", "kwargs"])):
         # no .POSITIONAL_ONLY support
 
         args = bound_args + args
-        while i < parameters_len and \
-                parameters[i].kind == inspect.Parameter.POSITIONAL_OR_KEYWORD:
+        while (
+            i < parameters_len
+            and parameters[i].kind == inspect.Parameter.POSITIONAL_OR_KEYWORD
+        ):
             p = parameters[i]
             i += 1
 
@@ -65,7 +72,9 @@ class ArgPack(collections.namedtuple("_ArgPack", ["bounds", "args", "kwargs"])):
                 if name in kwargs:
                     raise TypeError(
                         "{}() got multiple values for argument '{}'".format(
-                            callable.code.co_name, name))
+                            callable.code.co_name, name
+                        )
+                    )
                 consumed_i += 1
                 merged[name] = value
                 continue
@@ -77,26 +86,31 @@ class ArgPack(collections.namedtuple("_ArgPack", ["bounds", "args", "kwargs"])):
 
             value = p.default
             if value is inspect.Parameter.empty:
-                message = \
-                    "{}() missing required positional argument: '{}'".format(
-                        callable.code.co_name, p.name)
+                message = "{}() missing required positional argument: '{}'".format(
+                    callable.code.co_name, p.name
+                )
                 raise TypeError(message)
             merged[name] = value
 
-        if i < parameters_len and \
-                parameters[i].kind == inspect.Parameter.VAR_POSITIONAL:
+        if (
+            i < parameters_len
+            and parameters[i].kind == inspect.Parameter.VAR_POSITIONAL
+        ):
             p = parameters[i]
             i += 1
 
-            merged['*' + p.name] = args[consumed_i:]
+            merged["*" + p.name] = args[consumed_i:]
         else:
             if consumed_i < len(args):
                 raise TypeError(
-                    "{}() takes {} positional arguments but {} were given"
-                    .format(callable.code.co_name, i, i + len(args) - consumed_i))
+                    "{}() takes {} positional arguments but {} were given".format(
+                        callable.code.co_name, i, i + len(args) - consumed_i
+                    )
+                )
 
-        while i < parameters_len and \
-                parameters[i].kind == inspect.Parameter.KEYWORD_ONLY:
+        while (
+            i < parameters_len and parameters[i].kind == inspect.Parameter.KEYWORD_ONLY
+        ):
             p = parameters[i]
             i += 1
 
@@ -108,19 +122,22 @@ class ArgPack(collections.namedtuple("_ArgPack", ["bounds", "args", "kwargs"])):
                 merged[name] = p.default
             else:
                 raise TypeError(
-                    "{}() missing 1 required keyword-only argument: '{}'"
-                    .format(callable.code.co_name, p.name))
+                    "{}() missing 1 required keyword-only argument: '{}'".format(
+                        callable.code.co_name, p.name
+                    )
+                )
 
         var_kws = {k: v for k, v in kwargs.items() if k not in consumed_names}
-        if i < parameters_len and \
-                parameters[i].kind == inspect.Parameter.VAR_KEYWORD:
+        if i < parameters_len and parameters[i].kind == inspect.Parameter.VAR_KEYWORD:
             p = parameters[i]
             i += 1
-            merged['**' + p.name] = var_kws
+            merged["**" + p.name] = var_kws
         elif var_kws:
             raise TypeError(
                 "{}() got multiple values for arguments '{}'".format(
-                    callable.code.co_name, list(var_kws.keys())))
+                    callable.code.co_name, list(var_kws.keys())
+                )
+            )
 
         return merged
 
@@ -140,13 +157,13 @@ def suggest_key_prefix(c, key_prefix):
             cc = c.wrapped_callable
             # A proper solution is `im_class` of the bound method
             if c.is_membermethod:
-                key_prefix = \
-                    '{0.__module__}.{{self.__class__.__name__}}.{0.__name__}' \
-                    .format(cc)
+                key_prefix = (
+                    "{0.__module__}.{{self.__class__.__name__}}.{0.__name__}".format(cc)
+                )
             elif c.is_classmethod:
-                key_prefix = '{0.__module__}.{{cls}}.{0.__name__}'.format(cc)
+                key_prefix = "{0.__module__}.{{cls}}.{0.__name__}".format(cc)
     else:
-        key_prefix = key_prefix.replace('{', '{{').replace('}', '}}')
+        key_prefix = key_prefix.replace("{", "{{").replace("}", "}}")
     return key_prefix
 
 
@@ -155,11 +172,11 @@ def _coerce_bypass(v):
 
 
 def _coerce_ndarray(v):
-    return "{}:{}".format(type(v).__name__, str(v).replace(' ', ','))
+    return "{}:{}".format(type(v).__name__, str(v).replace(" ", ","))
 
 
 def _coerce_list_and_tuple(v):
-    return str(v).replace(' ', '')
+    return str(v).replace(" ", "")
 
 
 def _coerce_type(v):
@@ -167,14 +184,13 @@ def _coerce_type(v):
 
 
 def _coerce_dict(v):
-    return ','.join(['{},{}'.format(k, v[k]) for k in sorted(v.keys())])
+    return ",".join(["{},{}".format(k, v[k]) for k in sorted(v.keys())])
 
 
 def _coerce_set(v):
-    elements = ','.join([
-        "'{}'".format(e) if isinstance(e, str) else str(e)
-        for e in sorted(v)
-    ])
+    elements = ",".join(
+        ["'{}'".format(e) if isinstance(e, str) else str(e) for e in sorted(v)]
+    )
     return "{" + "{}".format(elements) + "}"
 
 
@@ -188,7 +204,7 @@ def _coerce_dataclass(v):
 
 @functools.lru_cache(maxsize=128)
 def coerce_function(t):
-    if hasattr(t, '__ring_key__'):
+    if hasattr(t, "__ring_key__"):
         return _coerce_ring_key
 
     if issubclass(t, (int, str, bool, type(None), type(Ellipsis))):
@@ -225,7 +241,7 @@ def coerce(v, in_memory_storage):
     if type_coerce:
         return type_coerce(v)
 
-    if hasattr(v, '__ring_key__'):
+    if hasattr(v, "__ring_key__"):
         return v.__ring_key__()
 
     if in_memory_storage and type(v).__hash__ != object.__hash__:
@@ -240,25 +256,28 @@ def coerce(v, in_memory_storage):
         msg = "Add __ring_key__(), __str__() or __hash__()."
 
     raise TypeError(
-        "The given value '{}' of type '{}' is not a key-compatible type. {}".format(v, cls, msg))
+        "The given value '{}' of type '{}' is not a key-compatible type. {}".format(
+            v, cls, msg
+        )
+    )
 
 
 def interface_attrs(**kwargs):
-    if 'return_annotation' in kwargs:
-        kwargs['__annotations_override__'] = {
-            'return': kwargs.pop('return_annotation')}
+    if "return_annotation" in kwargs:
+        kwargs["__annotations_override__"] = {"return": kwargs.pop("return_annotation")}
 
-    if 'transform_args' in kwargs:
-        transform_args = kwargs.pop('transform_args')
+    if "transform_args" in kwargs:
+        transform_args = kwargs.pop("transform_args")
         if transform_args:
             if type(transform_args) != tuple:
                 transform_args = transform_args, {}
             func, rules = transform_args
-            assert frozenset(rules.keys()) <= frozenset({'prefix_count'})
-            kwargs['transform_args'] = transform_args
+            assert frozenset(rules.keys()) <= frozenset({"prefix_count"})
+            kwargs["transform_args"] = transform_args
 
     assert frozenset(kwargs.keys()) <= frozenset(
-        {'transform_args', '__annotations_override__'})
+        {"transform_args", "__annotations_override__"}
+    )
 
     def _decorator(f):
         f.__dict__.update(kwargs)
@@ -292,7 +311,7 @@ def transform_args_prefix(wire, rules, args, kwargs):
     :see: the source code of :class:`ring.func.base.BaseUserInterface` about
         actual usage.
     """
-    prefix_count = rules.get('prefix_count', 0)
+    prefix_count = rules.get("prefix_count", 0)
     wrapper_args = args[:prefix_count]
     function_args = args[prefix_count:]
     pargs = wire._pack_args(function_args, kwargs)
@@ -342,8 +361,7 @@ class BaseUserInterface(object):
     def __init__(self, ring):
         self._ring = ring
 
-    @interface_attrs(
-        return_annotation=str)
+    @interface_attrs(return_annotation=str)
     def key(self, wire, pargs):
         """Create and return the composed key for storage.
 
@@ -372,8 +390,7 @@ class BaseUserInterface(object):
         """
         raise NotImplementedError
 
-    @interface_attrs(
-        transform_args=(transform_args_prefix, {'prefix_count': 1}))
+    @interface_attrs(transform_args=(transform_args_prefix, {"prefix_count": 1}))
     def set(self, wire, value, pargs):  # pragma: no cover
         """Set the storage value of the corresponding key as the given `value`.
 
@@ -463,7 +480,8 @@ def create_bulk_key(interface, wire, args):
     else:
         raise TypeError(
             "Each parameter of '_many' suffixed sub-functions must be an "
-            "instance of 'tuple' or 'dict'")
+            "instance of 'tuple' or 'dict'"
+        )
 
     return interface.key(wire, args_pack)
 
@@ -476,7 +494,8 @@ def execute_bulk_item(wire, args):
     else:
         raise TypeError(
             "Each parameter of '_many' suffixed sub-functions must be an "
-            "instance of 'tuple' or 'dict'")
+            "instance of 'tuple' or 'dict'"
+        )
 
 
 class AbstractBulkUserInterfaceMixin(object):
@@ -507,8 +526,8 @@ class AbstractBulkUserInterfaceMixin(object):
     """
 
     @interface_attrs(
-        transform_args=transform_positional_only,
-        return_annotation=lambda a: List[str])
+        transform_args=transform_positional_only, return_annotation=lambda a: List[str]
+    )
     def key_many(self, wire, pargs):
         """Create and return the composed keys for storage.
 
@@ -619,7 +638,6 @@ class Config(object):
 
 
 class RingWire(Wire):
-
     __slots__ = ()
 
     def __init__(self, rope, *args, **kwargs):
@@ -667,14 +685,12 @@ class RingWire(Wire):
 
         attr = getattr(self._rope.config.user_interface, name)
         if callable(attr):
-            transform_args = getattr(
-                attr, 'transform_args', None)
+            transform_args = getattr(attr, "transform_args", None)
 
             def impl_f(*args, **kwargs):
                 if transform_args:
                     transform_func, transform_rules = transform_args
-                    fargs, pargs = transform_func(
-                        self, transform_rules, args, kwargs)
+                    fargs, pargs = transform_func(self, transform_rules, args, kwargs)
                 else:
                     fargs = ()
                     pargs = self._pack_args(args, kwargs)
@@ -682,14 +698,12 @@ class RingWire(Wire):
 
             cc = self._callable.wrapped_callable
             functools.wraps(cc)(impl_f)
-            impl_f.__name__ = '.'.join((cc.__name__, name))
+            impl_f.__name__ = ".".join((cc.__name__, name))
             if six.PY34:
-                impl_f.__qualname__ = '.'.join((cc.__qualname__, name))
+                impl_f.__qualname__ = ".".join((cc.__qualname__, name))
 
-            annotations = getattr(
-                impl_f, '__annotations__', {})
-            annotations_override = getattr(
-                attr, '__annotations_override__', {})
+            annotations = getattr(impl_f, "__annotations__", {})
+            annotations_override = getattr(attr, "__annotations_override__", {})
             for field, override in annotations_override.items():
                 if isinstance(override, types.FunctionType):
                     new_annotation = override(annotations)
@@ -703,12 +717,13 @@ class RingWire(Wire):
 
 
 class PublicRing(object):
-
     def __init__(self, rope):
         self._rope = rope
 
     def key(self, func):
-        self._rope.compose_key = lambda pargs: func(*(pargs.bounds + pargs.args), **pargs.kwargs)
+        self._rope.compose_key = lambda pargs: func(
+            *(pargs.bounds + pargs.args), **pargs.kwargs
+        )
 
     def encode(self, func):
         self._rope._encode = func
@@ -730,18 +745,22 @@ class RingRope(RopeCore):
         config = self.config
 
         _ignorable_keys = suggest_ignorable_keys(
-            self.callable, self.config.ignorable_keys)
+            self.callable, self.config.ignorable_keys
+        )
         _key_prefix = suggest_key_prefix(self.callable, config.key_prefix)
 
         c = self.callable
         key_generator = CallableKey(
-            c, format_prefix=_key_prefix, ignorable_keys=_ignorable_keys)
+            c, format_prefix=_key_prefix, ignorable_keys=_ignorable_keys
+        )
 
-        in_memory_storage = hasattr(config.storage_class, 'in_memory_storage')
+        in_memory_storage = hasattr(config.storage_class, "in_memory_storage")
         labels = pargs.labels(key_generator.provider)
         coerced_kwargs = {
-            k: coerce(v, in_memory_storage) for k, v in labels.items()
-            if k not in _ignorable_keys}
+            k: coerce(v, in_memory_storage)
+            for k, v in labels.items()
+            if k not in _ignorable_keys
+        }
         key = key_generator.build(coerced_kwargs)
         if config.key_encoding:
             key = key.encode(config.key_encoding)
@@ -776,7 +795,6 @@ class RingRope(RopeCore):
 
 
 class Ring(object):
-
     def __init__(self, allows_default_action=True, wire_slots=Ellipsis):
         self._config = None
         self._allows_default_action = allows_default_action
@@ -804,63 +822,70 @@ class Ring(object):
     def config(self):
         return self._config
 
-    def configure(self,
-                  storage_backend,  # actual storage
-                  key_prefix,  # manual key prefix
-                  expire_default,  # default expiration
-                  # keyword-only arguments from here
-                  # building blocks
-                  coder, miss_value, user_interface, storage_class,
-                  default_action=Ellipsis,
-                  coder_registry=Ellipsis,
-                  # key builder related parameters
-                  ignorable_keys=None, key_encoding=None, key_refactor=None):
+    def configure(
+        self,
+        storage_backend,  # actual storage
+        key_prefix,  # manual key prefix
+        expire_default,  # default expiration
+        # keyword-only arguments from here
+        # building blocks
+        coder,
+        miss_value,
+        user_interface,
+        storage_class,
+        default_action=Ellipsis,
+        coder_registry=Ellipsis,
+        # key builder related parameters
+        ignorable_keys=None,
+        key_encoding=None,
+        key_refactor=None,
+    ):
         """Configure ring object.
 
-         This is the base factory function that every internal **Ring** factories
-         are based on. See the source code of :mod:`ring.func.sync` or
-         :mod:`ring.func.asyncio` for actual usages and sample code.
+        This is the base factory function that every internal **Ring** factories
+        are based on. See the source code of :mod:`ring.func.sync` or
+        :mod:`ring.func.asyncio` for actual usages and sample code.
 
-         :param Any storage_backend: Actual storage backend instance.
-         :param Optional[str] key_prefix: Specify storage key prefix when a
-             :class:`str` value is given; Otherwise a key prefix is automatically
-             suggested based on the function signature. Note that the suggested
-             key prefix is not compatible between Python 2 and 3.
-         :param Optional[float] expire_default: Set the duration of seconds to
-             expire the data when a number is given; Otherwise the default
-             behavior depends on the backend. Note that the storage may or may
-             not support expiration or persistent saving.
+        :param Any storage_backend: Actual storage backend instance.
+        :param Optional[str] key_prefix: Specify storage key prefix when a
+            :class:`str` value is given; Otherwise a key prefix is automatically
+            suggested based on the function signature. Note that the suggested
+            key prefix is not compatible between Python 2 and 3.
+        :param Optional[float] expire_default: Set the duration of seconds to
+            expire the data when a number is given; Otherwise the default
+            behavior depends on the backend. Note that the storage may or may
+            not support expiration or persistent saving.
 
-         :param Union[str,ring.coder.Coder] coder: A registered coder name or a
-             coder object. See :doc:`coder` for details.
-         :param Any miss_value: The default value when storage misses a given key.
-         :param type user_interface: Injective implementation of sub-functions.
-         :param type storage_class: Injective implementation of storage.
-         :param Optional[str] default_action: The default action name for
-             `__call__` of the wire object. When the given value is :data:`None`,
-             there is no `__call__` method for ring wire.
-         :param Optional[ring.coder.Registry] coder_registry: The coder registry
-             to load the given `coder`. The default value is
-             :data:`ring.coder.registry` when :data:`None` is given.
+        :param Union[str,ring.coder.Coder] coder: A registered coder name or a
+            coder object. See :doc:`coder` for details.
+        :param Any miss_value: The default value when storage misses a given key.
+        :param type user_interface: Injective implementation of sub-functions.
+        :param type storage_class: Injective implementation of storage.
+        :param Optional[str] default_action: The default action name for
+            `__call__` of the wire object. When the given value is :data:`None`,
+            there is no `__call__` method for ring wire.
+        :param Optional[ring.coder.Registry] coder_registry: The coder registry
+            to load the given `coder`. The default value is
+            :data:`ring.coder.registry` when :data:`None` is given.
 
-         :param Optional[Callable[[type(Wire),type(Ring)],None]] on_manufactured:
-             The callback function when a new ring wire or wire bridge is created.
+        :param Optional[Callable[[type(Wire),type(Ring)],None]] on_manufactured:
+            The callback function when a new ring wire or wire bridge is created.
 
-         :param List[str] ignorable_keys: (experimental) Parameter names not to
-             use to create storage key.
-         :param Optional[str] key_encoding: The storage key is usually
-             :class:`str` typed. When this parameter is given, a key is encoded
-             into :class:`bytes` using the given encoding.
-         :param Optional[Callable[[str],str]] key_refactor: Roughly,
-             ``key = key_refactor(key)`` will be run when `key_refactor` is not
-             :data:`None`; Otherwise it is omitted.
+        :param List[str] ignorable_keys: (experimental) Parameter names not to
+            use to create storage key.
+        :param Optional[str] key_encoding: The storage key is usually
+            :class:`str` typed. When this parameter is given, a key is encoded
+            into :class:`bytes` using the given encoding.
+        :param Optional[Callable[[str],str]] key_refactor: Roughly,
+            ``key = key_refactor(key)`` will be run when `key_refactor` is not
+            :data:`None`; Otherwise it is omitted.
 
-         :return: The factory decorator to create new ring wire or wire bridge.
-         :rtype: (Callable)->ring.wire.RopeCore
-         """
+        :return: The factory decorator to create new ring wire or wire bridge.
+        :rtype: (Callable)->ring.wire.RopeCore
+        """
 
         if default_action is Ellipsis:
-            default_action = 'get_or_update'
+            default_action = "get_or_update"
         assert bool(default_action) == bool(self._allows_default_action)
         if coder_registry is Ellipsis:
             coder_registry = default_registry
@@ -868,7 +893,7 @@ class Ring(object):
         ring_coder = coder_registry.get_or_coderize(raw_coder)
 
         if isinstance(user_interface, (tuple, list)):
-            user_interface = type('_ComposedUserInterface', user_interface, {})
+            user_interface = type("_ComposedUserInterface", user_interface, {})
 
         self._config = Config(
             coder=ring_coder,
@@ -881,7 +906,8 @@ class Ring(object):
             expire_default=expire_default,
             key_refactor=key_refactor,
             key_prefix=key_prefix,
-            ignorable_keys=ignorable_keys)
+            ignorable_keys=ignorable_keys,
+        )
 
     def create_rope(self, func, callback=None):
         rope = self.wire_rope(func)
@@ -893,20 +919,26 @@ class Ring(object):
 
 
 def factory(
-        storage_backend,  # actual storage
-        key_prefix,  # manual key prefix
-        expire_default,  # default expiration
-        # keyword-only arguments from here
-        # building blocks
-        coder, miss_value, user_interface, storage_class,
-        default_action=Ellipsis,
-        coder_registry=Ellipsis,
-        # callback
-        on_manufactured=None,
-        # optimization
-        wire_slots=Ellipsis,
-        # key builder related parameters
-        ignorable_keys=None, key_encoding=None, key_refactor=None):
+    storage_backend,  # actual storage
+    key_prefix,  # manual key prefix
+    expire_default,  # default expiration
+    # keyword-only arguments from here
+    # building blocks
+    coder,
+    miss_value,
+    user_interface,
+    storage_class,
+    default_action=Ellipsis,
+    coder_registry=Ellipsis,
+    # callback
+    on_manufactured=None,
+    # optimization
+    wire_slots=Ellipsis,
+    # key builder related parameters
+    ignorable_keys=None,
+    key_encoding=None,
+    key_refactor=None,
+):
     """Create a decorator which turns a function into ring wire or wire bridge.
 
     This is the base factory function that every internal **Ring** factories
@@ -959,11 +991,17 @@ def factory(
             expire_default,
             # keyword-only arguments from here
             # building blocks
-            coder, miss_value, user_interface, storage_class,
+            coder,
+            miss_value,
+            user_interface,
+            storage_class,
             default_action,
             coder_registry,
             # key builder related parameters
-            ignorable_keys, key_encoding, key_refactor)
+            ignorable_keys,
+            key_encoding,
+            key_refactor,
+        )
 
         return ring.create_rope(f, on_manufactured)
 
@@ -995,7 +1033,11 @@ class BaseStorage(object):
     def __init__(self, ring, backend):
         self._ring = ring
         if contextvars:
-            self._backend = (lambda: backend.get()) if isinstance(backend, contextvars.ContextVar) else (lambda: backend)
+            self._backend = (
+                (lambda: backend.get())
+                if isinstance(backend, contextvars.ContextVar)
+                else (lambda: backend)
+            )
         else:
             self._backend = lambda: backend
 
@@ -1100,7 +1142,8 @@ def asyncio_binary_classifier(f):
 
 def create_factory_proxy(proxy_base, classifier, factory_table):
     proxy_class = type(
-        'ring.create_factory_proxy.<locals>._FactoryProxy', (proxy_base,), {})
+        "ring.create_factory_proxy.<locals>._FactoryProxy", (proxy_base,), {}
+    )
     proxy_class.classifier = staticmethod(classifier)
     proxy_class.factory_table = staticmethod(factory_table)
     sample_factory = factory_table[0]
@@ -1110,23 +1153,23 @@ def create_factory_proxy(proxy_base, classifier, factory_table):
 
 
 class FactoryProxyMetaclass(type):
-
     def __repr__(cls):
-        factory_table_body = ', '.join(
-            '{i}: {factory.__module__}.{factory.__name__}'.format(
-                i=i, factory=factory)
-            for i, factory in enumerate(cls.factory_table))
-        factory_table = '{' + factory_table_body + '}'
-        f = '<{cls.__base__.__name__} subclass with (' \
-            'factory_table={factory_table}, ' \
-            'classifier={cls.classifier.__module__}.{classifier})>'
+        factory_table_body = ", ".join(
+            "{i}: {factory.__module__}.{factory.__name__}".format(i=i, factory=factory)
+            for i, factory in enumerate(cls.factory_table)
+        )
+        factory_table = "{" + factory_table_body + "}"
+        f = (
+            "<{cls.__base__.__name__} subclass with ("
+            "factory_table={factory_table}, "
+            "classifier={cls.classifier.__module__}.{classifier})>"
+        )
         return f.format(
-            cls=cls,
-            factory_table=factory_table, classifier=qualname(cls.classifier))
+            cls=cls, factory_table=factory_table, classifier=qualname(cls.classifier)
+        )
 
 
 class FactoryProxyBase(six.with_metaclass(FactoryProxyMetaclass, object)):
-
     classifier = None  # must be set in descendant
     factory_table = None  # must be set in descendant
 
@@ -1146,6 +1189,6 @@ class FactoryProxyBase(six.with_metaclass(FactoryProxyMetaclass, object)):
         return ring(func)
 
     def __repr__(self):
-        return u'{cls.__name__}(*{args}, **{kwargs})'.format(
-            cls=type(self),
-            args=repr(self.pargs[0]), kwargs=repr(self.pargs[1]))
+        return "{cls.__name__}(*{args}, **{kwargs})".format(
+            cls=type(self), args=repr(self.pargs[0]), kwargs=repr(self.pargs[1])
+        )
