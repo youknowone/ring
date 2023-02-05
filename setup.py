@@ -15,7 +15,7 @@ def get_version():
 
 install_requires = [
     'six>=1.11.0',
-    'wirerope==0.4.5',
+    'wirerope>=0.4.7',
     'attrs>=19.3.0',
     'inspect2>=0.1.0;python_version<"3.0.0"',
     'functools32>=3.2.3-2>=0.1.0;python_version<"3.0"',
@@ -26,7 +26,7 @@ tests_require = [
     'pymemcache',
     'redis', 'requests',
     'diskcache>=4.1.0',
-    'django',
+    'django>=4',
     'numpy',
 ]
 docs_require = [
@@ -109,5 +109,7 @@ setup(
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
     ],
 )  # noqa
