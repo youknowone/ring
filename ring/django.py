@@ -4,6 +4,13 @@
 from __future__ import absolute_import
 
 import warnings
+
+import django
+
+_DJANGO_VERSION = getattr(django, "VERSION", (0, 0, 0))
+if _DJANGO_VERSION[0] >= 4:
+    raise ImportError("Django >= 4 is not supported yet")
+
 from django.core import cache as django_cache
 from django.http.request import HttpRequest
 from django.urls import reverse
@@ -15,7 +22,7 @@ from .func.sync import CacheUserInterface
 from .typing import Any, Optional, Tuple
 
 
-__all__ = ('cache', 'cache_page')
+__all__ = ("cache", "cache_page")
 
 
 def promote_backend(backend):
@@ -52,7 +59,7 @@ def transform_cache_page_args(wire, rules, args, kwargs):
         request = HttpRequest()
         request.__dict__.update(template_request.__dict__)
         request._fake_request = True
-        request.method = 'GET'
+        request.method = "GET"
         if path_hint is not None:
             try:
                 path = reverse(path_hint)
@@ -62,7 +69,7 @@ def transform_cache_page_args(wire, rules, args, kwargs):
     else:
         request = raw_request  # type error?
 
-    return (request, ), wire._pack_args(args[1:], kwargs)
+    return (request,), wire._pack_args(args[1:], kwargs)
 
 
 class CachePageUserInterface(fbase.BaseUserInterface):
@@ -81,38 +88,39 @@ class CachePageUserInterface(fbase.BaseUserInterface):
         return self._ring._config.storage_backend
 
     @fbase.interface_attrs(
-        transform_args=transform_cache_page_args,
-        return_annotation=Tuple[str, str])
+        transform_args=transform_cache_page_args, return_annotation=Tuple[str, str]
+    )
     def key(self, wire, request, pargs):
         middleware = self.middleware
         key_get = get_cache_key(
-            request, middleware.key_prefix, 'GET', cache=middleware.cache)
+            request, middleware.key_prefix, "GET", cache=middleware.cache
+        )
         key_head = get_cache_key(
-            request, middleware.key_prefix, 'HEAD', cache=middleware.cache)
+            request, middleware.key_prefix, "HEAD", cache=middleware.cache
+        )
         return key_get, key_head
 
-    @fbase.interface_attrs(
-        transform_args=transform_cache_page_args)
+    @fbase.interface_attrs(transform_args=transform_cache_page_args)
     def execute(self, wire, request, pargs):
         middleware = self.middleware
         view_func = wire.__func__
         try:
             response = view_func(request, *pargs.args, **pargs.kwargs)
         except Exception as e:
-            if hasattr(middleware, 'process_exception'):
+            if hasattr(middleware, "process_exception"):
                 result = middleware.process_exception(request, e)
                 if result is not None:
                     return result
             raise
-        if hasattr(response, 'render') and callable(response.render):
-            if hasattr(middleware, 'process_template_response'):
-                response = middleware.process_template_response(
-                    request, response)
+        if hasattr(response, "render") and callable(response.render):
+            if hasattr(middleware, "process_template_response"):
+                response = middleware.process_template_response(request, response)
         return response
 
     @fbase.interface_attrs(
         transform_args=transform_cache_page_args,
-        return_annotation=lambda a: Optional[a.get('return', Any)])
+        return_annotation=lambda a: Optional[a.get("return", Any)],
+    )
     def get(self, wire, request, pargs):
         middleware = self.middleware
         result = middleware.process_request(request)
@@ -126,30 +134,32 @@ class CachePageUserInterface(fbase.BaseUserInterface):
         return self._ring._config.miss_value
 
     @fbase.interface_attrs(
-        transform_args=transform_cache_page_args, return_annotation=None)
+        transform_args=transform_cache_page_args, return_annotation=None
+    )
     def set(self, wire, response, request, pargs):
-        if not hasattr(request, '_cache_update_cache'):
-            request._cache_update_cache = request.method in ('GET', 'HEAD')
+        if not hasattr(request, "_cache_update_cache"):
+            request._cache_update_cache = request.method in ("GET", "HEAD")
         middleware = self.middleware
-        if hasattr(response, 'render') and callable(response.render):
-            if hasattr(middleware, 'process_response'):
+        if hasattr(response, "render") and callable(response.render):
+            if hasattr(middleware, "process_response"):
+
                 def callback(response):
                     return middleware.process_response(request, response)
 
                 response.add_post_render_callback(callback)
         else:
-            if hasattr(middleware, 'process_response'):
+            if hasattr(middleware, "process_response"):
                 return middleware.process_response(request, response)
 
     @fbase.interface_attrs(
-        transform_args=transform_cache_page_args, return_annotation=None)
+        transform_args=transform_cache_page_args, return_annotation=None
+    )
     def update(self, wire, request, pargs):
         response = self.execute(wire, request, pargs)
         self.set(wire, response, request, pargs)
         return response
 
-    @fbase.interface_attrs(
-        transform_args=transform_cache_page_args)
+    @fbase.interface_attrs(transform_args=transform_cache_page_args)
     def get_or_update(self, wire, request, pargs):
         response = self.get(wire, request, pargs)
         if response is not None:
@@ -159,14 +169,16 @@ class CachePageUserInterface(fbase.BaseUserInterface):
         return response
 
     @fbase.interface_attrs(
-        transform_args=transform_cache_page_args, return_annotation=None)
+        transform_args=transform_cache_page_args, return_annotation=None
+    )
     def delete(self, wire, request, pargs):
-        if not getattr(request, '_fake_request', None):
+        if not getattr(request, "_fake_request", None):
             warnings.warn(
                 "A request is given as first argument. If this is intended "
                 "try '(request, None)'. Otherwise, Use '(request, path)' "
                 "instead of 'request' to convert the actual request to have "
-                "the target path.")
+                "the target path."
+            )
         key_get, key_head = self.key(wire, request, pargs)
         if key_get:
             self.middleware.cache.delete(key_get)
@@ -174,7 +186,8 @@ class CachePageUserInterface(fbase.BaseUserInterface):
             self.middleware.cache.delete(key_head)
 
     @fbase.interface_attrs(
-        transform_args=transform_cache_page_args, return_annotation=bool)
+        transform_args=transform_cache_page_args, return_annotation=bool
+    )
     def has(self, wire, request, pargs):
         raise NotImplementedError
         # The below implementation is not reliable for the return value `True`.
@@ -183,14 +196,20 @@ class CachePageUserInterface(fbase.BaseUserInterface):
         # return self.key(*args, **kwargs) != (None, None)
 
     @fbase.interface_attrs(
-        transform_args=transform_cache_page_args, return_annotation=None)
+        transform_args=transform_cache_page_args, return_annotation=None
+    )
     def touch(self, wire, request, pargs):
         raise NotImplementedError
 
 
 def cache(
-        backend=django_cache.cache, key_prefix=None, expire=None, coder=None,
-        user_interface=CacheUserInterface, storage_class=LowLevelCacheStorage):
+    backend=django_cache.cache,
+    key_prefix=None,
+    expire=None,
+    coder=None,
+    user_interface=CacheUserInterface,
+    storage_class=LowLevelCacheStorage,
+):
     """A typical ring-style cache based on Django's low-level cache API.
 
     :param Union[str,object] backend: Django's cache config key for
@@ -205,15 +224,24 @@ def cache(
     """  # noqa
     backend = promote_backend(backend)
     return fbase.factory(
-        backend, key_prefix=key_prefix, on_manufactured=None,
-        user_interface=user_interface, storage_class=storage_class,
-        miss_value=None, expire_default=expire, coder=coder)
+        backend,
+        key_prefix=key_prefix,
+        on_manufactured=None,
+        user_interface=user_interface,
+        storage_class=storage_class,
+        miss_value=None,
+        expire_default=expire,
+        coder=coder,
+    )
 
 
 def cache_page(
-        timeout, cache=None, key_prefix=None,  # original parameters
-        user_interface=CachePageUserInterface,
-        storage_class=fbase.BaseStorage):
+    timeout,
+    cache=None,
+    key_prefix=None,  # original parameters
+    user_interface=CachePageUserInterface,
+    storage_class=fbase.BaseStorage,
+):
     """The drop-in-replacement of Django's per-view cache.
 
     Use this decorator instead of
@@ -271,10 +299,17 @@ def cache_page(
     """  # noqa
     middleware_class = CacheMiddleware
     middleware = middleware_class(
-        cache_timeout=timeout, cache_alias=cache, key_prefix=key_prefix)
+        cache_timeout=timeout, cache_alias=cache, key_prefix=key_prefix
+    )
 
     return fbase.factory(
-        middleware, key_prefix='', on_manufactured=None,
-        user_interface=user_interface, storage_class=storage_class,
+        middleware,
+        key_prefix="",
+        on_manufactured=None,
+        user_interface=user_interface,
+        storage_class=storage_class,
         # meaningless parameters below
-        miss_value=None, expire_default=None, coder=None)
+        miss_value=None,
+        expire_default=None,
+        coder=None,
+    )

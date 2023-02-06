@@ -6,8 +6,7 @@ import time
 
 @ring.dict({})
 def get_url(url):
-    """very slow function
-    """
+    """very slow function"""
     time.sleep(1)
     return requests.get(url).content
 

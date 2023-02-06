@@ -5,18 +5,17 @@ name: Python package
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        python-version: [2.7, 3.6, 3.7, 3.8, 3.9, pypy2, pypy3]
+        python-version: ["2.7", "3.7", "3.8", "3.9", "3.10", "3.11"]
 
     steps:
     - uses: actions/checkout@v2
@@ -30,12 +29,12 @@ jobs:
       run: |
         sudo apt-get install libmemcached-dev
         python -m pip install --upgrade pip
-        python -m pip install flake8 pytest
+        python --version | grep '3.' && python -m pip install black
         python -m pip install -e '.[tests]'
-    - name: Lint with flake8
+    - name: Lint with black
       run: |
-        # stop the build if there are Python syntax errors or undefined names
-        flake8 --ignore=E501,E999 ring tests setup.py --statistics
+        black --check ring tests setup.py
+      if: matrix.python-version != '2.7'
     - name: Start containers
       run: docker-compose -f "docker-compose.yml" up -d --build
     - name: Test with pytest

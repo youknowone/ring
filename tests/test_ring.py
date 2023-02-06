@@ -1,13 +1,11 @@
-
 import ring
 import pytest
 from .test_func_sync import pythonmemcache_client
 
-__all__ = ('pythonmemcache_client', )
+__all__ = ("pythonmemcache_client",)
 
 
 class hybridmethod(object):
-
     def __init__(self, func):
         self.__func__ = func
 
@@ -17,7 +15,6 @@ class hybridmethod(object):
 
 
 class A(object):
-
     v = -10
 
     def __init__(self, v):
@@ -71,17 +68,20 @@ def test_ring_property():
     assert a.p == 15
 
 
-@pytest.mark.parametrize('value', [
-    1,
-    0,
-    True,
-    False,
-    u'str',
-    b'bytes',
-    ['list', 'with', 'values'],
-    {'dict': 'also', 'matters': '!'},
-    {'set', 'should', 'be', 'ordered'},
-])
+@pytest.mark.parametrize(
+    "value",
+    [
+        1,
+        0,
+        True,
+        False,
+        "str",
+        b"bytes",
+        ["list", "with", "values"],
+        {"dict": "also", "matters": "!"},
+        {"set", "should", "be", "ordered"},
+    ],
+)
 def test_ring_key(value):
     # test only with real cache backends. dict doesn't help this test
     @ring.memcache(pythonmemcache_client, expire=1)
@@ -93,7 +93,6 @@ def test_ring_key(value):
 
 
 def test_proxy_repr():
-
     @ring.dict({})
     def f():
         pass
@@ -104,7 +103,6 @@ def test_proxy_repr():
 
 
 def test_proxy_cache():
-
     dring = ring.dict({})
 
     @dring
@@ -117,9 +115,9 @@ def test_proxy_cache():
 
 
 def test_package_version():
-    parts = ring.__version__.split('.')
+    parts = ring.__version__.split(".")
     assert len(parts) == 3
-    assert parts[0] == '0'
+    assert parts[0] == "0"
 
 
 def test_varargs():

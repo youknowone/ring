@@ -12,8 +12,14 @@ import hashlib
 from . import base as fbase, lru_cache as lru_mod
 
 __all__ = (
-    'lru', 'dict', 'memcache', 'redis_py', 'redis_py_hash', 'shelve',
-    'diskcache')
+    "lru",
+    "dict",
+    "memcache",
+    "redis_py",
+    "redis_py_hash",
+    "shelve",
+    "diskcache",
+)
 
 
 class CacheUserInterface(fbase.BaseUserInterface):
@@ -24,7 +30,8 @@ class CacheUserInterface(fbase.BaseUserInterface):
     """
 
     @fbase.interface_attrs(
-        return_annotation=lambda a: Optional[a.get('return', Any)])  # noqa: F722
+        return_annotation=lambda a: Optional[a.get("return", Any)]
+    )  # noqa: F722
     def get(self, wire, pargs):
         key = self.key(wire, pargs=pargs)
         try:
@@ -49,26 +56,24 @@ class CacheUserInterface(fbase.BaseUserInterface):
         return result
 
     @fbase.interface_attrs(
-        transform_args=(fbase.transform_args_prefix, {'prefix_count': 1}),
-        return_annotation=None)
+        transform_args=(fbase.transform_args_prefix, {"prefix_count": 1}),
+        return_annotation=None,
+    )
     def set(self, wire, _value, pargs):
         key = self.key(wire, pargs=pargs)
         wire.storage.set(key, _value)
 
-    @fbase.interface_attrs(
-        return_annotation=None)
+    @fbase.interface_attrs(return_annotation=None)
     def delete(self, wire, pargs):
         key = self.key(wire, pargs=pargs)
         wire.storage.delete(key)
 
-    @fbase.interface_attrs(
-        return_annotation=bool)
+    @fbase.interface_attrs(return_annotation=bool)
     def has(self, wire, pargs):
         key = self.key(wire, pargs=pargs)
         return wire.storage.has(key)
 
-    @fbase.interface_attrs(
-        return_annotation=None)
+    @fbase.interface_attrs(return_annotation=None)
     def touch(self, wire, pargs):
         key = self.key(wire, pargs=pargs)
         wire.storage.touch(key)
@@ -83,23 +88,25 @@ class BulkInterfaceMixin(fbase.AbstractBulkUserInterfaceMixin):
 
     @fbase.interface_attrs(
         transform_args=fbase.transform_positional_only,
-        return_annotation=lambda a: List[a.get('return', Any)])
+        return_annotation=lambda a: List[a.get("return", Any)],
+    )
     def execute_many(self, wire, pargs):
         values = [fbase.execute_bulk_item(wire, args) for args in pargs.args]
         return values
 
     @fbase.interface_attrs(
         transform_args=fbase.transform_positional_only,
-        return_annotation=lambda a: List[Optional[a.get('return', Any)]])
+        return_annotation=lambda a: List[Optional[a.get("return", Any)]],
+    )
     def get_many(self, wire, pargs):
         keys = self.key_many(wire, pargs)
-        results = wire.storage.get_many(
-            keys, miss_value=wire._rope.config.miss_value)
+        results = wire.storage.get_many(keys, miss_value=wire._rope.config.miss_value)
         return results
 
     @fbase.interface_attrs(
         transform_args=fbase.transform_positional_only,
-        return_annotation=lambda a: List[a.get('return', Any)])
+        return_annotation=lambda a: List[a.get("return", Any)],
+    )
     def update_many(self, wire, pargs):
         keys = self.key_many(wire, pargs)
         values = self.execute_many(wire, pargs)
@@ -108,7 +115,8 @@ class BulkInterfaceMixin(fbase.AbstractBulkUserInterfaceMixin):
 
     @fbase.interface_attrs(
         transform_args=fbase.transform_positional_only,
-        return_annotation=lambda a: List[a.get('return', Any)])
+        return_annotation=lambda a: List[a.get("return", Any)],
+    )
     def get_or_update_many(self, wire, pargs):
         keys = self.key_many(wire, pargs)
         miss_value = object()
@@ -122,7 +130,8 @@ class BulkInterfaceMixin(fbase.AbstractBulkUserInterfaceMixin):
             miss_indices.append(i)
 
         new_results = [
-            fbase.execute_bulk_item(wire, pargs.args[i]) for i in miss_indices]
+            fbase.execute_bulk_item(wire, pargs.args[i]) for i in miss_indices
+        ]
         new_keys = [keys[i] for i in miss_indices]
         wire.storage.set_many(new_keys, new_results)
 
@@ -131,49 +140,48 @@ class BulkInterfaceMixin(fbase.AbstractBulkUserInterfaceMixin):
         return results
 
     @fbase.interface_attrs(
-        transform_args=fbase.transform_positional_only,
-        return_annotation=None)
+        transform_args=fbase.transform_positional_only, return_annotation=None
+    )
     def set_many(self, wire, pargs):
         args_list, value_list = pargs.args
         keys = self.key_many(wire, fbase.ArgPack((), args_list, {}))
         wire.storage.set_many(keys, value_list)
 
     @fbase.interface_attrs(
-        transform_args=fbase.transform_positional_only,
-        return_annotation=None)
+        transform_args=fbase.transform_positional_only, return_annotation=None
+    )
     def delete_many(self, wire, pargs):
         keys = self.key_many(wire, pargs)
         wire.storage.delete_many(keys)
 
     @fbase.interface_attrs(
-        transform_args=fbase.transform_positional_only,
-        return_annotation=None)
+        transform_args=fbase.transform_positional_only, return_annotation=None
+    )
     def has_many(self, wire, pargs):
         keys = self.key_many(wire, pargs)
         wire.storage.has_many(keys)
 
     @fbase.interface_attrs(
-        transform_args=fbase.transform_positional_only,
-        return_annotation=None)
+        transform_args=fbase.transform_positional_only, return_annotation=None
+    )
     def touch_many(self, wire, pargs):
         keys = self.key_many(wire, pargs)
         wire.storage.touch_many(keys)
 
 
 class BulkStorageMixin(object):
-
     def get_many(self, keys, miss_value):
         values = self.get_many_values(keys)
         results = [
             self.rope.decode(v) if v is not fbase.NotFound else miss_value  # noqa
-            for v in values]
+            for v in values
+        ]
         return results
 
     def set_many(self, keys, values, expire=Ellipsis):
         if expire is Ellipsis:
             expire = self.rope.config.expire_default
-        self.set_many_values(
-            keys, [self.rope.encode(v) for v in values], expire)
+        self.set_many_values(keys, [self.rope.encode(v) for v in values], expire)
 
     def delete_many(self, keys):
         self.delete_many_values(keys)
@@ -188,7 +196,6 @@ class BulkStorageMixin(object):
 
 
 class LruStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
-
     in_memory_storage = True
 
     def get_value(self, key):
@@ -217,7 +224,6 @@ class LruStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
 
 
 class ExpirableDictStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
-
     in_memory_storage = True
     now = time.time
 
@@ -262,7 +268,6 @@ class ExpirableDictStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
 
 
 class PersistentDictStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
-
     in_memory_storage = True
 
     def get_value(self, key):
@@ -286,7 +291,6 @@ class PersistentDictStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
 
 
 class ShelveStorage(PersistentDictStorage):
-
     def set_value(self, key, value, expire):
         super(ShelveStorage, self).set_value(key, value, expire)
         self.backend.sync()
@@ -299,9 +303,7 @@ class ShelveStorage(PersistentDictStorage):
         self.backend.close()
 
 
-class MemcacheStorage(
-        fbase.CommonMixinStorage, fbase.StorageMixin, BulkStorageMixin):
-
+class MemcacheStorage(fbase.CommonMixinStorage, fbase.StorageMixin, BulkStorageMixin):
     def get_value(self, key):
         value = self.backend.get(key)
         if value is None:
@@ -328,9 +330,7 @@ class MemcacheStorage(
         return self.backend.delete_multi(keys)
 
 
-class RedisStorage(
-        fbase.CommonMixinStorage, fbase.StorageMixin, BulkStorageMixin):
-
+class RedisStorage(fbase.CommonMixinStorage, fbase.StorageMixin, BulkStorageMixin):
     def get_value(self, key):
         value = self.backend.get(key)
         if value is None:
@@ -363,7 +363,6 @@ class RedisStorage(
 
 
 class RedisHashStorage(RedisStorage):
-
     def __init__(self, rope, backend):
         storage_backend = backend[0]
         self.hash_key = backend[1]
@@ -393,7 +392,6 @@ class RedisHashStorage(RedisStorage):
 
 
 class DiskCacheStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
-
     def get_value(self, key):
         value = self.backend.get(key)
         if value is None:
@@ -408,9 +406,15 @@ class DiskCacheStorage(fbase.CommonMixinStorage, fbase.StorageMixin):
 
 
 def lru(
-        lru=None, key_prefix=None, expire=None, coder=None,
-        user_interface=CacheUserInterface, storage_class=LruStorage,
-        maxsize=128, **kwargs):
+    lru=None,
+    key_prefix=None,
+    expire=None,
+    coder=None,
+    user_interface=CacheUserInterface,
+    storage_class=LruStorage,
+    maxsize=128,
+    **kwargs
+):
     """LRU(Least-Recently-Used) cache interface.
 
     Because the lru backend is following the basic manner of
@@ -441,19 +445,30 @@ def lru(
     if lru is None:
         lru = lru_mod.LruCache(maxsize)
         if key_prefix is None:
-            key_prefix = ''
+            key_prefix = ""
 
     return fbase.factory(
-        lru, key_prefix=key_prefix, on_manufactured=None,
-        user_interface=user_interface, storage_class=storage_class,
-        miss_value=None, expire_default=expire, coder=coder,
-        **kwargs)
+        lru,
+        key_prefix=key_prefix,
+        on_manufactured=None,
+        user_interface=user_interface,
+        storage_class=storage_class,
+        miss_value=None,
+        expire_default=expire,
+        coder=coder,
+        **kwargs
+    )
 
 
 def dict(
-        obj, key_prefix=None, expire=None, coder=None,
-        user_interface=CacheUserInterface, storage_class=None,
-        **kwargs):
+    obj,
+    key_prefix=None,
+    expire=None,
+    coder=None,
+    user_interface=CacheUserInterface,
+    storage_class=None,
+    **kwargs
+):
     """Basic Python :class:`dict` based cache.
 
     This backend is not designed for real products. Please carefully read the
@@ -479,16 +494,26 @@ def dict(
             storage_class = ExpirableDictStorage
 
     return fbase.factory(
-        obj, key_prefix=key_prefix, on_manufactured=None,
-        user_interface=user_interface, storage_class=storage_class,
-        miss_value=None, expire_default=expire, coder=coder,
-        **kwargs)
+        obj,
+        key_prefix=key_prefix,
+        on_manufactured=None,
+        user_interface=user_interface,
+        storage_class=storage_class,
+        miss_value=None,
+        expire_default=expire,
+        coder=coder,
+        **kwargs
+    )
 
 
 def shelve(
-        shelf, key_prefix=None, coder=None,
-        user_interface=CacheUserInterface, storage_class=ShelveStorage,
-        **kwargs):
+    shelf,
+    key_prefix=None,
+    coder=None,
+    user_interface=CacheUserInterface,
+    storage_class=ShelveStorage,
+    **kwargs
+):
     """Python :mod:`shelve` based cache.
 
     :param shelve.Shelf shelf: A shelf storage. See :mod:`shelve` to create
@@ -503,17 +528,27 @@ def shelve(
     """
     expire = None
     return fbase.factory(
-        shelf, key_prefix=key_prefix, on_manufactured=None,
-        user_interface=user_interface, storage_class=storage_class,
-        miss_value=None, expire_default=expire, coder=coder,
-        **kwargs)
+        shelf,
+        key_prefix=key_prefix,
+        on_manufactured=None,
+        user_interface=user_interface,
+        storage_class=storage_class,
+        miss_value=None,
+        expire_default=expire,
+        coder=coder,
+        **kwargs
+    )
 
 
 def memcache(
-        client, key_prefix=None, expire=0, coder=None,
-        user_interface=(CacheUserInterface, BulkInterfaceMixin),
-        storage_class=MemcacheStorage,
-        **kwargs):
+    client,
+    key_prefix=None,
+    expire=0,
+    coder=None,
+    user_interface=(CacheUserInterface, BulkInterfaceMixin),
+    storage_class=MemcacheStorage,
+    **kwargs
+):
     """Common Memcached_ interface.
 
     This backend is shared interface for various memcached client libraries
@@ -568,21 +603,32 @@ def memcache(
     :see: :func:`ring.aiomcache` for :mod:`asyncio` version.
     """
     from ring._memcache import key_refactor
+
     miss_value = None
 
     return fbase.factory(
-        client, key_prefix=key_prefix, on_manufactured=None,
-        user_interface=user_interface, storage_class=storage_class,
-        miss_value=miss_value, expire_default=expire, coder=coder,
+        client,
+        key_prefix=key_prefix,
+        on_manufactured=None,
+        user_interface=user_interface,
+        storage_class=storage_class,
+        miss_value=miss_value,
+        expire_default=expire,
+        coder=coder,
         key_refactor=key_refactor,
-        **kwargs)
+        **kwargs
+    )
 
 
 def redis_py(
-        client, key_prefix=None, expire=None, coder=None,
-        user_interface=(CacheUserInterface, BulkInterfaceMixin),
-        storage_class=RedisStorage,
-        **kwargs):
+    client,
+    key_prefix=None,
+    expire=None,
+    coder=None,
+    user_interface=(CacheUserInterface, BulkInterfaceMixin),
+    storage_class=RedisStorage,
+    **kwargs
+):
     """Redis_ interface.
 
     This backend depends on `redis-py`_.
@@ -613,17 +659,27 @@ def redis_py(
     .. _redis-py: https://pypi.org/project/redis/
     """
     return fbase.factory(
-        client, key_prefix=key_prefix, on_manufactured=None,
-        user_interface=user_interface, storage_class=storage_class,
-        miss_value=None, expire_default=expire, coder=coder,
-        **kwargs)
+        client,
+        key_prefix=key_prefix,
+        on_manufactured=None,
+        user_interface=user_interface,
+        storage_class=storage_class,
+        miss_value=None,
+        expire_default=expire,
+        coder=coder,
+        **kwargs
+    )
 
 
 def redis_py_hash(
-        client, hash_key=None, key_prefix=None, coder=None,
-        user_interface=(CacheUserInterface, BulkInterfaceMixin),
-        storage_class=RedisHashStorage,
-        **kwargs):
+    client,
+    hash_key=None,
+    key_prefix=None,
+    coder=None,
+    user_interface=(CacheUserInterface, BulkInterfaceMixin),
+    storage_class=RedisHashStorage,
+    **kwargs
+):
     """
     This backend depends on `redis-py`_.
 
@@ -652,16 +708,27 @@ def redis_py_hash(
     """
     expire = None
     return fbase.factory(
-        (client, hash_key), key_prefix=key_prefix, on_manufactured=None,
-        user_interface=user_interface, storage_class=storage_class,
-        miss_value=None, expire_default=expire, coder=coder,
-        **kwargs)
+        (client, hash_key),
+        key_prefix=key_prefix,
+        on_manufactured=None,
+        user_interface=user_interface,
+        storage_class=storage_class,
+        miss_value=None,
+        expire_default=expire,
+        coder=coder,
+        **kwargs
+    )
 
 
 def diskcache(
-        obj, key_prefix=None, expire=None, coder=None,
-        user_interface=CacheUserInterface, storage_class=DiskCacheStorage,
-        **kwargs):
+    obj,
+    key_prefix=None,
+    expire=None,
+    coder=None,
+    user_interface=CacheUserInterface,
+    storage_class=DiskCacheStorage,
+    **kwargs
+):
     """diskcache_ interface.
 
     .. _diskcache: https://pypi.org/project/diskcache/
@@ -676,18 +743,29 @@ def diskcache(
     :see: :func:`ring.func.sync.CacheUserInterface` for sub-functions.
     """
     return fbase.factory(
-        obj, key_prefix=key_prefix, on_manufactured=None,
-        user_interface=user_interface, storage_class=storage_class,
-        miss_value=None, expire_default=expire, coder=coder,
-        **kwargs)
+        obj,
+        key_prefix=key_prefix,
+        on_manufactured=None,
+        user_interface=user_interface,
+        storage_class=storage_class,
+        miss_value=None,
+        expire_default=expire,
+        coder=coder,
+        **kwargs
+    )
 
 
 def arcus(
-        client, key_prefix=None, expire=0, coder=None,
-        default_action='get_or_update',
-        user_interface=CacheUserInterface,
-        **kwargs):  # pragma: no cover
+    client,
+    key_prefix=None,
+    expire=0,
+    coder=None,
+    default_action="get_or_update",
+    user_interface=CacheUserInterface,
+    **kwargs
+):  # pragma: no cover
     """Arcus support. deprecated."""
+
     class Storage(fbase.CommonMixinStorage, fbase.StorageMixin):
         def get_value(self, key):
             value = self.backend.get(key).get_result()
@@ -704,7 +782,7 @@ def arcus(
         def touch_value(self, key, expire):
             self.backend.touch(key, expire)
 
-    rule = re.compile(r'[!-~]+')
+    rule = re.compile(r"[!-~]+")
 
     def key_refactor(key):
         if len(key) < 250 and rule.match(key).group(0) == key:
@@ -713,14 +791,20 @@ def arcus(
             hashed = hashlib.sha1(key).hexdigest()
         except TypeError:
             # FIXME: ensure key is bytes before key_refactor
-            key = key.encode('utf-8')
+            key = key.encode("utf-8")
             hashed = hashlib.sha1(key).hexdigest()
-        return 'ring-sha1:' + hashed
+        return "ring-sha1:" + hashed
 
     return fbase.factory(
-        client, key_prefix=key_prefix, on_manufactured=None,
-        user_interface=user_interface, storage_class=Storage,
+        client,
+        key_prefix=key_prefix,
+        on_manufactured=None,
+        user_interface=user_interface,
+        storage_class=Storage,
         default_action=default_action,
-        miss_value=None, expire_default=expire, coder=coder,
+        miss_value=None,
+        expire_default=expire,
+        coder=coder,
         key_refactor=key_refactor,
-        **kwargs)
+        **kwargs
+    )

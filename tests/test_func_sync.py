@@ -17,22 +17,34 @@ except ImportError:
     contextvars = None
 
 
-pymemcache_client = pymemcache.client.Client(('127.0.0.1', 11211))
+pymemcache_client = pymemcache.client.Client(("127.0.0.1", 11211))
 pythonmemcache_client = memcache.Client(["127.0.0.1:11211"])
 redis_py_client = redis.StrictRedis()
 
-pymemcache_client_contextvar = contextvars.ContextVar(
-    "pymemcache_client_contextvar",
-    default=pymemcache_client,
-) if contextvars else None
-pythonmemcache_client_contextvar = contextvars.ContextVar(
-    "pythonmemcache_client_contextvar",
-    default=pythonmemcache_client,
-) if contextvars else None
-redis_py_client_contextvar = contextvars.ContextVar(
-    "redis_py_client",
-    default=redis_py_client,
-) if contextvars else None
+pymemcache_client_contextvar = (
+    contextvars.ContextVar(
+        "pymemcache_client_contextvar",
+        default=pymemcache_client,
+    )
+    if contextvars
+    else None
+)
+pythonmemcache_client_contextvar = (
+    contextvars.ContextVar(
+        "pythonmemcache_client_contextvar",
+        default=pythonmemcache_client,
+    )
+    if contextvars
+    else None
+)
+redis_py_client_contextvar = (
+    contextvars.ContextVar(
+        "redis_py_client",
+        default=redis_py_client,
+    )
+    if contextvars
+    else None
+)
 
 
 try:
@@ -40,12 +52,16 @@ try:
 except ImportError:
     pylibmc_client = None
 else:
-    pylibmc_client = pylibmc.Client(['127.0.0.1'])
+    pylibmc_client = pylibmc.Client(["127.0.0.1"])
 finally:
-    pylibmc_client_contextvar = contextvars.ContextVar(
-        "pylibmc_client",
-        default=pylibmc_client,
-    ) if contextvars else None
+    pylibmc_client_contextvar = (
+        contextvars.ContextVar(
+            "pylibmc_client",
+            default=pylibmc_client,
+        )
+        if contextvars
+        else None
+    )
 
 
 class StorageDict(dict):
@@ -65,7 +81,7 @@ def storage_dict():
 
 @pytest.fixture
 def storage_shelve(request):
-    storage = shelve.open('/tmp/ring-test/shelve{}'.format(sys.version_info[0]))
+    storage = shelve.open("/tmp/ring-test/shelve{}".format(sys.version_info[0]))
     storage.ring = ring.shelve
     storage.is_binary = False
     storage.has_has = True
@@ -86,9 +102,7 @@ def storage_lru():
     return storage
 
 
-@pytest.fixture(scope='session', params=[
-    diskcache.Cache('/tmp/ring-test/diskcache')
-])
+@pytest.fixture(scope="session", params=[diskcache.Cache("/tmp/ring-test/diskcache")])
 def storage_diskcache(request):
     client = request.param
     client.ring = ring.disk
@@ -100,11 +114,11 @@ def storage_diskcache(request):
 
 
 @pytest.fixture(
-    scope='session',
+    scope="session",
     ids=[
-        'python-memcached',
-        'pymemcache',
-        'pylibmc',
+        "python-memcached",
+        "pymemcache",
+        "pylibmc",
         "pythonmemcache_client_contextvar",
         "pymemcache_client_contextvar",
         "pylibmc_client_contextvar",
@@ -117,7 +131,8 @@ def storage_diskcache(request):
         (pythonmemcache_client_contextvar, False, sys.version_info[0] == 2),
         (pymemcache_client_contextvar, True, True),
         (pylibmc_client_contextvar, True, None),
-    ])
+    ],
+)
 def memcache_client(request):
     client, is_binary, has_touch = request.param
     if contextvars:
@@ -135,10 +150,7 @@ def memcache_client(request):
     return client
 
 
-@pytest.fixture(scope='session', params=[
-    redis_py_client,
-    redis_py_client_contextvar
-])
+@pytest.fixture(scope="session", params=[redis_py_client, redis_py_client_contextvar])
 def redis_client(request):
     client = request.param
     if contextvars:
@@ -156,30 +168,34 @@ def redis_client(request):
     return client
 
 
-@pytest.fixture(params=[
-    lazy_fixture('storage_dict'),
-    lazy_fixture('storage_shelve'),
-    lazy_fixture('storage_lru'),
-    lazy_fixture('memcache_client'),
-    lazy_fixture('redis_client'),
-    lazy_fixture('storage_diskcache'),
-])
+@pytest.fixture(
+    params=[
+        lazy_fixture("storage_dict"),
+        lazy_fixture("storage_shelve"),
+        lazy_fixture("storage_lru"),
+        lazy_fixture("memcache_client"),
+        lazy_fixture("redis_client"),
+        lazy_fixture("storage_diskcache"),
+    ]
+)
 def storage(request):
     return request.param
 
 
-@pytest.fixture(params=['function', 'method1', 'method2', 'class1', 'class2', 'static1', 'static2'])
+@pytest.fixture(
+    params=["function", "method1", "method2", "class1", "class2", "static1", "static2"]
+)
 def function(request, storage):
     def resultify(r):
         if storage.is_binary:
-            r = str(r).encode('utf-8')
+            r = str(r).encode("utf-8")
         return r
 
-    options = {'wire_slots': ('base',)}
+    options = {"wire_slots": ("base",)}
     if storage.has_expire:
-        options['expire'] = 10
+        options["expire"] = 10
 
-    if request.param == 'function':
+    if request.param == "function":
         base = [0]
 
         @storage.ring(storage, **options)
@@ -190,12 +206,12 @@ def function(request, storage):
 
         return f
     else:
-        class A(object):
 
+        class A(object):
             base = [0]
 
             def __ring_key__(self):
-                return 'a'
+                return "a"
 
             @storage.ring(storage, **options)
             def method(self, a, b):
@@ -214,12 +230,12 @@ def function(request, storage):
         obj1 = A()
         obj2 = A()
         f = {
-            'method1': obj1.method,
-            'method2': obj2.method,
-            'class1': obj1.cmethod,
-            'class2': A.cmethod,
-            'static1': obj1.smethod,
-            'static2': A.smethod,
+            "method1": obj1.method,
+            "method2": obj2.method,
+            "class1": obj1.cmethod,
+            "class2": A.cmethod,
+            "static1": obj1.smethod,
+            "static2": A.smethod,
         }[request.param]
         f.base = A.base
         return f
@@ -279,8 +295,8 @@ def test_common(function, storage):
         with pytest.raises((AttributeError, NotImplementedError)):
             function.touch(1, 2)
 
-    function.set(b'RANDOMVALUE', 1, 2)
-    assert function.get(1, 2) == b'RANDOMVALUE'
+    function.set(b"RANDOMVALUE", 1, 2)
+    assert function.get(1, 2) == b"RANDOMVALUE"
 
     function.delete(1, 2)  # finallize
 
@@ -290,11 +306,11 @@ def test_func_dict():
 
     base = [0]
 
-    @ring.dict(cache, key_prefix='', expire=10)
+    @ring.dict(cache, key_prefix="", expire=10)
     def f(a, b):
         return base[0] + a * 100 + b
 
-    assert f.key(1, 2) == ':1:2'  # dict doesn't have prefix by default
+    assert f.key(1, 2) == ":1:2"  # dict doesn't have prefix by default
 
     base[0] = 10000
     assert False is f.has(1, 2)
@@ -366,16 +382,16 @@ def test_lru(storage_lru):
 def test_diskcache(storage_diskcache):
     base = [0]
 
-    @ring.disk(storage_diskcache, 'ring-test')
+    @ring.disk(storage_diskcache, "ring-test")
     def f(a, b):
         r = base[0] + a * 100 + b
         sr = str(r)
         if storage_diskcache.is_binary:
-            sr = sr.encode('utf-8')
+            sr = sr.encode("utf-8")
         return sr
 
     f.delete(8, 6)
-    assert f.key(8, 6) == 'ring-test:8:6'
+    assert f.key(8, 6) == "ring-test:8:6"
 
     base[0] = 10000
     assert None is f.get(8, b=6)
@@ -387,15 +403,15 @@ def test_diskcache(storage_diskcache):
 
 
 def test_common_value(storage):
-    options = {'expire': 10}
+    options = {"expire": 10}
     if not storage.has_expire:
         options = {}
 
-    base = [b'a']
+    base = [b"a"]
 
     @storage.ring(storage, key_prefix=str(storage), **options)
     def ff():
-        base[0] += b'b'
+        base[0] += b"b"
         return base[0]
 
     ff.delete()
@@ -418,7 +434,7 @@ def test_common_value(storage):
     # py3 test in asyncio
     @storage.ring(storage, key_prefix=str(storage), **options)
     def complicated(a, *args, **kw):
-        return b'42'
+        return b"42"
 
     # set
     v1 = complicated(0, 1, 2, 3, b=4, c=5, d=6)
@@ -429,13 +445,13 @@ def test_common_value(storage):
 def test_execute_many(redis_client):
     client = redis_client
 
-    @ring.memcache(client, coder='json')
+    @ring.memcache(client, coder="json")
     def f(a):
         return a
 
     r = f.execute_many(
-        (1, ),
-        (2, ),
+        (1,),
+        (2,),
     )
     assert r == [1, 2]
 

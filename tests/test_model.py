@@ -1,7 +1,6 @@
-
 from __future__ import absolute_import
 
-'''
+"""
 from ring.storage import DictStorage
 from ring.ring import Model, ModelMixin
 
@@ -47,7 +46,7 @@ def test_model_mixin():
 
     user.expire()   # expire by model
     assert storage.get('user:42:json').value is None
-'''
+"""
 
 """
 def test_model_subscription():

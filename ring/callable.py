@@ -4,7 +4,7 @@ from wirerope.callable import Callable
 from ._util import cached_property
 from ._compat import qualname
 
-__all__ = ('Callable', )
+__all__ = ("Callable",)
 
 
 def _code(self):
@@ -16,12 +16,11 @@ def _code(self):
 
 
 def _annotations(self):
-    return getattr(self.wrapped_callable, '__annotations__', None) or {}
+    return getattr(self.wrapped_callable, "__annotations__", None) or {}
 
 
 def _identifier(self):
-    return '.'.join((
-        self.wrapped_callable.__module__, qualname(self.wrapped_callable)))
+    return ".".join((self.wrapped_callable.__module__, qualname(self.wrapped_callable)))
 
 
 Callable.code = cached_property(_code)

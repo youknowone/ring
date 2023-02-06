@@ -1,17 +1,15 @@
-
 import pytest
 import ring.func.sync
 from ring.func.base import BaseUserInterface, NotFound, factory
 
 
 class DoubleCacheUserInterface(BaseUserInterface):
-
     async def execute(self, wire, pargs):
         result = await wire.__func__(*pargs.args, **pargs.kwargs)
         return result
 
     def key2(self, wire, pargs):
-        return self.key(wire, pargs) + ':back'
+        return self.key(wire, pargs) + ":back"
 
     async def get(self, wire, pargs):
         key1 = self.key(wire, pargs)
@@ -76,16 +74,21 @@ class DoubleCacheUserInterface(BaseUserInterface):
 
 
 def doublecache(
-        client, key_prefix, expire=0, coder=None,
-        user_interface=DoubleCacheUserInterface):
+    client, key_prefix, expire=0, coder=None, user_interface=DoubleCacheUserInterface
+):
     from ring.func.sync import ExpirableDictStorage
     from ring.func.asyncio import convert_storage
 
     return factory(
-        client, key_prefix=key_prefix, on_manufactured=None,
+        client,
+        key_prefix=key_prefix,
+        on_manufactured=None,
         user_interface=user_interface,
         storage_class=convert_storage(ExpirableDictStorage),
-        miss_value=None, expire_default=expire, coder=coder)
+        miss_value=None,
+        expire_default=expire,
+        coder=coder,
+    )
 
 
 @pytest.mark.asyncio
@@ -94,7 +97,7 @@ async def test_x():
 
     f_value = 0
 
-    @doublecache(storage, key_prefix='f', expire=10)
+    @doublecache(storage, key_prefix="f", expire=10)
     async def f():
         nonlocal f_value
         if f_value < 0:
@@ -103,11 +106,11 @@ async def test_x():
 
     assert storage == {}
     assert 0 == await f()
-    assert 'f' in storage
-    assert 'f:back' in storage
+    assert "f" in storage
+    assert "f:back" in storage
     assert 0 == await f.get()
 
-    del storage['f']
+    del storage["f"]
     assert 0 == await f.get()
     assert len(storage) == 1
 
@@ -127,10 +130,10 @@ async def test_x():
     await f.update()
     assert 2 == await f()
 
-    storage['f'] = storage['f'][0], 1
+    storage["f"] = storage["f"][0], 1
     assert 1 == await f.get()
     assert 1 == await f()
-    del storage['f']
+    del storage["f"]
     f_value = 3
     assert 2 == await f.get()
     assert 3 == await f()
@@ -138,29 +141,26 @@ async def test_x():
 
 
 def test_coder_func():
-
     storage = {}
 
     @ring.dict(storage)
     def f(a):
         return a
 
-    encoded_value = f.encode('value')
+    encoded_value = f.encode("value")
     decoded_value = f.decode(encoded_value)
     assert encoded_value == decoded_value
 
-    assert f('10') == '10'
-    raw_value = storage.get(f.key('10'))  # raw value
+    assert f("10") == "10"
+    raw_value = storage.get(f.key("10"))  # raw value
     value = f.decode(raw_value)
-    assert f.get('10') == value
+    assert f.get("10") == value
 
 
 def test_coder_method():
-
     storage = {}
 
     class Object(object):
-
         def __init__(self, **kwargs):
             self._data = kwargs
 
@@ -171,13 +171,13 @@ def test_coder_method():
 
     class User(Object):
         def __ring_key__(self):
-            return 'User{self.user_id}'.format(self=self)
+            return "User{self.user_id}".format(self=self)
 
         @ring.dict(storage)
         def data(self):
             return self._data.copy()
 
-    u1 = User(user_id=42, name='User 1')
+    u1 = User(user_id=42, name="User 1")
     u1.data()
 
     encoded_value = u1.data.encode(u1.data.key())
