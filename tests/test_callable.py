@@ -5,8 +5,16 @@ from ring.callable import Callable
 from ring.func.base import ArgPack
 
 
-if sys.version_info[0] >= 3:
+if sys.version_info >= (3, 8):
     from ._test_callable_py3 import *  # noqa
+
+    test_make_labels_py3 = eval(
+        r"""[
+            (lambda x, /, y: None, ArgPack((), (1, 2), {}), {"x": 1, "y": 2}),
+        ]"""
+    )
+else:
+    test_make_labels_py3 = []
 
 
 @pytest.mark.parametrize(
@@ -46,7 +54,8 @@ if sys.version_info[0] >= 3:
             ArgPack((), (1, 2, 3, 4), {"y": 20, "z": 30}),
             {"x": 1, "*args": (2, 3, 4), "**kw": {"y": 20, "z": 30}},
         ),
-    ],
+    ]
+    + test_make_labels_py3,
 )
 def test_make_labels(f, pargs, merged):
     kwargified = pargs.labels(Callable(f))

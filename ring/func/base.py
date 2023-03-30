@@ -56,9 +56,9 @@ class ArgPack(collections.namedtuple("_ArgPack", ["bounds", "args", "kwargs"])):
         # no .POSITIONAL_ONLY support
 
         args = bound_args + args
-        while (
-            i < parameters_len
-            and parameters[i].kind == inspect.Parameter.POSITIONAL_OR_KEYWORD
+        while i < parameters_len and parameters[i].kind in (
+            inspect.Parameter.POSITIONAL_ONLY,
+            inspect.Parameter.POSITIONAL_OR_KEYWORD,
         ):
             p = parameters[i]
             i += 1
