@@ -27,7 +27,8 @@ tests_require = [
     "mock",
     "patch",
     "pymemcache",
-    "redis",
+    "redis;python_version<'3.0'",
+    "redis>=4.2.0;python_version>='3.0'",
     "requests",
     "diskcache>=4.1.0",
     "django<4",
@@ -59,7 +60,6 @@ if (3, 3) <= sys.version_info:
     tests_require.extend(
         [
             "aiomcache",
-            "aioredis>=2.0.0",
         ]
     )
 
