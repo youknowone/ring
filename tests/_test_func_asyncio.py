@@ -5,7 +5,7 @@ import shelve
 from typing import Optional
 
 import aiomcache
-import aioredis
+import redis.asyncio
 import diskcache
 import ring
 from ring.func.lru_cache import LruCache
@@ -42,11 +42,11 @@ def aiomcache_client():
 
 
 @pytest.fixture()
-def aioredis_pool():
+def redis_asyncio_pool():
     if sys.version_info <= (3, 5):
         pytest.skip()
 
-    pool = aioredis.from_url(
+    pool = redis.asyncio.from_url(
         "redis://localhost",
         encoding="utf-8",
     )
@@ -58,19 +58,19 @@ def aioredis_connection():
     if sys.version_info <= (3, 5):
         pytest.skip()
 
-    pool = aioredis.from_url(
+    pool = redis.asyncio.from_url(
         "redis://localhost",
         encoding="utf-8",
     )
     return pool, ring.aioredis
-    pool = aioredis_pool()[0]
+    pool = redis_asyncio_pool()[0]
     return pool.client(), ring.aioredis
 
 
 @pytest.fixture(
     params=[
         lazy_fixture("aioredis_connection"),
-        lazy_fixture("aioredis_pool"),
+        lazy_fixture("redis_asyncio_pool"),
     ]
 )
 def aioredis_client(request):
@@ -81,7 +81,7 @@ def aioredis_client(request):
     params=[
         lazy_fixture("storage_dict"),
         lazy_fixture("aiomcache_client"),
-        lazy_fixture("aioredis_pool"),
+        lazy_fixture("redis_asyncio_pool"),
         lazy_fixture("aioredis_connection"),
     ]
 )
