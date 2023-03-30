@@ -53,5 +53,7 @@ def test_code():
 
     assert Callable(f).code.co_name == "f"
 
-    h = asyncio.coroutine(f)
-    assert Callable(h).code.co_name == "f"
+    async def h(a):
+        pass  # noqa
+
+    assert Callable(h).code.co_name == "h"
