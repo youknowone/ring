@@ -1,3 +1,4 @@
+import sys
 import ring
 import pytest
 from .test_func_sync import pythonmemcache_client
@@ -128,3 +129,7 @@ def test_varargs():
 
     assert a(3) == b(3)
     assert a(3, x=1) == b(3, x=1)
+
+
+if sys.version_info >= (3, 8):
+    import tests._test_positional_only
