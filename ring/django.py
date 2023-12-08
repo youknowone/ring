@@ -5,11 +5,6 @@ from __future__ import absolute_import
 
 import warnings
 
-import django
-
-_DJANGO_VERSION = getattr(django, "VERSION", (0, 0, 0))
-if _DJANGO_VERSION[0] >= 4:
-    raise ImportError("Django >= 4 is not supported yet")
 
 from django.core import cache as django_cache
 from django.http.request import HttpRequest
@@ -297,9 +292,16 @@ def cache_page(
 
     :see: :func:`django.views.decorators.cache.cache_page`.
     """  # noqa
+
+    def dummy_get_response(request):
+        return None
+
     middleware_class = CacheMiddleware
     middleware = middleware_class(
-        cache_timeout=timeout, cache_alias=cache, key_prefix=key_prefix
+        get_response=dummy_get_response,
+        cache_timeout=timeout,
+        cache_alias=cache,
+        key_prefix=key_prefix,
     )
 
     return fbase.factory(
