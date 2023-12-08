@@ -31,7 +31,7 @@ tests_require = [
     "redis>=4.2.0;python_version>='3.0'",
     "requests",
     "diskcache>=4.1.0",
-    "django<4",
+    "django",
     "numpy",
 ]
 docs_require = [
