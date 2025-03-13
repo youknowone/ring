@@ -1,6 +1,7 @@
 """:mod:`ring.django` --- Django support
 ========================================
 """
+
 from __future__ import absolute_import
 
 import warnings
@@ -47,7 +48,7 @@ def transform_cache_page_args(wire, rules, args, kwargs):
     raw_request = args[0]
     if isinstance(raw_request, HttpRequest):
         request = raw_request
-    elif type(raw_request) == tuple:
+    elif type(raw_request) is tuple:
         template_request, path_hint = raw_request
         if not isinstance(template_request, HttpRequest):
             raise TypeError

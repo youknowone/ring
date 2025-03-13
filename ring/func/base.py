@@ -1,7 +1,8 @@
-""":mod:`ring.func.base` --- The building blocks of **ring.func.\***.
+""":mod:`ring.func.base` --- The building blocks of **ring.func.* **.
 =====================================================================
 
 """  # noqa: W605
+
 import abc
 import collections
 import types
@@ -213,7 +214,7 @@ def coerce_function(t):
     if issubclass(t, (list, tuple)):
         return _coerce_list_and_tuple
 
-    if t == type:
+    if t is type:
         return _coerce_type
 
     if issubclass(t, dict):
@@ -269,7 +270,7 @@ def interface_attrs(**kwargs):
     if "transform_args" in kwargs:
         transform_args = kwargs.pop("transform_args")
         if transform_args:
-            if type(transform_args) != tuple:
+            if type(transform_args) is not tuple:
                 transform_args = transform_args, {}
             func, rules = transform_args
             assert frozenset(rules.keys()) <= frozenset({"prefix_count"})

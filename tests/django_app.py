@@ -7,6 +7,7 @@ To run as a stand-alone app, run:
     django-admin runserver --pythonpath=. --settings=django_app
 
 """
+
 import random
 import string
 import datetime
