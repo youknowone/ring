@@ -11,6 +11,14 @@ on:
 
 jobs:
   build:
+    services:
+      redis:
+        image: redis
+        ports: ['6379:6379']
+      memcached:
+        image: memcached
+        ports: ['11211:11211']
+
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -34,13 +42,9 @@ jobs:
     - name: Lint with ruff
       run: |
         ruff format --diff ring tests setup.py
-    - name: Start containers
-      run: docker-compose -f "docker-compose.yml" up -d --build
     - name: Test with pytest
       run: |
         pytest
-    - name: Stop containers
-      run: docker-compose -f "docker-compose.yml" down
 
     - name: Codecov
       run: bash <(curl -s https://codecov.io/bash)
