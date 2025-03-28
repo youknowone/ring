@@ -4,6 +4,7 @@
 Coder is a configurable layer that provides ways to encode raw data and decode
 stored cache data.
 """
+
 import abc
 import six
 from collections import namedtuple
@@ -105,7 +106,7 @@ class Registry(object):
         if coder is None:
             if isinstance(raw_coder, str):  # py2 support
                 raise TypeError(
-                    "The given coder is not a registered name in coder " "registry."
+                    "The given coder is not a registered name in coder registry."
                 )
             coder = coderize(raw_coder)
         return coder

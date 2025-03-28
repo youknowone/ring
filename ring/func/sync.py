@@ -4,6 +4,7 @@
 This module includes building blocks and storage implementations of **Ring**
 factories.
 """
+
 from ring.typing import Any, Optional, List
 import time
 import re
@@ -29,9 +30,7 @@ class CacheUserInterface(fbase.BaseUserInterface):
         details.
     """
 
-    @fbase.interface_attrs(
-        return_annotation=lambda a: Optional[a.get("return", Any)]
-    )  # noqa: F722
+    @fbase.interface_attrs(return_annotation=lambda a: Optional[a.get("return", Any)])  # noqa: F722
     def get(self, wire, pargs):
         key = self.key(wire, pargs=pargs)
         try:
@@ -413,7 +412,7 @@ def lru(
     user_interface=CacheUserInterface,
     storage_class=LruStorage,
     maxsize=128,
-    **kwargs
+    **kwargs,
 ):
     """LRU(Least-Recently-Used) cache interface.
 
@@ -456,7 +455,7 @@ def lru(
         miss_value=None,
         expire_default=expire,
         coder=coder,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -467,7 +466,7 @@ def dict(
     coder=None,
     user_interface=CacheUserInterface,
     storage_class=None,
-    **kwargs
+    **kwargs,
 ):
     """Basic Python :class:`dict` based cache.
 
@@ -502,7 +501,7 @@ def dict(
         miss_value=None,
         expire_default=expire,
         coder=coder,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -512,7 +511,7 @@ def shelve(
     coder=None,
     user_interface=CacheUserInterface,
     storage_class=ShelveStorage,
-    **kwargs
+    **kwargs,
 ):
     """Python :mod:`shelve` based cache.
 
@@ -536,7 +535,7 @@ def shelve(
         miss_value=None,
         expire_default=expire,
         coder=coder,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -547,7 +546,7 @@ def memcache(
     coder=None,
     user_interface=(CacheUserInterface, BulkInterfaceMixin),
     storage_class=MemcacheStorage,
-    **kwargs
+    **kwargs,
 ):
     """Common Memcached_ interface.
 
@@ -616,7 +615,7 @@ def memcache(
         expire_default=expire,
         coder=coder,
         key_refactor=key_refactor,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -627,7 +626,7 @@ def redis_py(
     coder=None,
     user_interface=(CacheUserInterface, BulkInterfaceMixin),
     storage_class=RedisStorage,
-    **kwargs
+    **kwargs,
 ):
     """Redis_ interface.
 
@@ -667,7 +666,7 @@ def redis_py(
         miss_value=None,
         expire_default=expire,
         coder=coder,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -678,7 +677,7 @@ def redis_py_hash(
     coder=None,
     user_interface=(CacheUserInterface, BulkInterfaceMixin),
     storage_class=RedisHashStorage,
-    **kwargs
+    **kwargs,
 ):
     """
     This backend depends on `redis-py`_.
@@ -716,7 +715,7 @@ def redis_py_hash(
         miss_value=None,
         expire_default=expire,
         coder=coder,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -727,7 +726,7 @@ def diskcache(
     coder=None,
     user_interface=CacheUserInterface,
     storage_class=DiskCacheStorage,
-    **kwargs
+    **kwargs,
 ):
     """diskcache_ interface.
 
@@ -751,7 +750,7 @@ def diskcache(
         miss_value=None,
         expire_default=expire,
         coder=coder,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -762,7 +761,7 @@ def arcus(
     coder=None,
     default_action="get_or_update",
     user_interface=CacheUserInterface,
-    **kwargs
+    **kwargs,
 ):  # pragma: no cover
     """Arcus support. deprecated."""
 
@@ -806,5 +805,5 @@ def arcus(
         expire_default=expire,
         coder=coder,
         key_refactor=key_refactor,
-        **kwargs
+        **kwargs,
     )

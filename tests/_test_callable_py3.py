@@ -1,4 +1,3 @@
-import asyncio
 from typing import Any, Optional
 from ring.callable import Callable
 from ring.func.base import ArgPack

@@ -4,6 +4,7 @@
 This module includes building blocks and storage implementations of **Ring**
 factories for :mod:`asyncio`.
 """
+
 import sys
 from functools import wraps, partial
 
@@ -174,9 +175,7 @@ class CacheUserInterface(fbase.BaseUserInterface):
         details.
     """
 
-    @fbase.interface_attrs(
-        return_annotation=lambda a: Optional[a.get("return", Any)]
-    )  # noqa: F722
+    @fbase.interface_attrs(return_annotation=lambda a: Optional[a.get("return", Any)])  # noqa: F722
     async def get(self, wire, **kwargs):
         key = self.key(wire, **kwargs)
         try:
@@ -565,7 +564,7 @@ def dict(
     coder=None,
     user_interface=CacheUserInterface,
     storage_class=None,
-    **kwargs
+    **kwargs,
 ):
     """:class:`dict` interface for :mod:`asyncio`.
 
@@ -587,7 +586,7 @@ def dict(
         miss_value=None,
         expire_default=expire,
         coder=coder,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -599,7 +598,7 @@ def aiomcache(
     user_interface=(CacheUserInterface, BulkInterfaceMixin),
     storage_class=AiomcacheStorage,
     key_encoding="utf-8",
-    **kwargs
+    **kwargs,
 ):
     """Memcached_ interface for :mod:`asyncio`.
 
@@ -639,7 +638,7 @@ def aiomcache(
         coder=coder,
         key_encoding=key_encoding,
         key_refactor=key_refactor,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -650,7 +649,7 @@ def aioredis1(
     coder=None,
     user_interface=(CacheUserInterface, BulkInterfaceMixin),
     storage_class=Aioredis1Storage,
-    **kwargs
+    **kwargs,
 ):
     """Redis interface for :mod:`asyncio`.
 
@@ -708,7 +707,7 @@ def aioredis1(
         miss_value=None,
         expire_default=expire,
         coder=coder,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -719,7 +718,7 @@ def aioredis1_hash(
     coder=None,
     user_interface=(CacheUserInterface, BulkInterfaceMixin),
     storage_class=Aioredis1HashStorage,
-    **kwargs
+    **kwargs,
 ):
     """Redis interface for :mod:`asyncio`.
 
@@ -772,7 +771,7 @@ def aioredis1_hash(
         miss_value=None,
         expire_default=expire,
         coder=coder,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -783,7 +782,7 @@ def aioredis2(
     coder=None,
     user_interface=(CacheUserInterface, BulkInterfaceMixin),
     storage_class=Aioredis2Storage,
-    **kwargs
+    **kwargs,
 ):
     """Redis interface for :mod:`asyncio`.
 
@@ -841,7 +840,7 @@ def aioredis2(
         miss_value=None,
         expire_default=expire,
         coder=coder,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -852,7 +851,7 @@ def aioredis2_hash(
     coder=None,
     user_interface=(CacheUserInterface, BulkInterfaceMixin),
     storage_class=Aioredis2HashStorage,
-    **kwargs
+    **kwargs,
 ):
     """Redis interface for :mod:`asyncio`.
 
@@ -905,7 +904,7 @@ def aioredis2_hash(
         miss_value=None,
         expire_default=expire,
         coder=coder,
-        **kwargs
+        **kwargs,
     )
 
 

@@ -3,6 +3,7 @@
 
 Ring object factory functions are aggregated in this module.
 """
+
 from __future__ import absolute_import
 from ring.func import sync
 

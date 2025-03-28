@@ -21,7 +21,7 @@ install_requires = [
     'functools32>=3.2.3-2;python_version<"3.0"',
 ]
 tests_require = [
-    "pytest>=3.10.1",
+    "pytest<8",
     "pytest-cov",
     "pytest-lazy-fixture>=0.6.2",
     "mock",
