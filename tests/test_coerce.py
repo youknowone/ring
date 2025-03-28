@@ -1,3 +1,4 @@
+import abc
 import sys
 
 import pytest
@@ -37,6 +38,10 @@ class HashUser(object):
         return str(self.user_id)
 
 
+class ABCUser(abc.ABC):
+    pass
+
+
 ring_key_instance = User(42)
 ring_hash_instance = HashUser(42)
 test_parameters = [
@@ -49,6 +54,8 @@ test_parameters = [
     ({1, 2, 3, 4}, "{1,2,3,4}"),
     ({"1", "2", "3", "4"}, "{'1','2','3','4'}"),
     (("1", "2", "3", "4"), "('1','2','3','4')"),
+    (User, "User"),
+    (ABCUser, "ABCUser"),
 ]
 if numpy is not None:
     test_parameters.extend(
